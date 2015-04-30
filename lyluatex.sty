@@ -1,18 +1,28 @@
-\ProvidesPackage{lydoc}
+\ProvidesPackage{lyluatex}
 
+% Dépendances
 \RequirePackage{graphicx}
 \RequirePackage{keycommand}
 \RequirePackage{luacode}
+% Script lua
 \directlua{dofile(kpse.find_file("lydoc.lua"))}
 
+% Une tricherie un peu sale pour récupérer la largeur de ligne
 \let\bs\textbackslash
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
 \newcommand*{\largeur}{\expandafter\un\the\linewidth}
-
+% Taille par défaut des partitions
 \newcounter{staffsize}
 \setcounter{staffsize}{17}
-
+% La commande principale
 \newkeycommand*\includely[staffsize=\arabic{staffsize}][1]{%
     \directlua{InclureLy(\luastring{#1},\luastring{\largeur},\luastring{\commandkey{staffsize}})}
 }
 \let\lilypondfile\includely
+
+\newwrite\lyfile
+\immediate\openout\lyfile=test.ly
+\immediate\write\lyfile{this is interesting}
+\immediate\write\lyfile{}
+\immediate\write\lyfile{this too}
+\immediate\closeout\lyfile
