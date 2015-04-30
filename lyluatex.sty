@@ -3,6 +3,7 @@
 % Dépendances
 \RequirePackage{graphicx}
 \RequirePackage{keycommand}
+\RequirePackage{fancyvrb}
 \RequirePackage{luacode}
 % Script lua
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
@@ -21,8 +22,21 @@
 \let\lilypondfile\includely
 
 \newwrite\lyfile
-\immediate\openout\lyfile=test.ly
-\immediate\write\lyfile{this is interesting}
-\immediate\write\lyfile{}
-\immediate\write\lyfile{this too}
-\immediate\closeout\lyfile
+\newcounter{tmply}
+\newenvironment{ly}{%
+\stepcounter{tmply}
+\def\lyfile{tmp_ly/\alph{tmply}.ly}
+\VerbatimOut{\lyfile}%
+}{%
+\endVerbatimOut%
+\includely{\lyfile}%
+}
+
+\newenvironment{lilypond}{%
+\stepcounter{tmply}
+\def\lyfile{tmp_ly/\alph{tmply}.ly}
+\VerbatimOut{\lyfile}%
+}{%
+\endVerbatimOut%
+\includely{\lyfile}%
+}

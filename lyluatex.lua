@@ -72,7 +72,6 @@ function InclureLy(entree, largeur, facteur)
 	    splitext(sortie, "ly"),
 	    sortie
 	))
-    end
     i = io.open(splitext(sortie, 'ly') .. '-systems.tex', 'r')
     texoutput = i:read("*all")
     i:close()
@@ -80,6 +79,7 @@ function InclureLy(entree, largeur, facteur)
     o = io.open(splitext(sortie, 'ly') .. '-systems.tex', 'w')
     o:write(texoutput)
     o:close()
+    end
     tex.sprint([[\noindent\input{]] .. splitext(sortie, 'ly') .. '-systems' .. [[}]])
 --    ))
 end
@@ -122,3 +122,6 @@ function mkdirs(str)
         lfs.mkdir(path)
     end
 end
+
+
+mkdirs('tmp_ly')
