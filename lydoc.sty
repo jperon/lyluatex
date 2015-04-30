@@ -1,0 +1,18 @@
+\ProvidesPackage{lydoc}
+
+\RequirePackage{graphicx}
+\RequirePackage{keycommand}
+\RequirePackage{luacode}
+\directlua{dofile(kpse.find_file("lydoc.lua"))}
+
+\let\bs\textbackslash
+{\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
+\newcommand*{\largeur}{\expandafter\un\the\linewidth}
+
+\newcounter{staffsize}
+\setcounter{staffsize}{17}
+
+\newkeycommand*\includely[staffsize=\arabic{staffsize}][1]{%
+    \directlua{InclureLy(\luastring{#1},\luastring{\largeur},\luastring{\commandkey{staffsize}})}
+}
+\let\lilypondfile\includely
