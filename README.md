@@ -31,4 +31,4 @@ Dès lors, il ne vous reste plus qu'à compiler le document comme d'habitude, av
 
     lualatex -shell-escape DOCUMENT.TEX
 
-Voyez le document `test.ly` pour un exemple.
+Voyez le document `test.tex` pour un exemple.
