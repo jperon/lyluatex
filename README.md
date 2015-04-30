@@ -32,3 +32,8 @@ Dès lors, il ne vous reste plus qu'à compiler le document comme d'habitude, av
     lualatex -shell-escape DOCUMENT.TEX
 
 Voyez le document `test.tex` pour un exemple.
+
+
+## Migration depuis `lilypond-book`
+
+Afin de faciliter la migration depuis `lilypond-book`, `lyluatex` définit une commande `\lilypondfile` acceptant les mêmes arguments que `\includely`. Toutefois, il n'est pas possible pour le moment de mimer le comportement de l'environnement `lilypond` défini par `lilypond-book`.
