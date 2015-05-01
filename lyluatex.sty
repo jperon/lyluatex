@@ -4,6 +4,7 @@
 \RequirePackage{graphicx}
 \RequirePackage{keycommand}
 \RequirePackage{fancyvrb}
+\RequirePackage{environ}
 \RequirePackage{luacode}
 % Script lua
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
@@ -15,28 +16,34 @@
 % Taille par défaut des partitions
 \newcounter{staffsize}
 \setcounter{staffsize}{17}
+% Compteurs utiles pour les fragments intégrés
+\newcounter{localstaffsize}
+\newcounter{tmply}
+
 % La commande principale
 \newkeycommand*\includely[staffsize=\arabic{staffsize}][1]{%
     \directlua{InclureLy(\luastring{#1},\luastring{\largeur},\luastring{\commandkey{staffsize}})}
 }
 \let\lilypondfile\includely
 
-\newwrite\lyfile
-\newcounter{tmply}
-\newenvironment{ly}{%
-\stepcounter{tmply}
-\def\lyfile{tmp_ly/\alph{tmply}.ly}
-\VerbatimOut{\lyfile}%
-}{%
-\endVerbatimOut%
-\includely{\lyfile}%
+\NewEnviron{ecrirely}{%
+\directlua{Ecrire(\luastringO{\BODY}, \luastring{\lyfile})}
 }
 
-\newenvironment{lilypond}{%
+\newkeyenvironment{ly}[staffsize=\arabic{staffsize}]{%
+\setcounter{localstaffsize}{\commandkey{staffsize}}
 \stepcounter{tmply}
 \def\lyfile{tmp_ly/\alph{tmply}.ly}
-\VerbatimOut{\lyfile}%
-}{%
-\endVerbatimOut%
-\includely{\lyfile}%
+\ecrirely%
+}{
+\endecrirely%
+\includely[staffsize=\arabic{localstaffsize}]{\lyfile}%
+}
+
+\let\lilypond\ly
+\let\endlilypond\endly
+
+\newkeycommand{\lily}[staffsize=\arabic{staffsize}][1]{%
+\setcounter{localstaffsize}{\commandkey{staffsize}}%
+\begin{ly}[staffsize=\arabic{localstaffsize}]#1\end{ly}%
 }

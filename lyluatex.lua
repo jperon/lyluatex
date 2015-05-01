@@ -9,6 +9,13 @@ local err, warn, info, log = luatexbase.provides_module({
     license            = "MIT",
 })
 
+function Ecrire(entree, fichier)
+    fichier = splitext(fichier, 'ly') .. '.ly'
+    o = io.open(fichier, 'w')
+    o:write(entree)
+    o:close()
+end
+
 function InclureLy(entree, largeur, facteur)
     entree = splitext(entree, 'ly') .. '.ly'
     if not lfs.isfile(entree) then err("Le fichier %s n'existe pas.", entree) end
