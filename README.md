@@ -42,4 +42,9 @@ Voyez le document `test.tex` pour un exemple.
 
 ## Migration depuis `lilypond-book`
 
-Afin de faciliter la migration depuis `lilypond-book`, `lyluatex` définit une commande `\lilypondfile` acceptant les mêmes arguments que `\includely`. De même, l'environnement `lilypond` est défini comme dans `lilypond-book`.
+Afin de faciliter la migration depuis `lilypond-book`, `lyluatex` définit une commande `\lilypondfile` acceptant les mêmes arguments que `\includely`. De même, l'environnement `lilypond` est défini comme `ly`, et la commande `\lily` peut remplacer la commande `\lilypond` de `lilypond-book`.
+
+De la sorte, les documents saisis auparavant avec l'aide de `lilypond-book` devraient s'utiliser sans grande difficulté avec `lyluatex`, en prenant cependant en considération que :
+
+- à part le paramètre `staffsize`, les paramètres optionnels sont pour l'instant ignorés ;
+- les commandes telles que `\lilypond[fragment]{c d e f}` doivent être adaptées comme suit : `\lily{{c d e f}}`.

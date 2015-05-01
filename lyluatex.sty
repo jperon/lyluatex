@@ -3,7 +3,6 @@
 % Dépendances
 \RequirePackage{graphicx}
 \RequirePackage{keycommand}
-\RequirePackage{fancyvrb}
 \RequirePackage{environ}
 \RequirePackage{luacode}
 % Script lua
@@ -30,7 +29,7 @@
 \directlua{Ecrire(\luastringO{\BODY}, \luastring{\lyfile})}
 }
 
-\newkeyenvironment{ly}[staffsize=\arabic{staffsize}]{%
+\newkeyenvironment{ly}[staffsize=\arabic{staffsize}][autres]{%
 \setcounter{localstaffsize}{\commandkey{staffsize}}
 \stepcounter{tmply}
 \def\lyfile{tmp_ly/\alph{tmply}.ly}
@@ -43,7 +42,7 @@
 \let\lilypond\ly
 \let\endlilypond\endly
 
-\newkeycommand{\lily}[staffsize=\arabic{staffsize}][1]{%
+\newkeycommand{\lily}[staffsize=\arabic{staffsize}][autres][1]{%
 \setcounter{localstaffsize}{\commandkey{staffsize}}%
 \begin{ly}[staffsize=\arabic{localstaffsize}]#1\end{ly}%
 }
