@@ -1,9 +1,9 @@
 local err, warn, info, log = luatexbase.provides_module({
-    name               = "lydoc",
+    name               = "lyluatex",
     version            = '0',
     greinternalversion = internalversion,
     date               = "2015/04/29",
-    description        = "Module lydoc.",
+    description        = "Module lyluatex.",
     author             = "The Gregorio Project (see CONTRIBUTORS.md)",
     copyright          = "2008-2015 - The Gregorio Project",
     license            = "MIT",
