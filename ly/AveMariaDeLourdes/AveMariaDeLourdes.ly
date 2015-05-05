@@ -1,5 +1,5 @@
 \version "2.16"
-\include "italiano.ly"
+\language "italiano"
 
 \header {
   tagline = ""
@@ -41,7 +41,7 @@ Paroles = \lyricmode {
   où l'ai -- rain sa -- cré,
   de sa voix con -- nu -- e,
   an -- non -- çait l'A -- ve.
-  
+
   \italique
   A -- ve, a -- ve, a -- ve Ma -- rí -- a_!
   A -- ve, a -- ve, a -- ve Ma -- rí -- a_!

@@ -9,6 +9,7 @@ local err, warn, info, log = luatexbase.provides_module({
     license            = "MIT",
 })
 
+
 function Ecrire(entree, fichier)
     fichier = splitext(fichier, 'ly') .. '.ly'
     o = io.open(fichier, 'w')
@@ -22,13 +23,14 @@ function InclureLy(entree, largeur, facteur)
     strlargeur = string.gsub(largeur, '%.', '-')
     sortie = 'tmp_ly/' .. splitext(entree, 'ly') .. '-' .. facteur .. '-' .. strlargeur .. '.ly'
     mkdirs(dirname(sortie))
-    if not lfs.isfile(sortie)
+    if not lfs.isfile(splitext(sortie, 'ly') .. '-systems.tex')
     or lfs.attributes(sortie).modification < lfs.attributes(entree).modification
     then
 	i = io.open(entree, 'r')
 	o = io.open(sortie, 'w')
 	o:write(string.format(
-[[%%En-tête copié depuis lilypond-book-preamble.ly
+[[%%En-tête
+\version "2.18.2"
 #(define default-toplevel-book-handler
   print-book-with-defaults-as-systems )
 
@@ -49,13 +51,7 @@ function InclureLy(entree, largeur, facteur)
   (lambda ( . rest)
    (apply collect-scores-for-book rest)))
 
-#(set! output-empty-score-list #t)
-
-
-#(ly:set-option 'backend 'eps)
-#(ly:set-option (quote no-point-and-click))
-#(define inside-lilypond-book #t)
-#(define version-seen #t)
+#(ly:set-option 'safe '#t)
 
 
 %%Paramètres de la partition
@@ -63,19 +59,18 @@ function InclureLy(entree, largeur, facteur)
 \paper{
     indent = 0\mm
     line-width = %s\pt
-    line-width = #(- line-width (* mm  3.000000) (* mm 1))
 }
 
 %%Partition originale
 ]],
 	    facteur,
-	    largeur - 6)
+	    largeur - 10)
 	)
 	o:write(i:read('*a'))
 	o:close()
 	i:close()
 	os.execute(string.format(
-	    "lilypond -o %s -djob-count=2 -ddelete-intermediate-files %s",
+	    "lilypond -o %s -dno-point-and-click -dbackend=eps -djob-count=2 -ddelete-intermediate-files %s",
 	    splitext(sortie, "ly"),
 	    sortie
 	))
@@ -89,19 +84,6 @@ function InclureLy(entree, largeur, facteur)
     end
     tex.sprint([[\noindent\input{]] .. splitext(sortie, 'ly') .. '-systems' .. [[}]])
 --    ))
-end
-
-function BaseName(str)
-    tex.sprint(basename(str))
-end
-
-function DirName(str)
-    tex.sprint(dirname(str))
-end
-
-function basename(str)
-    local name = string.gsub(str, "(.*/)(.*)", "%2")
-    return name
 end
 
 function dirname(str)
@@ -129,6 +111,5 @@ function mkdirs(str)
         lfs.mkdir(path)
     end
 end
-
 
 mkdirs('tmp_ly')
