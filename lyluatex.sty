@@ -4,7 +4,8 @@
 \RequirePackage{graphicx}
 \RequirePackage{keycommand}
 \RequirePackage{environ}
-\RequirePackage{luacode}
+\def\luastring#1{\luatexluaescapestring{#1}}
+\def\luastringO#1{\luatexluaescapestring{\unexpanded\expandafter{#1}}}
 % Script lua
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
 
@@ -25,24 +26,28 @@
 }
 \let\lilypondfile\includely
 
-\NewEnviron{ecrirely}{%
-\directlua{Ecrire(\luastringO{\BODY}, \luastring{\lyfile})}
+\newkeycommand{\lily}[staffsize=\arabic{staffsize}][autres][1]{%
+\setcounter{localstaffsize}{\commandkey{staffsize}}%
+\stepcounter{tmply}
+\def\lyfile{tmp_ly/\alph{tmply}.ly}
+\directlua{Ecrire(\luastringO{#1}, \luastring{\lyfile}}%
+\includely[staffsize=\arabic{localstaffsize}]{\lyfile}%
+}
+
+\NewEnviron{compilerly}{%
+\lily{\BODY}
 }
 
 \newkeyenvironment{ly}[staffsize=\arabic{staffsize}][autres]{%
-\setcounter{localstaffsize}{\commandkey{staffsize}}
+\setcounter{localstaffsize}{\value{staffsize}}
+\setcounter{staffsize}{\commandkey{staffsize}}
 \stepcounter{tmply}
 \def\lyfile{tmp_ly/\alph{tmply}.ly}
-\ecrirely%
+\compilerly%
 }{
-\endecrirely%
-\includely[staffsize=\arabic{localstaffsize}]{\lyfile}%
+\compilerly%
+\setcounter{staffsize}{\value{localstaffsize}}
 }
 
 \let\lilypond\ly
 \let\endlilypond\endly
-
-\newkeycommand{\lily}[staffsize=\arabic{staffsize}][autres][1]{%
-\setcounter{localstaffsize}{\commandkey{staffsize}}%
-\begin{ly}[staffsize=\arabic{localstaffsize}]#1\end{ly}%
-}
