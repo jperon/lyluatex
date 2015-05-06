@@ -10,25 +10,26 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 
-function Ecrire(entree, fichier)
-    fichier = splitext(fichier, 'ly') .. '.ly'
-    o = io.open(fichier, 'w')
-    o:write(entree)
-    o:close()
+TMP = 'tmp_ly'
+N = 0
+
+
+local function lilypond(entree, sortie)
+    os.execute(string.format(
+	"lilypond "
+	.."-dno-point-and-click "
+	.."-dbackend=eps "
+	.."-djob-count=2 "
+	.."-ddelete-intermediate-files "
+	.."-o %s %s",
+	sortie,
+	entree
+    ))
 end
 
-function InclureLy(entree, largeur, facteur)
-    entree = splitext(entree, 'ly') .. '.ly'
-    if not lfs.isfile(entree) then err("Le fichier %s n'existe pas.", entree) end
-    strlargeur = string.gsub(largeur, '%.', '-')
-    sortie = 'tmp_ly/' .. splitext(entree, 'ly') .. '-' .. facteur .. '-' .. strlargeur .. '.ly'
-    mkdirs(dirname(sortie))
-    if not lfs.isfile(splitext(sortie, 'ly') .. '-systems.tex')
-    or lfs.attributes(sortie).modification < lfs.attributes(entree).modification
-    then
-	i = io.open(entree, 'r')
-	o = io.open(sortie, 'w')
-	o:write(string.format(
+
+local function entete_lilypond(facteur, largeur)
+    return string.format(
 [[%%En-tête
 \version "2.18.2"
 #(define default-toplevel-book-handler
@@ -63,32 +64,50 @@ function InclureLy(entree, largeur, facteur)
 
 %%Partition originale
 ]],
-	    facteur,
-	    largeur - 10)
-	)
+facteur,
+largeur
+)
+end
+
+
+function direct_ly(ly, largeur, facteur)
+    N = N + 1
+    tmp = TMP..'/f'..N..'.ly'
+    f = io.open(tmp, 'w')
+    f:write(ly)
+    f:close()
+    InclureLy(tmp, largeur, facteur)
+end
+
+
+function InclureLy(entree, largeur, facteur)
+    nom = splitext(entree, 'ly')
+    entree = nom..'.ly'
+    if not lfs.isfile(entree) then err("Le fichier %s n'existe pas.", entree) end
+    sortie = TMP..'/' ..nom..'-'..facteur..'-'..string.gsub(largeur, '%.', '-')..'.ly'
+    snom = splitext(sortie, 'ly')
+    mkdirs(dirname(sortie))
+    if not lfs.isfile(snom..'-systems.tex')
+    or lfs.attributes(sortie).modification < lfs.attributes(entree).modification
+    then
+	i = io.open(entree, 'r')
+	o = io.open(sortie, 'w')
+	o:write(entete_lilypond(facteur, largeur - 10))
 	o:write(i:read('*a'))
 	o:close()
 	i:close()
-	os.execute(string.format(
-	    "lilypond "
-	    .."-dno-point-and-click "
-	    .."-dbackend=eps "
-	    .."-djob-count=2 "
-	    .."-ddelete-intermediate-files "
-	    .."-o %s %s",
-	    splitext(sortie, "ly"),
-	    sortie
-	))
-    i = io.open(splitext(sortie, 'ly') .. '-systems.tex', 'r')
-    texoutput = i:read("*all")
-    i:close()
-    texoutput, _ = string.gsub(texoutput, [[includegraphics{]], [[includegraphics{]] .. dirname(sortie))
-    o = io.open(splitext(sortie, 'ly') .. '-systems.tex', 'w')
-    o:write(texoutput)
-    o:close()
+	lilypond(sortie, snom)
     end
-    tex.sprint([[\noindent\input{]] .. splitext(sortie, 'ly') .. '-systems' .. [[}]])
+    i = io.open(snom..'-systems.tex', 'r')
+    contenu = i:read("*all")
+    i:close()
+    texoutput, _ = string.gsub(
+	contenu,
+	[[includegraphics{]], [[includegraphics{]]..dirname(sortie)
+    )
+    tex.print(([[\noindent]]..texoutput):explode('\n'))
 end
+
 
 function dirname(str)
     if str:match(".-/.-") then
@@ -99,6 +118,7 @@ function dirname(str)
     end
 end
 
+
 function splitext(str, ext)
     if str:match(".-%..-") then
     	local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
@@ -108,6 +128,7 @@ function splitext(str, ext)
     end
 end
 
+
 function mkdirs(str)
     path = '.'
     for dir in string.gmatch(str, '([^%/]+)') do
@@ -116,4 +137,5 @@ function mkdirs(str)
     end
 end
 
-mkdirs('tmp_ly')
+
+mkdirs(TMP)

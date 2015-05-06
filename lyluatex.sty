@@ -5,7 +5,6 @@
 \RequirePackage{keycommand}
 \RequirePackage{environ}
 \def\luastring#1{\luatexluaescapestring{#1}}
-\def\luastringO#1{\luatexluaescapestring{\unexpanded\expandafter{#1}}}
 % Script lua
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
 
@@ -14,38 +13,36 @@
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
 \newcommand*{\largeur}{\expandafter\un\the\linewidth}
 % Taille par défaut des partitions
-\newcounter{staffsize}
-\setcounter{staffsize}{17}
+\newcounter{staffsize}\setcounter{staffsize}{17}
 % Compteurs utiles pour les fragments intégrés
 \newcounter{localstaffsize}
-\newcounter{tmply}
 
 % La commande principale
 \newkeycommand*\includely[staffsize=\arabic{staffsize}][1]{%
-    \directlua{InclureLy(\luastring{#1},\luastring{\largeur},\luastring{\commandkey{staffsize}})}
+\directlua{InclureLy("\luastring{#1}",\luastring{\largeur},\luastring{\commandkey{staffsize}})}
 }
 \let\lilypondfile\includely
 
-\newkeycommand{\lily}[staffsize=\arabic{staffsize}][autres][1]{%
-\setcounter{localstaffsize}{\commandkey{staffsize}}%
-\stepcounter{tmply}
-\def\lyfile{tmp_ly/\alph{tmply}.ly}
-\directlua{Ecrire(\luastringO{#1}, \luastring{\lyfile}}%
-\includely[staffsize=\arabic{localstaffsize}]{\lyfile}%
+\long\def\lilysnippet#1{%
+\directlua{%
+direct_ly("\luatexluaescapestring{\unexpanded\expandafter{#1}}",\luastring{\largeur},\luastring{\arabic{staffsize}})
+}%
 }
 
 \NewEnviron{compilerly}{%
-\lily{\BODY}
+\lilysnippet\BODY
+}
+
+\newcommand{\lily}[1]{%
+\lilysnippet{\unexpanded{#1}}%
 }
 
 \newkeyenvironment{ly}[staffsize=\arabic{staffsize}][autres]{%
 \setcounter{localstaffsize}{\value{staffsize}}
 \setcounter{staffsize}{\commandkey{staffsize}}
-\stepcounter{tmply}
-\def\lyfile{tmp_ly/\alph{tmply}.ly}
 \compilerly%
 }{
-\compilerly%
+\endcompilerly%
 \setcounter{staffsize}{\value{localstaffsize}}
 }
 
