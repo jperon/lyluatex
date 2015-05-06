@@ -70,7 +70,12 @@ function InclureLy(entree, largeur, facteur)
 	o:close()
 	i:close()
 	os.execute(string.format(
-	    "lilypond -o %s -dno-point-and-click -dbackend=eps -djob-count=2 -ddelete-intermediate-files %s",
+	    "lilypond "
+	    .."-dno-point-and-click "
+	    .."-dbackend=eps "
+	    .."-djob-count=2 "
+	    .."-ddelete-intermediate-files "
+	    .."-o %s %s",
 	    splitext(sortie, "ly"),
 	    sortie
 	))
@@ -83,7 +88,6 @@ function InclureLy(entree, largeur, facteur)
     o:close()
     end
     tex.sprint([[\noindent\input{]] .. splitext(sortie, 'ly') .. '-systems' .. [[}]])
---    ))
 end
 
 function dirname(str)
