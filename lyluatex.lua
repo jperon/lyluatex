@@ -52,11 +52,13 @@ local function entete_lilypond(facteur, largeur)
   (lambda ( . rest)
    (apply collect-scores-for-book rest)))
 
+
+#(set-global-staff-size %s)
+
 #(ly:set-option 'safe '#t)
 
 
 %%Paramètres de la partition
-#(set-global-staff-size %s)
 \paper{
     indent = 0\mm
     line-width = %s\pt
@@ -76,11 +78,11 @@ function direct_ly(ly, largeur, facteur)
     f = io.open(tmp, 'w')
     f:write(ly)
     f:close()
-    InclureLy(tmp, largeur, facteur)
+    inclure_ly(tmp, largeur, facteur)
 end
 
 
-function InclureLy(entree, largeur, facteur)
+function inclure_ly(entree, largeur, facteur)
     nom = splitext(entree, 'ly')
     entree = nom..'.ly'
     if not lfs.isfile(entree) then err("Le fichier %s n'existe pas.", entree) end

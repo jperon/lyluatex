@@ -12,39 +12,50 @@
 \let\bs\textbackslash
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
 \newcommand*{\largeur}{\expandafter\un\the\linewidth}
-% Taille par défaut des partitions
+% Taille des partitions
 \newcounter{staffsize}\setcounter{staffsize}{17}
-% Compteurs utiles pour les fragments intégrés
 \newcounter{localstaffsize}
 
-% La commande principale
-\newkeycommand*\includely[staffsize=\arabic{staffsize}][1]{%
-\directlua{InclureLy("\luastring{#1}",\luastring{\largeur},\luastring{\commandkey{staffsize}})}
-}
-\let\lilypondfile\includely
 
-\long\def\lilysnippet#1{%
+% Commandes principales
+% Inclusion d'un fichier ly
+\newkeycommand*\includely[staffsize=\arabic{staffsize}][autres][1]{%
 \directlua{%
-direct_ly("\luatexluaescapestring{\unexpanded\expandafter{#1}}",\luastring{\largeur},\luastring{\arabic{staffsize}})
+    inclure_ly(
+        "\luastring{#1}",
+        \luastring{\largeur},
+        \luastring{\commandkey{staffsize}}
+    )%
 }%
 }
 
+% Inclusion d'un fragment intégré au document (environnement de base)
 \NewEnviron{compilerly}{%
-\lilysnippet\BODY
+\directlua{%
+    direct_ly(
+        "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}",
+        \luastring{\largeur},
+        \luastring{\arabic{localstaffsize}}
+    )%
+}%
 }
 
-\newcommand{\lily}[1]{%
-\lilysnippet{\unexpanded{#1}}%
+% Commande et environnement avec paramètres
+\newkeycommand{\lily}[staffsize=\arabic{staffsize}][autres][1]{%
+\setcounter{localstaffsize}{\commandkey{staffsize}}%
+\begin{compilerly}%
+#1
+\end{compilerly}%
 }
 
 \newkeyenvironment{ly}[staffsize=\arabic{staffsize}][autres]{%
-\setcounter{localstaffsize}{\value{staffsize}}
-\setcounter{staffsize}{\commandkey{staffsize}}
+\setcounter{localstaffsize}{\commandkey{staffsize}}%
 \compilerly%
 }{
 \endcompilerly%
-\setcounter{staffsize}{\value{localstaffsize}}
 }
 
+% Commandes pour la compatibilité avec lilypond-book
+\let\lilypondfile\includely
 \let\lilypond\ly
 \let\endlilypond\endly
