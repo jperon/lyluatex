@@ -4,7 +4,6 @@
 \RequirePackage{graphicx}
 \RequirePackage{keycommand}
 \RequirePackage{environ}
-\def\luastring#1{\luatexluaescapestring{#1}}
 % Script lua
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
 
@@ -14,7 +13,7 @@
 \newcommand*{\largeur}{\expandafter\un\the\linewidth}
 % Taille des partitions
 \newcounter{staffsize}\setcounter{staffsize}{17}
-\newcounter{localstaffsize}
+\newcounter{localstaffsize}\setcounter{staffsize}{17}
 
 
 % Commandes principales
@@ -22,9 +21,9 @@
 \newkeycommand*\includely[staffsize=\arabic{staffsize}][autres][1]{%
 \directlua{%
     inclure_ly(
-        "\luastring{#1}",
-        \luastring{\largeur},
-        \luastring{\commandkey{staffsize}}
+        "\luatexluaescapestring{#1}",
+        \luatexluaescapestring{\largeur},
+        \luatexluaescapestring{\commandkey{staffsize}}
     )%
 }%
 }
@@ -34,8 +33,8 @@
 \directlua{%
     direct_ly(
         "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}",
-        \luastring{\largeur},
-        \luastring{\arabic{localstaffsize}}
+        \luatexluaescapestring{\largeur},
+        \luatexluaescapestring{\arabic{localstaffsize}}
     )%
 }%
 }
