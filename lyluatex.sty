@@ -12,13 +12,15 @@
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
 \newcommand*{\largeur}{\expandafter\un\the\linewidth}
 % Taille des partitions
-\newcounter{staffsize}\setcounter{staffsize}{17}
-\newcounter{localstaffsize}\setcounter{staffsize}{17}
+%\newcounter{staffsize}\setcounter{staffsize}{17}
+%\newcounter{localstaffsize}\setcounter{staffsize}{17}
+\def\staffsize{17}
+\let\localstaffsize\staffsize
 
 
 % Commandes principales
 % Inclusion d'un fichier ly
-\newkeycommand*\includely[staffsize=\arabic{staffsize}][autres][1]{%
+\newkeycommand*\includely[staffsize=\staffsize][autres][1]{%
 \directlua{%
     inclure_ly(
         "\luatexluaescapestring{#1}",
@@ -34,21 +36,21 @@
     direct_ly(
         "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}",
         \luatexluaescapestring{\largeur},
-        \luatexluaescapestring{\arabic{localstaffsize}}
+        \luatexluaescapestring{\localstaffsize}
     )%
 }%
 }
 
 % Commande et environnement avec paramètres
-\newkeycommand{\lily}[staffsize=\arabic{staffsize}][autres][1]{%
-\setcounter{localstaffsize}{\commandkey{staffsize}}%
+\newkeycommand{\lily}[staffsize=\staffsize][autres][1]{%
+\def\localstaffsize{\commandkey{staffsize}}%
 \begin{compilerly}%
 #1
 \end{compilerly}%
 }
 
-\newkeyenvironment{ly}[staffsize=\arabic{staffsize}][autres]{%
-\setcounter{localstaffsize}{\commandkey{staffsize}}%
+\newkeyenvironment{ly}[staffsize=\staffsize][autres]{%
+\def\localstaffsize{\commandkey{staffsize}}%
 \compilerly%
 }{
 \endcompilerly%

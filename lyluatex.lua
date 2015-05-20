@@ -26,7 +26,7 @@ function inclure_ly(entree, largeur, facteur)
     nom = splitext(entree, 'ly')
     entree = nom..'.ly'
     if not lfs.isfile(entree) then err("Le fichier %s n'existe pas.", entree) end
-    sortie = TMP..'/' ..nom..'-'..facteur..'-'..string.gsub(largeur, '%.', '-')..'.ly'
+    sortie = TMP..'/' ..string.gsub(nom..'-'..facteur..'-'..largeur, '%.', '-')..'.ly'
     sortie = splitext(sortie, 'ly')
     if not lfs.isfile(sortie..'-systems.tex')
     or lfs.attributes(sortie..'-systems.tex').modification < lfs.attributes(entree).modification
