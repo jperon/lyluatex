@@ -19,13 +19,19 @@ Dans le préambule de votre document, incluez le package `lyluatex` :
 
     \usepackage{lyluatex}
 
+L'option facultative `program` permet de définir un chemin alternatif vers `lilypond`, par exemple :
+
+    \usepackage[program=/opt/lilypond-dev/lilypond]{lyluatex}
+
 Dès lors, vous pouvez inclure une partition lilypond grâce à la commande :
 
     \includely[staffsize=17]{CHEMIN/VERS/LA/PARTITION}
 
 L'argument `staffsize`, optionnel, influe sur la taille de la partition. Vous pouvez changer la taille pour l'ensemble des partitions en saisissant, avant l'inclusion des partitions concernées :
 
-    \setcounter{staffsize}{24}
+    \def\staffsize{24}
+
+Si `staffsize` est défini à 0 (sa valeur par défaut), la taille de partition sera calculée automatiquement de façon à ce que le texte de la partition ait la même taille que la police de caractères à l'endroit concerné.
 
 Dès lors, il ne vous reste plus qu'à compiler le document comme d'habitude, avec `lualatex -shell-escape` :
 
