@@ -10,6 +10,7 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 
+LILYPOND = 'lilypond'
 TMP = 'tmp_ly'
 N = 0
 
@@ -43,7 +44,7 @@ end
 function compiler_ly(ly, sortie)
     mkdirs(dirname(sortie))
     local p = io.popen(
-	"lilypond "
+	LILYPOND.." "
 	.."-dno-point-and-click "
 	.."-dbackend=eps "
 	.."-djob-count=2 "
