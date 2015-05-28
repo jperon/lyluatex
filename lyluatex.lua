@@ -59,6 +59,9 @@ end
 
 
 function entete_lilypond(facteur, largeur)
+    if facteur == 0 then
+        facteur = font.fonts[font.current()].size/39321.6
+    end
     return string.format(
 [[%%En-tête
 \version "2.18.2"

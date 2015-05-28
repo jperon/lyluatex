@@ -1,4 +1,4 @@
-\documentclass[a5paper,12pt]{scrbook}
+\documentclass[a5paper,fontsize=12pt]{scrbook}
 \usepackage{fontspec}
 \usepackage{libertine}
 \usepackage[program=lilypond]{lyluatex}
@@ -7,9 +7,13 @@
 \title{}
 \author{}
 
-\def\staffsize{20.5}
+% Si vous voulez changer globalement la taille des partitions.
+% Autrement, elle sera automatiquement adaptée à la taille de police.
+%\def\staffsize{20.5}
 
 \begin{document}
+
+Taille de police
 
 % Import d'une partition externe. La commande \includely est strictement équivalente.
 \lilypondfile{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}

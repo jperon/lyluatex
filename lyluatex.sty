@@ -17,9 +17,9 @@
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
 \newcommand*{\largeur}{\expandafter\un\the\linewidth}
 % Taille des partitions
-%\newcounter{staffsize}\setcounter{staffsize}{17}
-%\newcounter{localstaffsize}\setcounter{staffsize}{17}
-\def\staffsize{17}
+% Si la valeur est 0, elle sera automatiquement calculée
+% à partir de la taille de police.
+\def\staffsize{0}
 \let\localstaffsize\staffsize
 
 
