@@ -1,0 +1,95 @@
+\documentclass[a5paper,fontsize=12pt]{scrbook}
+\usepackage{fontspec}
+\usepackage{libertine}
+\usepackage[program=lilypond]{lyluatex}
+\usepackage{multicol}
+
+\title{}
+\author{}
+
+% To globally change the size of the scores.
+% Otherwise, they will automatically adapt to the size of the font.
+%\def\staffsize{20.5}
+
+\begin{document}
+
+Size of the font.
+
+% Importing an external score.  The command \includely is strictly equivalent.
+\lilypondfile{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
+
+% Direct input of a musical fagment.
+\begin{ly}[staffsize=12,fragment]
+\version "2.16"
+\language "italiano"
+
+\header {
+  tagline = ""
+  composer = ""
+}
+
+MetriqueArmure = {
+  \tempo 4=70
+  \time 3/4
+  \key do \major
+}
+
+italique = { \override Score . LyricText #'font-shape = #'italic }
+
+roman = { \override Score . LyricText #'font-shape = #'roman }
+
+MusiqueTheme = \relative do' {
+  \partial 4 do4
+  fa4 fa la
+  fa4 fa la
+  sol4 sol la8[( sol])
+  fa2 do4
+  fa4 fa la
+  fa4 fa la
+  sol4 sol la8[( sol])
+  fa2 \breathe fa4^"Refrain"
+  sib2 sib4
+  la2 la4
+  sol4 sol sol
+  do2 la4
+  sib2 sib4
+  la2 la4
+  sol4 sol la8[( sol])
+  fa2. \bar "|."
+}
+
+Paroles = \lyricmode {
+  L'heure é -- tait ve -- nu -- e,
+  où l'ai -- rain sa -- cré,
+  de sa voix con -- nu -- e,
+  an -- non -- çait l'A -- ve.
+
+  \italique
+  A -- ve, a -- ve, a -- ve Ma -- rí -- a_!
+  A -- ve, a -- ve, a -- ve Ma -- rí -- a_!
+}
+
+\score{
+  <<
+    \new Staff <<
+      \set Staff.midiInstrument = "flute"
+      \set Staff.autoBeaming = ##f
+      \new Voice = "theme" {
+        \override Score.PaperColumn #'keep-inside-line = ##t
+        \MetriqueArmure
+        \MusiqueTheme
+      }
+    >>
+    \new Lyrics \lyricsto theme {
+      \Paroles
+    }
+  >>
+  \layout{}
+  \midi{}
+}
+
+\end{ly}
+
+\lily[staffsize=24]{\relative c'' { c b a g f e d c }}
+
+\end{document}
