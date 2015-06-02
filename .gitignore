@@ -1,6 +1,7 @@
 *~
 test.pdf
 tmp_ly
+*.zip
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
