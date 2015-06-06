@@ -60,7 +60,7 @@ end
 
 function entete_lilypond(facteur, largeur)
     if facteur == 0 then
-        facteur = font.fonts[font.current()].size/39321.6
+        facteur = fontinfo(font.current()).size/39321.6
     end
     return string.format(
 [[%%En-tête
@@ -143,6 +143,16 @@ function mkdirs(str)
 	path = path .. '/' .. dir
         lfs.mkdir(path)
     end
+end
+
+
+local fontdata = fonts.hashes.identifiers
+function fontinfo(id)
+    local f = fontdata[id]
+    if f then
+        return f
+    end
+    return font.fonts[id]
 end
 
 
