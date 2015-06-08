@@ -18,6 +18,7 @@ N = 0
 function direct_ly(ly, largeur, facteur)
     N = N + 1
     sortie = TMP..'/f'..N
+    facteur = calcul_facteur(facteur)
     compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly:gsub('\\par ',''), sortie)
     retour_tex(sortie)
 end
@@ -26,6 +27,7 @@ end
 function inclure_ly(entree, largeur, facteur)
     nom = splitext(entree, 'ly')
     entree = nom..'.ly'
+    facteur = calcul_facteur(facteur)
     if not lfs.isfile(entree) then err("Le fichier %s n'existe pas.", entree) end
     sortie = TMP..'/' ..string.gsub(nom..'-'..facteur..'-'..largeur, '%.', '-')..'.ly'
     sortie = splitext(sortie, 'ly')
@@ -59,9 +61,6 @@ end
 
 
 function entete_lilypond(facteur, largeur)
-    if facteur == 0 then
-        facteur = fontinfo(font.current()).size/39321.6
-    end
     return string.format(
 [[%%En-tête
 \version "2.18.2"
@@ -102,6 +101,14 @@ function entete_lilypond(facteur, largeur)
 facteur,
 largeur
 )
+end
+
+
+function calcul_facteur(facteur)
+    if facteur == 0 then
+        facteur = fontinfo(font.current()).size/39321.6
+    end
+    return facteur
 end
 
 
