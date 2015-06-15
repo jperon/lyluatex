@@ -37,6 +37,10 @@ Dès lors, il ne vous reste plus qu'à compiler le document comme d'habitude, av
 
     lualatex -shell-escape DOCUMENT.TEX
 
+Une autre possibilité, plus "sécurisée", est d'ajouter `lilypond` aux commandes autorisées par défaut :
+
+    shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond lualatex DOCUMENT.TEX
+
 Vous pouvez aussi (mais ce n'est pas recommandé, sauf pour des fragments vraiment courts) saisir directement la musique au sein de votre document, grâce à l'environnement `ly`. Par exemple :
 
     \begin{ly}

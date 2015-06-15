@@ -31,6 +31,10 @@ Next, you simply need to compile the document normally with the command `lualate
 
     lualatex -shell-escape DOCUMENT.TEX
 
+Another "more secure" option is to add `lilypond` to default allowed commands :
+
+    shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond lualatex DOCUMENT.TEX
+
 You can also input music directly into your docoment with the `ly` environment.  This is only recommended for very short snippets.  For example:
 
     \begin{ly}
