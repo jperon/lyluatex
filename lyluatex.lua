@@ -9,6 +9,8 @@ local err, warn, info, log = luatexbase.provides_module({
     license            = "MIT",
 })
 
+local md5 = require 'md5'
+
 
 LILYPOND = 'lilypond'
 TMP = 'tmp_ly'
@@ -17,9 +19,12 @@ N = 0
 
 function direct_ly(ly, largeur, facteur)
     N = N + 1
-    sortie = TMP..'/f'..N
     facteur = calcul_facteur(facteur)
-    compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly:gsub('\\par ',''), sortie)
+    local sortie = TMP..'/'..string.gsub(md5.sumhexa(ly)..'-'..facteur..'-'..largeur, '%.', '-')
+    if not lfs.isfile(sortie..'-systems.tex')
+    then
+	compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly:gsub('\\par ',''), sortie)
+    end
     retour_tex(sortie)
 end
 
