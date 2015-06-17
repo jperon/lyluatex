@@ -10,7 +10,7 @@
 \ProcessKeyvalOptions*
 % Script lua
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
-\directlua{LILYPOND = '\lyluatex@program'}
+\directlua{ly_definir_programme('\lyluatex@program')}
 
 % Une tricherie un peu sale pour récupérer la largeur de ligne
 \let\bs\textbackslash

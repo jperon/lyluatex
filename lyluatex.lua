@@ -17,13 +17,18 @@ TMP = 'tmp_ly'
 N = 0
 
 
+function ly_definir_programme(lilypond)
+    if lilypond then LILYPOND = lilypond end
+    print(LILYPOND)
+end
+
+
 function direct_ly(ly, largeur, facteur)
     N = N + 1
     facteur = calcul_facteur(facteur)
     local sortie = TMP..'/'..string.gsub(md5.sumhexa(ly)..'-'..facteur..'-'..largeur, '%.', '-')
-    if not lfs.isfile(sortie..'-systems.tex')
-    then
-	compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly:gsub('\\par ',''), sortie)
+    if not lfs.isfile(sortie..'-systems.tex') then
+        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly:gsub('\\par ',''), sortie)
     end
     retour_tex(sortie)
 end
@@ -36,13 +41,14 @@ function inclure_ly(entree, largeur, facteur)
     if not lfs.isfile(entree) then err("Le fichier %s n'existe pas.", entree) end
     sortie = TMP..'/' ..string.gsub(nom..'-'..facteur..'-'..largeur, '%.', '-')..'.ly'
     sortie = splitext(sortie, 'ly')
-    if not lfs.isfile(sortie..'-systems.tex')
-    or lfs.attributes(sortie..'-systems.tex').modification < lfs.attributes(entree).modification
+    if
+        not lfs.isfile(sortie..'-systems.tex')
+        or lfs.attributes(sortie..'-systems.tex').modification < lfs.attributes(entree).modification
     then
-	i = io.open(entree, 'r')
-	ly = i:read('*a')
-	i:close()
-	compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie)
+        i = io.open(entree, 'r')
+        ly = i:read('*a')
+        i:close()
+        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie)
     end
     retour_tex(sortie)
 end
@@ -51,14 +57,14 @@ end
 function compiler_ly(ly, sortie)
     mkdirs(dirname(sortie))
     local p = io.popen(
-	LILYPOND.." "
-	.."-dno-point-and-click "
-	.."-dbackend=eps "
-	.."-djob-count=2 "
-	.."-ddelete-intermediate-files "
-	.."-o "..sortie
-	.." -",
-	'w'
+        LILYPOND.." "
+        .."-dno-point-and-click "
+        .."-dbackend=eps "
+        .."-djob-count=2 "
+        .."-ddelete-intermediate-files "
+        .."-o "..sortie
+        .." -",
+        'w'
     )
     p:write(ly)
     p:close()
@@ -110,9 +116,7 @@ end
 
 
 function calcul_facteur(facteur)
-    if facteur == 0 then
-        facteur = fontinfo(font.current()).size/39321.6
-    end
+    if facteur == 0 then facteur = fontinfo(font.current()).size/39321.6 end
     return facteur
 end
 
@@ -122,8 +126,8 @@ function retour_tex(sortie)
     contenu = i:read("*all")
     i:close()
     texoutput, _ = string.gsub(
-	contenu,
-	[[includegraphics{]], [[includegraphics{]]..dirname(sortie)
+        contenu,
+        [[includegraphics{]], [[includegraphics{]]..dirname(sortie)
     )
     tex.print(([[\noindent]]..texoutput):explode('\n'))
 end
@@ -131,20 +135,20 @@ end
 
 function dirname(str)
     if str:match(".-/.-") then
-    	local name = string.gsub(str, "(.*/)(.*)", "%1")
-    	return name
+        local name = string.gsub(str, "(.*/)(.*)", "%1")
+        return name
     else
-    	return ''
+        return ''
     end
 end
 
 
 function splitext(str, ext)
     if str:match(".-%..-") then
-    	local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
-    	return name
+        local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
+        return name
     else
-    	return str
+        return str
     end
 end
 
@@ -152,7 +156,7 @@ end
 function mkdirs(str)
     path = '.'
     for dir in string.gmatch(str, '([^%/]+)') do
-	path = path .. '/' .. dir
+        path = path .. '/' .. dir
         lfs.mkdir(path)
     end
 end
