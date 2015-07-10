@@ -48,25 +48,22 @@ function inclure_ly(entree, largeur, facteur)
         local i = io.open(entree, 'r')
         ly = i:read('*a')
         i:close()
-        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie)
+        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie, dirname(entree))
     end
     retour_tex(sortie)
 end
 
 
-function compiler_ly(ly, sortie)
+function compiler_ly(ly, sortie, include)
     mkdirs(dirname(sortie))
-    local p = io.popen(
-        LILYPOND.." "
-        .."-dno-point-and-click "
-        .."-dbackend=eps "
-        .."-djob-count=2 "
-        .."-ddelete-intermediate-files "
-        .."-o "..sortie
-        .." -",
-        'w'
-    )
-    ly = ly:gsub('\\include "%.%./', '\\include "../../')
+    local commande = LILYPOND.." "..
+        "-dno-point-and-click "..
+        "-dbackend=eps "..
+        "-djob-count=2 "..
+        "-ddelete-intermediate-files "
+    if include then commande = commande.."-I "..lfs.currentdir()..'/'..include.." " end
+    commande = commande.."-o "..sortie.." -"
+    local p = io.popen(commande, 'w')
     p:write(ly)
     p:close()
 end
