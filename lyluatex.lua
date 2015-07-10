@@ -45,7 +45,7 @@ function inclure_ly(entree, largeur, facteur)
         not lfs.isfile(sortie..'-systems.tex')
         or lfs.attributes(sortie..'-systems.tex').modification < lfs.attributes(entree).modification
     then
-        i = io.open(entree, 'r')
+        local i = io.open(entree, 'r')
         ly = i:read('*a')
         i:close()
         compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie)
@@ -66,6 +66,7 @@ function compiler_ly(ly, sortie)
         .." -",
         'w'
     )
+    ly = ly:gsub('\\include "%.%./', '\\include "../../')
     p:write(ly)
     p:close()
 end
@@ -98,8 +99,6 @@ function entete_lilypond(facteur, largeur)
 
 #(set-global-staff-size %s)
 
-#(ly:set-option 'safe '#t)
-
 
 %%Paramètres de la partition
 \paper{
@@ -122,7 +121,7 @@ end
 
 
 function retour_tex(sortie)
-    i = io.open(sortie..'-systems.tex', 'r')
+    local i = io.open(sortie..'-systems.tex', 'r')
     contenu = i:read("*all")
     i:close()
     texoutput, _ = string.gsub(
