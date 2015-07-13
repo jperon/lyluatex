@@ -5,6 +5,7 @@
 \RequirePackage{graphicx}
 \RequirePackage{keycommand}
 \RequirePackage{environ}
+\RequirePackage{currfile}
 % Options
 \DeclareStringOption[lilypond]{program}[lilypond]
 \ProcessKeyvalOptions*
@@ -29,6 +30,7 @@
 \directlua{%
     inclure_ly(
         "\luatexluaescapestring{#1}",
+        "\luatexluaescapestring{\currfiledir}",
         \luatexluaescapestring{\largeur},
         \luatexluaescapestring{\commandkey{staffsize}}
     )%

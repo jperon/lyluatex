@@ -34,11 +34,12 @@ function direct_ly(ly, largeur, facteur)
 end
 
 
-function inclure_ly(entree, largeur, facteur)
-    nom = splitext(entree, 'ly')
-    entree = nom..'.ly'
+function inclure_ly(entree, currfiledir, largeur, facteur)
     facteur = calcul_facteur(facteur)
-    if not lfs.isfile(entree) then err("Le fichier %s n'existe pas.", entree) end
+    nom = splitext(entree, 'ly')
+    entree = currfiledir..nom..'.ly'
+    if not entree then entree = kpse.find_file(nom..'.ly') end
+    if not lfs.isfile(entree) then err("Le fichier %s.ly n'existe pas.", nom) end
     sortie = TMP..'/' ..string.gsub(nom..'-'..facteur..'-'..largeur, '%.', '-')..'.ly'
     sortie = splitext(sortie, 'ly')
     if
