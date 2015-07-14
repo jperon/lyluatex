@@ -2,7 +2,7 @@ local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
     greinternalversion = internalversion,
-    date               = "2015/07/13",
+    date               = "2015/07/14",
     description        = "Module lyluatex.",
     author             = "The Gregorio Project (see CONTRIBUTORS.md)",
     copyright          = "2008-2015 - The Gregorio Project",
@@ -40,6 +40,7 @@ function inclure_ly(entree, currfiledir, largeur, facteur)
     entree = currfiledir..nom..'.ly'
     if not entree then entree = kpse.find_file(nom..'.ly') end
     if not lfs.isfile(entree) then err("Le fichier %s.ly n'existe pas.", nom) end
+    nom = splitext(entree, 'ly')
     sortie = TMP..'/' ..string.gsub(nom..'-'..facteur..'-'..largeur, '%.', '-')..'.ly'
     sortie = splitext(sortie, 'ly')
     if
