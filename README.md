@@ -41,6 +41,8 @@ Une autre possibilité, plus "sécurisée", est d'ajouter `lilypond` aux command
 
     shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond lualatex DOCUMENT.TEX
 
+Sur de gros documents, si votre ordinateur a peu de RAM, il est possible que surgissent des erreurs *buffer overflow* dans les appels à `lilypond`. Pour éviter cela, ajoutez d'abord l'option `-draftmode` à la commande précédente, puis relancez la compilation sans cette option.
+
 Vous pouvez aussi (mais ce n'est pas recommandé, sauf pour des fragments vraiment courts) saisir directement la musique au sein de votre document, grâce à l'environnement `ly`. Par exemple :
 
     \begin{ly}
