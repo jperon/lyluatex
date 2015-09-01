@@ -19,16 +19,34 @@ N = 0
 
 function ly_definir_programme(lilypond)
     if lilypond then LILYPOND = lilypond end
-    print(LILYPOND)
+end
+
+
+function contenuIntegral(contenu)
+    local content =""
+    for i, Line in ipairs(contenu:explode('\n')) do
+	if Line:find("^%s*[^%%]*\\include") then
+	    local i = io.open(Line:gsub('%s*\\include%s*"(.*)"%s*$', "%1"), 'r')
+	    if i then
+		content = content .. contenuIntegral(i:read('*a'))
+	    else
+		content = content .. Line .. "\n"
+	    end
+	else
+	    content = content .. Line .. "\n"
+	end
+    end
+    return content
 end
 
 
 function direct_ly(ly, largeur, facteur)
     N = N + 1
     facteur = calcul_facteur(facteur)
-    local sortie = TMP..'/'..string.gsub(md5.sumhexa(ly)..'-'..facteur..'-'..largeur, '%.', '-')
+    ly = ly:gsub('\\par ', '\n')
+    local sortie = TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur, '%.', '-')
     if not lfs.isfile(sortie..'-systems.tex') then
-        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly:gsub('\\par ',''), sortie)
+        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie)
     end
     retour_tex(sortie)
 end
@@ -38,18 +56,13 @@ function inclure_ly(entree, currfiledir, largeur, facteur)
     facteur = calcul_facteur(facteur)
     nom = splitext(entree, 'ly')
     entree = currfiledir..nom..'.ly'
-    if not entree then entree = kpse.find_file(nom..'.ly') end
+    if not lfs.isfile(entree) then entree = kpse.find_file(nom..'.ly') end
     if not lfs.isfile(entree) then err("Le fichier %s.ly n'existe pas.", nom) end
-    nom = splitext(entree, 'ly')
-    sortie = TMP..'/' ..string.gsub(nom..'-'..facteur..'-'..largeur, '%.', '-')..'.ly'
-    sortie = splitext(sortie, 'ly')
-    if
-        not lfs.isfile(sortie..'-systems.tex')
-        or lfs.attributes(sortie..'-systems.tex').modification < lfs.attributes(entree).modification
-    then
-        local i = io.open(entree, 'r')
-        ly = i:read('*a')
-        i:close()
+    local i = io.open(entree, 'r')
+    ly = i:read('*a')
+    i:close()
+    local sortie = TMP..'/' ..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur, '%.', '-')
+    if not lfs.isfile(sortie..'-systems.tex') then
         compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie, dirname(entree))
     end
     retour_tex(sortie)
