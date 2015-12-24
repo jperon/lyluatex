@@ -29,7 +29,7 @@ Thereafter, you can include a lilypond file with the command:
 
 The argument `staffsize`, which is optional, changes the size of the score.  You can change the size for all the subsequent scores in a document by placing the following command before your first include statement to be so affected:
 
-    \setcounter{staffsize}{24}
+    \def\staffsize{24}
 
 Next, you simply need to compile the document normally with the command `lualatex -shell-escape` :
 
