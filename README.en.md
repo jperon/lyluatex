@@ -18,6 +18,10 @@ Copy `lyluatex.sty` and `lyluatex.lua` into your texmf tree, then run `mktexlsr`
 In the preable of your document, include the pacakge `lyluatex`:
 
     \usepackage{lyluatex}
+    
+The `program` option permits the definition of an alternative path to `lilypond`, for examples:
+
+    \usepackage[program=/opt/lilypond-dev/lilypond]{lyluatex}
 
 Thereafter, you can include a lilypond file with the command:
 
