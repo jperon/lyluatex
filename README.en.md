@@ -18,6 +18,10 @@ Copy `lyluatex.sty` and `lyluatex.lua` into your texmf tree, then run `mktexlsr`
 In the preable of your document, include the pacakge `lyluatex`:
 
     \usepackage{lyluatex}
+    
+The `program` option permits the definition of an alternative path to `lilypond`, for examples:
+
+    \usepackage[program=/opt/lilypond-dev/lilypond]{lyluatex}
 
 Thereafter, you can include a lilypond file with the command:
 
@@ -25,7 +29,7 @@ Thereafter, you can include a lilypond file with the command:
 
 The argument `staffsize`, which is optional, changes the size of the score.  You can change the size for all the subsequent scores in a document by placing the following command before your first include statement to be so affected:
 
-    \setcounter{staffsize}{24}
+    \def\staffsize{24}
 
 Next, you simply need to compile the document normally with the command `lualatex -shell-escape` :
 
