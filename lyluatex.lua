@@ -2,10 +2,10 @@ local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
     greinternalversion = internalversion,
-    date               = "2015/07/14",
+    date               = "2016/09/08",
     description        = "Module lyluatex.",
     author             = "The Gregorio Project (see CONTRIBUTORS.md)",
-    copyright          = "2008-2015 - The Gregorio Project",
+    copyright          = "2008-2016 - The Gregorio Project",
     license            = "MIT",
 })
 
