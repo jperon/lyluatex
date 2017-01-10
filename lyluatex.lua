@@ -76,7 +76,7 @@ function compiler_ly(ly, sortie, include)
         "-dbackend=eps "..
         "-djob-count=2 "..
         "-ddelete-intermediate-files "
-    if include then commande = commande.."-I "..lfs.currentdir()..'/'..include.." " end
+    if include then commande = commande.."-I '"..lfs.currentdir().."/"..include.."' " end
     commande = commande.."-o "..sortie.." -"
     local p = io.popen(commande, 'w')
     p:write(ly)
