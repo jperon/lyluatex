@@ -43,7 +43,8 @@ end
 function direct_ly(ly, largeur, facteur)
     N = N + 1
     facteur = calcul_facteur(facteur)
-    ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-column', '\\%1-column')
+    ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
+    print(ly)
     local sortie = TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur, '%.', '-')
     if not lfs.isfile(sortie..'-systems.tex') then
         compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie)
