@@ -19,7 +19,7 @@ Size of the font.
 \lilypondfile{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
 
 % Direct input of a musical fagment.
-\begin{ly}[staffsize=12,fragment]
+\begin{lilypond}[staffsize=12,fragment]
 \version "2.16"
 \language "italiano"
 
@@ -88,8 +88,10 @@ Paroles = \lyricmode {
   \midi{}
 }
 
-\end{ly}
+\end{lilypond}
 
-\lily[staffsize=24]{\relative c'' { c b a g f e d c }}
+\lilypond[staffsize=24]{\relative c'' { c b a g f e d c }}
+
+\lilypond[fragment]{a' b' c'}
 
 \end{document}

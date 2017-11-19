@@ -2,7 +2,7 @@ local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
     greinternalversion = internalversion,
-    date               = "2017/09/30",
+    date               = "2017/11/19",
     description        = "Module lyluatex.",
     author             = "The Gregorio Project (see CONTRIBUTORS.md)",
     copyright          = "2008-2017 - The Gregorio Project",
@@ -44,7 +44,6 @@ function direct_ly(ly, largeur, facteur)
     N = N + 1
     facteur = calcul_facteur(facteur)
     ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    print(ly)
     local sortie = TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur, '%.', '-')
     if not lfs.isfile(sortie..'-systems.tex') then
         compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie)

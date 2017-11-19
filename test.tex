@@ -16,7 +16,7 @@ Taille de police
 \lilypondfile{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
 
 % Saisie directe d'un fragment musical.
-\begin{ly}[staffsize=12,fragment]
+\begin{lilypond}[staffsize=12,fragment]
 \version "2.16"
 \language "français"
 
@@ -85,8 +85,10 @@ Paroles = \lyricmode {
   \midi{}
 }
 
-\end{ly}
+\end{lilypond}
 
-\lily[staffsize=24]{\relative c'' { c b a g f e d c }}
+\lilypond[staffsize=24]{\relative c'' { c b a g f e d c }}
+
+\lilypond[fragment]{a' b' c'}
 
 \end{document}

@@ -54,7 +54,7 @@
 \newkeycommand{\lily}[staffsize=\staffsize][autres][1]{%
 \def\localstaffsize{\commandkey{staffsize}}%
 \begin{compilerly}%
-#1
+{#1}
 \end{compilerly}%
 }
 
@@ -67,5 +67,7 @@
 
 % Commandes pour la compatibilité avec lilypond-book
 \let\lilypondfile\includely
-\let\lilypond\ly
+\protected\def\lilypond{\def\reserved@a{lilypond}%
+  \ifx\reserved@a\@currenvir \expandafter \ly
+  \else \expandafter\lily \fi}
 \let\endlilypond\endly
