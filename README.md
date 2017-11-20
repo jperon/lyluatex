@@ -54,12 +54,21 @@ surgissent des erreurs *buffer overflow* dans les appels à `lilypond`. Pour
 puis relancez la compilation sans cette option.
 
 Vous pouvez aussi (mais ce n'est pas recommandé, sauf pour des fragments
-vraiment courts) saisir directement la musique au sein de votre document, grâce
+relativement courts) saisir directement la musique au sein de votre document, grâce
 à l'environnement `ly`. Par exemple :
 
     \begin{ly}
     \relative c' { c d e f g a b c }
     \end{ly}
+
+Enfin, il est possible d'intégrer des fragments vraiment courts grâce à la
+commande `\lily`.
+Par exemple :
+
+    \lily[staffsize=12]{c' d' g'}
+
+**Nota bene:** La commande `\lily` *ne permet pas* l'usage d'un block `\score`
+au sein du fragment.
 
 Voyez le document `test.tex` pour un exemple.
 

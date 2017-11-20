@@ -26,7 +26,7 @@ The `program` option permits the definition of an alternative path to
 
 Thereafter, you can include a lilypond file with the command:
 
-    \includely[staffsize=17]{CHEMIN/VERS/LA/PARTITION}
+    \includely[staffsize=17]{PATH/TO/THE/FILE}
 
 The argument `staffsize`, which is optional, changes the size of the score.  You
 can change the size for all the subsequent scores in a document by placing the
@@ -48,11 +48,19 @@ On systems with low RAM, when working on big documents, you could encounter
 `-draftmode`, then compile again without this option.
 
 You can also input music directly into your docoment with the `ly` environment.
-This is only recommended for very short snippets.  For example:
+This is only recommended for relatively short snippets.  For example:
 
     \begin{ly}
     \relative c' { c d e f g a b c }
     \end{ly}
+
+Finally, for truly short snippets, there is also the `\lily` command.  Example:
+
+    \lily[staffsize=12]{c' d' g'}
+
+**Nota bene:** The `\lily` command *does not* support blocks of LilyPond code
+with explicit `\score` blocks.  Such code must be included with the `ly`
+environment or as a separate file.
 
 See the document `test.en.tex` for an example.
 
