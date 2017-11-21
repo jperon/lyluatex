@@ -15,7 +15,7 @@ Copy `lyluatex.sty` and `lyluatex.lua` into your texmf tree, then run `mktexlsr`
 
 ## Usage
 
-In the preable of your document, include the pacakge `lyluatex`:
+In the preable of your document, include the package `lyluatex`:
 
     \usepackage{lyluatex}
 
