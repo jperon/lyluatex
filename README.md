@@ -10,8 +10,16 @@ Copiez `lyluatex.sty` et `lyluatex.lua` dans le dossier contenant le document co
 
 ### Pour l'ensemble de votre distribution de LaTeX
 
-Copiez `lyluatex.sty` et `lyluatex.lua` quelque part dans votre texmf, puis
-lancez `mktexlsr`.
+#### Version disponible sur TeXLive
+
+La commande suivante devrait faire l'affaire :
+
+    tlmgr install lyluatex
+
+#### Version la plus récente
+
+Copiez depuis ce dépôt `lyluatex.sty` et `lyluatex.lua` quelque part dans votre
+texmf, puis lancez `mktexlsr`.
 
 ## Utilisation
 

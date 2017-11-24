@@ -3,6 +3,8 @@ test*.pdf
 tmp_ly
 *.zip
 ctan
+\#*\#
+.\#*
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

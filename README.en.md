@@ -11,7 +11,16 @@ you wish to typeset.
 
 ### For all documents compiled with your LaTeX distribution
 
-Copy `lyluatex.sty` and `lyluatex.lua` into your texmf tree, then run `mktexlsr`.
+#### TeXLive version
+
+Just run this command :
+
+    tlmgr install lyluatex
+
+#### Last version
+
+Copy `lyluatex.sty` and `lyluatex.lua` from this repository into your texmf
+tree, then run `mktexlsr`.
 
 ## Usage
 
