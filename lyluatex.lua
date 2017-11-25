@@ -46,13 +46,14 @@ function direct_ly(ly, largeur, facteur)
     ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local sortie = TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur, '%.', '-')
     if not lfs.isfile(sortie..'-systems.tex') then
-        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie)
+        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie, true)
     end
     retour_tex(sortie)
 end
 
 
-function inclure_ly(entree, currfiledir, largeur, facteur)
+function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
+    print(pleinepage)
     facteur = calcul_facteur(facteur)
     nom = splitext(entree, 'ly')
     entree = currfiledir..nom..'.ly'
@@ -61,21 +62,29 @@ function inclure_ly(entree, currfiledir, largeur, facteur)
     local i = io.open(entree, 'r')
     ly = i:read('*a')
     i:close()
-    local sortie = TMP..'/' ..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur, '%.', '-')
+    local sortie = TMP..'/' ..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur..'-', '%.', '-')
+    if pleinepage then sortie = sortie..'-pleinepage' end
     if not lfs.isfile(sortie..'-systems.tex') then
-        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie, dirname(entree))
+        if pleinepage then
+            compiler_ly(ly, sortie, false, dirname(entree))
+            i = io.open(sortie..'-systems.tex', 'w')
+            i:write('\\includepdf[pages=-]{'..sortie..'}')
+            i:close()
+        else
+            compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie, true, dirname(entree))
+        end
     end
     retour_tex(sortie)
 end
 
 
-function compiler_ly(ly, sortie, include)
+function compiler_ly(ly, sortie, eps, include)
     mkdirs(dirname(sortie))
     local commande = LILYPOND.." "..
         "-dno-point-and-click "..
-        "-dbackend=eps "..
         "-djob-count=2 "..
         "-ddelete-intermediate-files "
+    if eps then commande = commande.."-dbackend=eps " end
     if include then commande = commande.."-I '"..lfs.currentdir().."/"..include.."' " end
     commande = commande.."-o "..sortie.." -"
     local p = io.popen(commande, 'w')

@@ -8,6 +8,7 @@
 \RequirePackage{keycommand}
 \RequirePackage{environ}
 \RequirePackage{currfile}
+\RequirePackage{pdfpages}
 % Options
 \DeclareStringOption[lilypond]{program}[lilypond]
 \ProcessKeyvalOptions*
@@ -28,13 +29,14 @@
 
 % Commandes principales
 % Inclusion d'un fichier ly
-\newkeycommand*\includely[staffsize=\staffsize][autres][1]{%
+\newkeycommand*\includely[staffsize=\staffsize,fullpage=false][autres][1]{%
 \directlua{%
     inclure_ly(
         "\luatexluaescapestring{#1}",
         "\luatexluaescapestring{\currfiledir}",
         \luatexluaescapestring{\largeur},
-        \luatexluaescapestring{\commandkey{staffsize}}
+        \luatexluaescapestring{\commandkey{staffsize}},
+        \commandkey{fullpage}
     )%
 }%
 }
