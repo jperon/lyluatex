@@ -53,7 +53,6 @@ end
 
 
 function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
-    print(pleinepage)
     facteur = calcul_facteur(facteur)
     nom = splitext(entree, 'ly')
     entree = currfiledir..nom..'.ly'
