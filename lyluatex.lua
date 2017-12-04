@@ -42,17 +42,20 @@ end
 
 function direct_ly(ly, largeur, facteur)
     N = N + 1
+    largeur = {['n'] = largeur:match('%d+'), ['u'] = largeur:match('%a+')}
     facteur = calcul_facteur(facteur)
     ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    local sortie = TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur, '%.', '-')
+    local sortie =
+    TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur.n..largeur.u, '%.', '-')
     if not lfs.isfile(sortie..'-systems.tex') then
-        compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie, true)
+        compiler_ly(entete_lilypond(facteur, largeur)..'\n'..ly, sortie, true)
     end
-    retour_tex(sortie)
+    retour_tex(sortie, facteur)
 end
 
 
 function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
+    largeur = {['n'] = largeur:match('%d+'), ['u'] = largeur:match('%a+')}
     facteur = calcul_facteur(facteur)
     nom = splitext(entree, 'ly')
     entree = currfiledir..nom..'.ly'
@@ -61,7 +64,7 @@ function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
     local i = io.open(entree, 'r')
     ly = i:read('*a')
     i:close()
-    local sortie = TMP..'/' ..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur..'-', '%.', '-')
+    local sortie = TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur.n..largeur.u..'-', '%.', '-')
     if pleinepage then sortie = sortie..'-pleinepage' end
     if not lfs.isfile(sortie..'-systems.tex') then
         if pleinepage then
@@ -70,10 +73,10 @@ function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
             i:write('\\includepdf[pages=-]{'..sortie..'}')
             i:close()
         else
-            compiler_ly(entete_lilypond(facteur, largeur - 10)..'\n'..ly, sortie, true, dirname(entree))
+            compiler_ly(entete_lilypond(facteur, largeur)..'\n'..ly, sortie, true, dirname(entree))
         end
     end
-    retour_tex(sortie)
+    retour_tex(sortie, facteur)
 end
 
 
@@ -123,13 +126,13 @@ function entete_lilypond(facteur, largeur)
 %%Paramètres de la partition
 \paper{
     indent = 0\mm
-    line-width = %s\pt
+    line-width = %s\%s
 }
 
 %%Partition originale
 ]],
 facteur,
-largeur
+largeur.n, largeur.u
 )
 end
 
@@ -140,14 +143,12 @@ function calcul_facteur(facteur)
 end
 
 
-function retour_tex(sortie)
+function retour_tex(sortie, facteur)
     local i = io.open(sortie..'-systems.tex', 'r')
-    contenu = i:read("*all")
+    local contenu = i:read("*all")
     i:close()
-    texoutput, _ = string.gsub(
-        contenu,
-        [[includegraphics{]], [[includegraphics{]]..dirname(sortie)
-    )
+    local texoutput, nbre = contenu:gsub([[\includegraphics{]],
+        [[\includegraphics{]]..dirname(sortie))
     tex.print(([[\noindent]]..texoutput):explode('\n'))
 end
 

@@ -75,7 +75,7 @@ Par exemple :
 
     \lily[staffsize=12]{c' d' g'}
 
-**Nota bene:** La commande `\lily` *ne permet pas* l'usage d'un block `\score`
+**Nota bene:** La commande `\lily` *ne permet pas* l'usage d'un bloc `\score`
 au sein du fragment.
 
 Voyez le document `test.tex` pour un exemple.

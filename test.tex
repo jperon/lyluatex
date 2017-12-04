@@ -1,5 +1,6 @@
 \documentclass[a5paper,fontsize=12pt]{scrbook}
 \usepackage[program=lilypond]{lyluatex}
+\usepackage{multicol}
 
 \title{}
 \author{}
@@ -10,11 +11,12 @@
 
 \begin{document}
 
-Taille de police
+Taille de police.
 
 % Import d'une partition externe. La commande \includely est strictement équivalente.
-\lilypondfile{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
+\lilypondfile[width=250pt]{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
 
+\begin{multicols}{2}
 % Saisie directe d'un fragment musical.
 \begin{lilypond}[staffsize=12,fragment]
 \version "2.16"
@@ -89,7 +91,14 @@ Paroles = \lyricmode {
 
 \lilypond[staffsize=24]{\relative c'' { c b a g f e d c }}
 
-\lilypond[fragment]{a' b' c'}
+Ce fragment :
+
+\lilypond{a' b' c'}
+
+sera écrit plus petit en note de bas de
+page\footnote{\lilypond[fragment]{a' b' c'}}.
+
+\end{multicols}
 
 \lilypondfile[fullpage=true]{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
 
