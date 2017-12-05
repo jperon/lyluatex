@@ -11,21 +11,28 @@
 \RequirePackage{pdfpages}
 % Options
 \DeclareStringOption[lilypond]{program}[lilypond]
-\DeclareStringOption[default]{width}[lilypond]
+\DeclareStringOption[default]{line-width}[lilypond]
+\newcommand{\pt}{pt}
+\newcommand{\mm}{mm}
+\newcommand{\cm}{cm}
 \ProcessKeyvalOptions*
 % Script lua
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
 \directlua{LILYPOND = '\lyluatex@program'}
 
 \def\defaultwidth{default}
-\ifx\lyluatex@width\defaultwidth
+\catcode`-=11
+\ifx\lyluatex@line-width\defaultwidth
+\catcode`-=12
 % Une tricherie un peu sale pour récupérer la largeur de ligne
 \let\bs\textbackslash
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
 \newcommand*{\largeur}{[[\directlua{tex.print(\expandafter\un\the\linewidth - 10)}pt]]}
 \else
-\directlua{print('test:','\lyluatex@width')}
-\let\largeur\lyluatex@width
+\catcode`-=11
+\directlua{print('test:','\lyluatex@line-width')}
+\let\largeur\lyluatex@line-width
+\catcode`-=12
 \fi
 % Taille des partitions
 % Si la valeur est 0, elle sera automatiquement calculée
@@ -37,12 +44,12 @@
 
 % Commandes principales
 % Inclusion d'un fichier ly
-\newkeycommand*\includely[fullpage=false,staffsize=\staffsize,width=\largeur][autres][1]{%
+\newkeycommand*\includely[fullpage=false,staffsize=\staffsize,line-width=\largeur][autres][1]{%
 \directlua{%
     inclure_ly(
         "\luatexluaescapestring{#1}",
         "\luatexluaescapestring{\currfiledir}",
-        '\commandkey{width}',
+        '\commandkey{line-width}',
         \luatexluaescapestring{\commandkey{staffsize}},
         \commandkey{fullpage}
     )%
@@ -61,9 +68,9 @@
 }
 
 % Commande et environnement avec paramètres
-\newkeycommand{\lily}[staffsize=\staffsize,width=\largeur][autres][1]{%
+\newkeycommand{\lily}[staffsize=\staffsize,line-width=\largeur][autres][1]{%
 \def\localstaffsize{\commandkey{staffsize}}%
-\def\localwidth{\commandkey{width}}%
+\def\localwidth{\commandkey{line-width}}%
 \begin{compilerly}%
 {#1}
 \end{compilerly}%

@@ -89,5 +89,5 @@ même, l'environnement `lilypond` est défini comme `ly`, et la commande
 
 De la sorte, les documents saisis auparavant avec l'aide de `lilypond-book`
 devraient s'utiliser sans grande difficulté avec `lyluatex`, en prenant
-cependant en considération que, à part le paramètre `staffsize`, les paramètres
-optionnels sont pour l'instant ignorés.
+cependant en considération que, à part les paramètres `staffsize` et
+`line-width`, les paramètres optionnels sont pour l'instant ignorés.
