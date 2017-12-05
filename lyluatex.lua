@@ -4,7 +4,7 @@ local err, warn, info, log = luatexbase.provides_module({
     greinternalversion = internalversion,
     date               = "2017/11/27",
     description        = "Module lyluatex.",
-    author             = "The Gregorio Project (see CONTRIBUTORS.md)",
+    author             = "The Gregorio Project  − Jacques Peron <cataclop@hotmail.com>",
     copyright          = "2008-2017 - The Gregorio Project",
     license            = "MIT",
 })
