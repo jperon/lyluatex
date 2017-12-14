@@ -119,6 +119,7 @@ function entete_lilypond(facteur, largeur)
   (lambda ( . rest)
    (apply collect-scores-for-book rest)))
 
+#(define inside-lyluatex #t)
 
 #(set-global-staff-size %s)
 
