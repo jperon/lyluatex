@@ -44,47 +44,47 @@ function flattenContent(original_content)
 end
 
 
-function lilypond_fragment(ly, line_width, staffsize)
+function lilypond_fragment(ly_code, line_width, staffsize)
     N = N + 1
     line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
     staffsize = calc_staffsize(staffsize)
-    ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
+    ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output =
-    TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
+    TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
     if not lfs.isfile(output..'-systems.tex') then
-        compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly, output, true)
+        compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly_code, output, true)
     end
     retour_tex(output, staffsize)
 end
 
 
-function lilypond_file(input, currfiledir, line_width, staffsize, fullpage)
+function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
     line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
     staffsize = calc_staffsize(staffsize)
-    filename = splitext(input, 'ly')
-    input = currfiledir..filename..'.ly'
-    if not lfs.isfile(input) then input = kpse.find_file(filename..'.ly') end
-    if not lfs.isfile(input) then err("File %s.ly doesn't exist.", filename) end
-    local i = io.open(input, 'r')
-    ly = i:read('*a')
+    filename = splitext(input_file, 'ly')
+    input_file = currfiledir..filename..'.ly'
+    if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
+    if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
+    local i = io.open(input_file, 'r')
+    ly_code = i:read('*a')
     i:close()
-    local output = TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..staffsize..'-'..line_width.n..line_width.u..'-', '%.', '-')
+    local output = TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u..'-', '%.', '-')
     if fullpage then output = output..'-fullpage' end
     if not lfs.isfile(output..'-systems.tex') then
         if fullpage then
-            compiler_ly(ly, output, false, dirname(input))
+            compiler_ly(ly_code, output, false, dirname(input_file))
             i = io.open(output..'-systems.tex', 'w')
             i:write('\\includepdf[pages=-]{'..output..'}')
             i:close()
         else
-            compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly, output, true, dirname(input))
+            compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
         end
     end
     retour_tex(output, staffsize)
 end
 
 
-function compiler_ly(ly, output, eps, include)
+function compiler_ly(ly_code, output, eps, include)
     mkdirs(dirname(output))
     local commande = LILYPOND.." "..
         "-dno-point-and-click "..
@@ -94,7 +94,7 @@ function compiler_ly(ly, output, eps, include)
     if include then commande = commande.."-I '"..lfs.currentdir().."/"..include.."' " end
     commande = commande.."-o "..output.." -"
     local p = io.popen(commande, 'w')
-    p:write(ly)
+    p:write(ly_code)
     p:close()
 end
 
