@@ -44,55 +44,55 @@ function flattenContent(original_content)
 end
 
 
-function direct_ly(ly, line_width, staffsize)
+function lilypond_fragment(ly, line_width, staffsize)
     N = N + 1
     line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
     staffsize = calc_staffsize(staffsize)
     ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    local sortie =
+    local output =
     TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
-    if not lfs.isfile(sortie..'-systems.tex') then
-        compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly, sortie, true)
+    if not lfs.isfile(output..'-systems.tex') then
+        compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly, output, true)
     end
-    retour_tex(sortie, staffsize)
+    retour_tex(output, staffsize)
 end
 
 
-function inclure_ly(entree, currfiledir, line_width, staffsize, pleinepage)
+function lilypond_file(input, currfiledir, line_width, staffsize, fullpage)
     line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
     staffsize = calc_staffsize(staffsize)
-    nom = splitext(entree, 'ly')
-    entree = currfiledir..nom..'.ly'
-    if not lfs.isfile(entree) then entree = kpse.find_file(nom..'.ly') end
-    if not lfs.isfile(entree) then err("Le fichier %s.ly n'existe pas.", nom) end
-    local i = io.open(entree, 'r')
+    filename = splitext(input, 'ly')
+    input = currfiledir..filename..'.ly'
+    if not lfs.isfile(input) then input = kpse.find_file(filename..'.ly') end
+    if not lfs.isfile(input) then err("File %s.ly doesn't exist.", filename) end
+    local i = io.open(input, 'r')
     ly = i:read('*a')
     i:close()
-    local sortie = TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..staffsize..'-'..line_width.n..line_width.u..'-', '%.', '-')
-    if pleinepage then sortie = sortie..'-pleinepage' end
-    if not lfs.isfile(sortie..'-systems.tex') then
-        if pleinepage then
-            compiler_ly(ly, sortie, false, dirname(entree))
-            i = io.open(sortie..'-systems.tex', 'w')
-            i:write('\\includepdf[pages=-]{'..sortie..'}')
+    local output = TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..staffsize..'-'..line_width.n..line_width.u..'-', '%.', '-')
+    if fullpage then output = output..'-fullpage' end
+    if not lfs.isfile(output..'-systems.tex') then
+        if fullpage then
+            compiler_ly(ly, output, false, dirname(input))
+            i = io.open(output..'-systems.tex', 'w')
+            i:write('\\includepdf[pages=-]{'..output..'}')
             i:close()
         else
-            compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly, sortie, true, dirname(entree))
+            compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly, output, true, dirname(input))
         end
     end
-    retour_tex(sortie, staffsize)
+    retour_tex(output, staffsize)
 end
 
 
-function compiler_ly(ly, sortie, eps, include)
-    mkdirs(dirname(sortie))
+function compiler_ly(ly, output, eps, include)
+    mkdirs(dirname(output))
     local commande = LILYPOND.." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-ddelete-intermediate-files "
     if eps then commande = commande.."-dbackend=eps " end
     if include then commande = commande.."-I '"..lfs.currentdir().."/"..include.."' " end
-    commande = commande.."-o "..sortie.." -"
+    commande = commande.."-o "..output.." -"
     local p = io.popen(commande, 'w')
     p:write(ly)
     p:close()
@@ -148,12 +148,12 @@ function calc_staffsize(staffsize)
 end
 
 
-function retour_tex(sortie, staffsize)
-    local i = io.open(sortie..'-systems.tex', 'r')
+function retour_tex(output, staffsize)
+    local i = io.open(output..'-systems.tex', 'r')
     local contenu = i:read("*all")
     i:close()
     local texoutput, nbre = contenu:gsub([[\includegraphics{]],
-        [[\includegraphics{]]..dirname(sortie))
+        [[\includegraphics{]]..dirname(output))
     tex.print(([[\noindent]]..texoutput):explode('\n'))
 end
 

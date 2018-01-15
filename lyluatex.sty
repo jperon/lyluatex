@@ -47,7 +47,7 @@
 % Inclusion of a .ly file
 \newkeycommand*\includely[fullpage=false,staffsize=\staffsize,line-width=\largeur][autres][1]{%
 \directlua{%
-    inclure_ly(
+    lilypond_file(
         "\luatexluaescapestring{#1}",
         "\luatexluaescapestring{\currfiledir}",
         '\commandkey{line-width}',
@@ -61,7 +61,7 @@
 % the document.
 \NewEnviron{compilerly}{%
 \directlua{%
-    direct_ly(
+    lilypond_fragment(
         "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}",
         '\localwidth',
         \luatexluaescapestring{\localstaffsize}
