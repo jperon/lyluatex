@@ -97,7 +97,7 @@ end
 
 function entete_lilypond(facteur, largeur)
     return string.format(
-[[%%En-tête
+[[%%File header
 \version "2.18.2"
 #(define default-toplevel-book-handler
   print-book-with-defaults-as-systems )
@@ -124,13 +124,13 @@ function entete_lilypond(facteur, largeur)
 #(set-global-staff-size %s)
 
 
-%%Paramètres de la partition
+%%Score parameters
 \paper{
     indent = 0\mm
     line-width = %s\%s
 }
 
-%%Partition originale
+%%Follows original score
 ]],
 facteur,
 largeur.n, largeur.u

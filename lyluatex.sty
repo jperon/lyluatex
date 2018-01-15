@@ -1,6 +1,6 @@
 \ProvidesPackage{lyluatex}
 
-% Dépendances
+% Dependencies
 \RequirePackage{luatexbase}
 \RequirePackage{luaotfload}
 \RequirePackage{kvoptions}
@@ -16,7 +16,7 @@
 \newcommand{\mm}{mm}
 \newcommand{\cm}{cm}
 \ProcessKeyvalOptions*
-% Script lua
+% Lua Script
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
 \directlua{LILYPOND = '\lyluatex@program'}
 
@@ -24,26 +24,27 @@
 \catcode`-=11
 \ifx\lyluatex@line-width\defaultwidth
 \catcode`-=12
-% Une tricherie un peu sale pour récupérer la largeur de ligne
+% A somewhat dirty trick to determine the line width
 \let\bs\textbackslash
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
 \newcommand*{\largeur}{[[\directlua{tex.print(\expandafter\un\the\linewidth - 10)}pt]]}
 \else
 \catcode`-=11
+% TODO: Is this to be removed? I think so
 \directlua{print('test:','\lyluatex@line-width')}
 \let\largeur\lyluatex@line-width
 \catcode`-=12
 \fi
-% Taille des partitions
-% Si la valeur est 0, elle sera automatiquement calculée
-% à partir de la taille de police.
+% Staff size for LilyPond
+% If this is set to 0 (default) the value is calculated automatically
+% from «la taille de police».
 \def\staffsize{0}
 \let\localstaffsize\staffsize
 \let\localwidth\largeur
 
 
-% Commandes principales
-% Inclusion d'un fichier ly
+% Main commands
+% Inclusion of a .ly file
 \newkeycommand*\includely[fullpage=false,staffsize=\staffsize,line-width=\largeur][autres][1]{%
 \directlua{%
     inclure_ly(
@@ -56,7 +57,8 @@
 }%
 }
 
-% Inclusion d'un fragment intégré au document (environnement de base)
+% Base environment to include a LilyPond fragment integrated into
+% the document.
 \NewEnviron{compilerly}{%
 \directlua{%
     direct_ly(
@@ -67,7 +69,7 @@
 }%
 }
 
-% Commande et environnement avec paramètres
+% Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[staffsize=\staffsize,line-width=\largeur][autres][1]{%
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
@@ -83,7 +85,7 @@
 \endcompilerly%
 }
 
-% Commandes pour la compatibilité avec lilypond-book
+% Commands for compatibility with lilypond-book
 \let\lilypondfile\includely
 \protected\def\lilypond{\def\reserved@a{lilypond}%
   \ifx\reserved@a\@currenvir \expandafter \ly
