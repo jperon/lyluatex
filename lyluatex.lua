@@ -54,7 +54,7 @@ function lilypond_fragment(ly_code, line_width, staffsize)
     if not lfs.isfile(output..'-systems.tex') then
         run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true)
     end
-    retour_tex(output, staffsize)
+    write_tex(output, staffsize)
 end
 
 
@@ -80,7 +80,7 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
             run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
         end
     end
-    retour_tex(output, staffsize)
+    write_tex(output, staffsize)
 end
 
 
@@ -148,11 +148,11 @@ function calc_staffsize(staffsize)
 end
 
 
-function retour_tex(output, staffsize)
+function write_tex(output, staffsize)
     local i = io.open(output..'-systems.tex', 'r')
-    local contenu = i:read("*all")
+    local content = i:read("*all")
     i:close()
-    local texoutput, nbre = contenu:gsub([[\includegraphics{]],
+    local texoutput, nbre = content:gsub([[\includegraphics{]],
         [[\includegraphics{]]..dirname(output))
     tex.print(([[\noindent]]..texoutput):explode('\n'))
 end
