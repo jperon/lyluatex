@@ -12,11 +12,6 @@ local err, warn, info, log = luatexbase.provides_module({
 local md5 = require 'md5'
 
 
-LILYPOND = 'lilypond'
-TMP = 'tmp_ly'
-N = 0
-
-
 function ly_define_program(lilypond)
     if lilypond then LILYPOND = lilypond end
 end
@@ -49,12 +44,18 @@ function extract_size_arguments(line_width, staffsize)
     return line_width, staffsize
 end
 
-function hash_output_filename(ly_code,line_width, staffsize)
-    return TMP..'/'..string.gsub(md5.sumhexa(flatten_content(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
+function hash_output_filename(ly_code, line_width, staffsize)
+    filename = string.gsub(
+        md5.sumhexa(flatten_content(ly_code))..
+        '-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-'
+    )
+    local f = io.open(FILELIST, 'a')
+    f:write(filename, '\n')
+    f:close()
+    return TMP..'/'..filename
 end
 
 function lilypond_fragment(ly_code, line_width, staffsize)
-    N = N + 1
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
@@ -158,6 +159,14 @@ function write_tex(output, staffsize)
     local i = io.open(output..'-systems.tex', 'r')
     local content = i:read("*all")
     i:close()
+    i = io.open(output..'-systems.count', 'r')
+    if i then
+        local n = tonumber(i:read('*all'))
+        i:close()
+        for i = 1, n, 1 do
+            os.remove(output..'-'..i..'.eps')
+        end
+    end
     local texoutput, nbre = content:gsub([[\includegraphics{]],
         [[\includegraphics{]]..dirname(output))
     tex.print(([[\noindent]]..texoutput):explode('\n'))
@@ -204,3 +213,5 @@ end
 
 
 mkdirs(TMP)
+FILELIST = TMP..'/'..splitext(status.log_name, 'log')..'.list'
+os.remove(FILELIST)

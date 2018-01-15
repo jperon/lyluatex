@@ -12,13 +12,17 @@
 % Options
 \DeclareStringOption[lilypond]{program}[lilypond]
 \DeclareStringOption[default]{line-width}[lilypond]
+\DeclareStringOption[tmp_ly]{tmpdir}[lilypond]
 \newcommand{\pt}{pt}
 \newcommand{\mm}{mm}
 \newcommand{\cm}{cm}
 \ProcessKeyvalOptions*
 % Lua Script
-\directlua{dofile(kpse.find_file("lyluatex.lua"))}
-\directlua{LILYPOND = '\lyluatex@program'}
+\directlua{
+LILYPOND = '\luatexluaescapestring{\lyluatex@program}'
+TMP = '\luatexluaescapestring{\lyluatex@tmpdir}'
+dofile(kpse.find_file("lyluatex.lua"))}
+\directlua{}
 \newcommand{\lilypondCmd}[1]{%
     \directlua{ly_define_program("\luatexluaescapestring{#1}")}%
     \def\lyluatex@program{#1}
