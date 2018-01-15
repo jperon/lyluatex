@@ -28,7 +28,7 @@ function flatten_content(ly_code)
        Other files (from LilyPond's include path) are considered
        irrelevant for the purpose of a hashsum.) --]]
     local result =""
-    for i, Line in ipairs(ly_code:explode('\n')) do
+    for _, Line in ipairs(ly_code:explode('\n')) do
 	if Line:find("^%s*[^%%]*\\include") then
 	    local i = io.open(Line:gsub('%s*\\include%s*"(.*)"%s*$', "%1"), 'r')
 	    if i then

@@ -19,6 +19,10 @@
 % Lua Script
 \directlua{dofile(kpse.find_file("lyluatex.lua"))}
 \directlua{LILYPOND = '\lyluatex@program'}
+\newcommand{\lilypondCmd}[1]{%
+    \directlua{ly_define_program("\luatexluaescapestring{#1}")}%
+    \def\lyluatex@program{#1}
+}
 
 \def\defaultwidth{default}
 \catcode`-=11
@@ -30,8 +34,6 @@
 \newcommand*{\lilywidth}{[[\directlua{tex.print(\expandafter\un\the\linewidth - 10)}pt]]}
 \else
 \catcode`-=11
-% TODO: Is this to be removed? I think so
-\directlua{print('test:','\lyluatex@line-width')}
 \let\lilywidth\lyluatex@line-width
 \catcode`-=12
 \fi
@@ -45,7 +47,13 @@
 
 % Main commands
 % Inclusion of a .ly file
-\newkeycommand*\includely[fullpage=false,staffsize=\staffsize,line-width=\lilywidth][other-options][1]{%
+\newkeycommand*\includely[%
+    fullpage=false%
+    ,staffsize=\staffsize%
+    ,line-width=\lilywidth%
+    ,program=\lyluatex@program%
+    ][other-options][1]{%
+\directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \directlua{%
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -55,6 +63,7 @@
         \commandkey{fullpage}
     )%
 }%
+\directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
 }
 
 % Base environment to include a LilyPond fragment integrated into
@@ -70,19 +79,27 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newkeycommand{\lily}[staffsize=\staffsize,line-width=\lilywidth][other-options][1]{%
+\newkeycommand{\lily}[%
+    staffsize=\staffsize%
+    ,line-width=\lilywidth%
+    ,program=\lyluatex@program%
+    ][other-options][1]{%
+\directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \begin{compilerly}%
 {#1}
 \end{compilerly}%
+\directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
 }
 
-\newkeyenvironment{ly}[staffsize=\staffsize][other-options]{%
+\newkeyenvironment{ly}[staffsize=\staffsize,program=\lyluatex@program][other-options]{%
+\directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
 \compilerly%
 }{%
 \endcompilerly%
+\directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
 }
 
 % Commands for compatibility with lilypond-book
