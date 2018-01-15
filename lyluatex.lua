@@ -17,87 +17,97 @@ TMP = 'tmp_ly'
 N = 0
 
 
-function ly_definir_programme(lilypond)
+function ly_define_program(lilypond)
     if lilypond then LILYPOND = lilypond end
 end
 
 
-function contenuIntegral(contenu)
-    local content =""
-    for i, Line in ipairs(contenu:explode('\n')) do
+function flatten_content(ly_code)
+  --[[ Produce a flattend string from the original content,
+       including referenced files (if they can be opened.
+       Other files (from LilyPond's include path) are considered
+       irrelevant for the purpose of a hashsum.) --]]
+    local result =""
+    for i, Line in ipairs(ly_code:explode('\n')) do
 	if Line:find("^%s*[^%%]*\\include") then
 	    local i = io.open(Line:gsub('%s*\\include%s*"(.*)"%s*$', "%1"), 'r')
 	    if i then
-		content = content .. contenuIntegral(i:read('*a'))
+		result = result .. flatten_content(i:read('*a'))
 	    else
-		content = content .. Line .. "\n"
+		result = result .. Line .. "\n"
 	    end
 	else
-	    content = content .. Line .. "\n"
+	    result = result .. Line .. "\n"
 	end
     end
-    return content
+    return result
 end
 
+function extract_size_arguments(line_width, staffsize)
+    line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
+    staffsize = calc_staffsize(staffsize)
+    return line_width, staffsize
+end
 
-function direct_ly(ly, largeur, facteur)
+function hash_output_filename(ly_code,line_width, staffsize)
+    return TMP..'/'..string.gsub(md5.sumhexa(flatten_content(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
+end
+
+function lilypond_fragment(ly_code, line_width, staffsize)
     N = N + 1
-    largeur = {['n'] = largeur:match('%d+'), ['u'] = largeur:match('%a+')}
-    facteur = calcul_facteur(facteur)
-    ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    local sortie =
-    TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur.n..largeur.u, '%.', '-')
-    if not lfs.isfile(sortie..'-systems.tex') then
-        compiler_ly(entete_lilypond(facteur, largeur)..'\n'..ly, sortie, true)
+    line_width, staffsize = extract_size_arguments(line_width, staffsize)
+    ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
+    local output = hash_output_filename(ly_code, line_width, staffsize)
+    if not lfs.isfile(output..'-systems.tex') then
+        run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true)
     end
-    retour_tex(sortie, facteur)
+    write_tex(output, staffsize)
 end
 
 
-function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
-    largeur = {['n'] = largeur:match('%d+'), ['u'] = largeur:match('%a+')}
-    facteur = calcul_facteur(facteur)
-    nom = splitext(entree, 'ly')
-    entree = currfiledir..nom..'.ly'
-    if not lfs.isfile(entree) then entree = kpse.find_file(nom..'.ly') end
-    if not lfs.isfile(entree) then err("Le fichier %s.ly n'existe pas.", nom) end
-    local i = io.open(entree, 'r')
-    ly = i:read('*a')
+function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
+    line_width, staffsize = extract_size_arguments(line_width, staffsize)
+    filename = splitext(input_file, 'ly')
+    input_file = currfiledir..filename..'.ly'
+    if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
+    if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
+    local i = io.open(input_file, 'r')
+    ly_code = i:read('*a')
     i:close()
-    local sortie = TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur.n..largeur.u..'-', '%.', '-')
-    if pleinepage then sortie = sortie..'-pleinepage' end
-    if not lfs.isfile(sortie..'-systems.tex') then
-        if pleinepage then
-            compiler_ly(ly, sortie, false, dirname(entree))
-            i = io.open(sortie..'-systems.tex', 'w')
-            i:write('\\includepdf[pages=-]{'..sortie..'}')
+    local output = hash_output_filename(ly_code, line_width, staffsize)
+    if fullpage then output = output..'-fullpage' end
+    if not lfs.isfile(output..'-systems.tex') then
+        if fullpage then
+            run_lilypond(ly_code, output, false, dirname(input_file))
+            i = io.open(output..'-systems.tex', 'w')
+            i:write('\\includepdf[pages=-]{'..output..'}')
             i:close()
         else
-            compiler_ly(entete_lilypond(facteur, largeur)..'\n'..ly, sortie, true, dirname(entree))
+            run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
         end
     end
-    retour_tex(sortie, facteur)
+    write_tex(output, staffsize)
 end
 
 
-function compiler_ly(ly, sortie, eps, include)
-    mkdirs(dirname(sortie))
-    local commande = LILYPOND.." "..
+function run_lilypond(ly_code, output, eps, include)
+    mkdirs(dirname(output))
+    local cmd = LILYPOND.." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-ddelete-intermediate-files "
-    if eps then commande = commande.."-dbackend=eps " end
-    if include then commande = commande.."-I '"..lfs.currentdir().."/"..include.."' " end
-    commande = commande.."-o "..sortie.." -"
-    local p = io.popen(commande, 'w')
-    p:write(ly)
+    if eps then cmd = cmd.."-dbackend=eps " end
+    if include then cmd = cmd.."-I '"..lfs.currentdir().."/"..include.."' " end
+    cmd = cmd.."-o "..output.." -"
+    local p = io.popen(cmd, 'w')
+    p:write(ly_code)
     p:close()
 end
 
 
-function entete_lilypond(facteur, largeur)
+function lilypond_fragment_header(staffsize, line_width)
     return string.format(
-[[%%En-tête
+[[%%File header
 \version "2.18.2"
 #(define default-toplevel-book-handler
   print-book-with-defaults-as-systems )
@@ -124,32 +134,32 @@ function entete_lilypond(facteur, largeur)
 #(set-global-staff-size %s)
 
 
-%%Paramètres de la partition
+%%Score parameters
 \paper{
     indent = 0\mm
     line-width = %s\%s
 }
 
-%%Partition originale
+%%Follows original score
 ]],
-facteur,
-largeur.n, largeur.u
+staffsize,
+line_width.n, line_width.u
 )
 end
 
 
-function calcul_facteur(facteur)
-    if facteur == 0 then facteur = fontinfo(font.current()).size/39321.6 end
-    return facteur
+function calc_staffsize(staffsize)
+    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
+    return staffsize
 end
 
 
-function retour_tex(sortie, facteur)
-    local i = io.open(sortie..'-systems.tex', 'r')
-    local contenu = i:read("*all")
+function write_tex(output, staffsize)
+    local i = io.open(output..'-systems.tex', 'r')
+    local content = i:read("*all")
     i:close()
-    local texoutput, nbre = contenu:gsub([[\includegraphics{]],
-        [[\includegraphics{]]..dirname(sortie))
+    local texoutput, nbre = content:gsub([[\includegraphics{]],
+        [[\includegraphics{]]..dirname(output))
     tex.print(([[\noindent]]..texoutput):explode('\n'))
 end
 
