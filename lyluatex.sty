@@ -45,7 +45,7 @@
 
 % Main commands
 % Inclusion of a .ly file
-\newkeycommand*\includely[fullpage=false,staffsize=\staffsize,line-width=\lilywidth][autres][1]{%
+\newkeycommand*\includely[fullpage=false,staffsize=\staffsize,line-width=\lilywidth][other-options][1]{%
 \directlua{%
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -70,7 +70,7 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newkeycommand{\lily}[staffsize=\staffsize,line-width=\lilywidth][autres][1]{%
+\newkeycommand{\lily}[staffsize=\staffsize,line-width=\lilywidth][other-options][1]{%
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \begin{compilerly}%
@@ -78,7 +78,7 @@
 \end{compilerly}%
 }
 
-\newkeyenvironment{ly}[staffsize=\staffsize][autres]{%
+\newkeyenvironment{ly}[staffsize=\staffsize][other-options]{%
 \def\localstaffsize{\commandkey{staffsize}}%
 \compilerly%
 }{%
