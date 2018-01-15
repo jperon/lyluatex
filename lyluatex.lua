@@ -43,14 +43,21 @@ function flattenContent(original_content)
     return content
 end
 
+function extract_size_arguments(line_width, staffsize)
+    line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
+    staffsize = calc_staffsize(staffsize)
+    return line_width, staffsize
+end
+
+function hash_output_filename(ly_code,line_width, staffsize)
+    return TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
+end
 
 function lilypond_fragment(ly_code, line_width, staffsize)
     N = N + 1
-    line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
-    staffsize = calc_staffsize(staffsize)
+    line_width, staffsize = extract_size_arguments(line_width, staffsize)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    local output =
-    TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
+    local output = hash_output_filename(ly_code, line_width, staffsize)
     if not lfs.isfile(output..'-systems.tex') then
         run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true)
     end
@@ -59,8 +66,7 @@ end
 
 
 function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
-    line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
-    staffsize = calc_staffsize(staffsize)
+    line_width, staffsize = extract_size_arguments(line_width, staffsize)
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -68,7 +74,7 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
     local i = io.open(input_file, 'r')
     ly_code = i:read('*a')
     i:close()
-    local output = TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u..'-', '%.', '-')
+    local output = hash_output_filename(ly_code, line_width, staffsize)
     if fullpage then output = output..'-fullpage' end
     if not lfs.isfile(output..'-systems.tex') then
         if fullpage then
