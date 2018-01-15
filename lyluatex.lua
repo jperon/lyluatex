@@ -22,25 +22,25 @@ function ly_define_program(lilypond)
 end
 
 
-function flattenContent(original_content)
+function flatten_content(ly_code)
   --[[ Produce a flattend string from the original content,
        including referenced files (if they can be opened.
        Other files (from LilyPond's include path) are considered
        irrelevant for the purpose of a hashsum.) --]]
-    local content =""
-    for i, Line in ipairs(original_content:explode('\n')) do
+    local result =""
+    for i, Line in ipairs(ly_code:explode('\n')) do
 	if Line:find("^%s*[^%%]*\\include") then
 	    local i = io.open(Line:gsub('%s*\\include%s*"(.*)"%s*$', "%1"), 'r')
 	    if i then
-		content = content .. flattenContent(i:read('*a'))
+		result = result .. flatten_content(i:read('*a'))
 	    else
-		content = content .. Line .. "\n"
+		result = result .. Line .. "\n"
 	    end
 	else
-	    content = content .. Line .. "\n"
+	    result = result .. Line .. "\n"
 	end
     end
-    return content
+    return result
 end
 
 function extract_size_arguments(line_width, staffsize)
@@ -50,7 +50,7 @@ function extract_size_arguments(line_width, staffsize)
 end
 
 function hash_output_filename(ly_code,line_width, staffsize)
-    return TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
+    return TMP..'/'..string.gsub(md5.sumhexa(flatten_content(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
 end
 
 function lilypond_fragment(ly_code, line_width, staffsize)
