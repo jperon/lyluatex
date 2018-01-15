@@ -27,12 +27,12 @@
 % A somewhat dirty trick to determine the line width
 \let\bs\textbackslash
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
-\newcommand*{\largeur}{[[\directlua{tex.print(\expandafter\un\the\linewidth - 10)}pt]]}
+\newcommand*{\lilywidth}{[[\directlua{tex.print(\expandafter\un\the\linewidth - 10)}pt]]}
 \else
 \catcode`-=11
 % TODO: Is this to be removed? I think so
 \directlua{print('test:','\lyluatex@line-width')}
-\let\largeur\lyluatex@line-width
+\let\lilywidth\lyluatex@line-width
 \catcode`-=12
 \fi
 % Staff size for LilyPond
@@ -40,12 +40,12 @@
 % from «la taille de police».
 \def\staffsize{0}
 \let\localstaffsize\staffsize
-\let\localwidth\largeur
+\let\localwidth\lilywidth
 
 
 % Main commands
 % Inclusion of a .ly file
-\newkeycommand*\includely[fullpage=false,staffsize=\staffsize,line-width=\largeur][autres][1]{%
+\newkeycommand*\includely[fullpage=false,staffsize=\staffsize,line-width=\lilywidth][autres][1]{%
 \directlua{%
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -70,7 +70,7 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newkeycommand{\lily}[staffsize=\staffsize,line-width=\largeur][autres][1]{%
+\newkeycommand{\lily}[staffsize=\staffsize,line-width=\lilywidth][autres][1]{%
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \begin{compilerly}%
