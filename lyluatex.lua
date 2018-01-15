@@ -17,7 +17,7 @@ TMP = 'tmp_ly'
 N = 0
 
 
-function ly_definir_programme(lilypond)
+function ly_define_program(lilypond)
     if lilypond then LILYPOND = lilypond end
 end
 
