@@ -44,23 +44,23 @@ function flattenContent(original_content)
 end
 
 
-function direct_ly(ly, largeur, facteur)
+function direct_ly(ly, line_width, staffsize)
     N = N + 1
-    largeur = {['n'] = largeur:match('%d+'), ['u'] = largeur:match('%a+')}
-    facteur = calcul_facteur(facteur)
+    line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
+    staffsize = calc_staffsize(staffsize)
     ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local sortie =
-    TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..facteur..'-'..largeur.n..largeur.u, '%.', '-')
+    TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
     if not lfs.isfile(sortie..'-systems.tex') then
-        compiler_ly(entete_lilypond(facteur, largeur)..'\n'..ly, sortie, true)
+        compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly, sortie, true)
     end
-    retour_tex(sortie, facteur)
+    retour_tex(sortie, staffsize)
 end
 
 
-function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
-    largeur = {['n'] = largeur:match('%d+'), ['u'] = largeur:match('%a+')}
-    facteur = calcul_facteur(facteur)
+function inclure_ly(entree, currfiledir, line_width, staffsize, pleinepage)
+    line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
+    staffsize = calc_staffsize(staffsize)
     nom = splitext(entree, 'ly')
     entree = currfiledir..nom..'.ly'
     if not lfs.isfile(entree) then entree = kpse.find_file(nom..'.ly') end
@@ -68,7 +68,7 @@ function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
     local i = io.open(entree, 'r')
     ly = i:read('*a')
     i:close()
-    local sortie = TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..facteur..'-'..largeur.n..largeur.u..'-', '%.', '-')
+    local sortie = TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..staffsize..'-'..line_width.n..line_width.u..'-', '%.', '-')
     if pleinepage then sortie = sortie..'-pleinepage' end
     if not lfs.isfile(sortie..'-systems.tex') then
         if pleinepage then
@@ -77,10 +77,10 @@ function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
             i:write('\\includepdf[pages=-]{'..sortie..'}')
             i:close()
         else
-            compiler_ly(entete_lilypond(facteur, largeur)..'\n'..ly, sortie, true, dirname(entree))
+            compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly, sortie, true, dirname(entree))
         end
     end
-    retour_tex(sortie, facteur)
+    retour_tex(sortie, staffsize)
 end
 
 
@@ -99,7 +99,7 @@ function compiler_ly(ly, sortie, eps, include)
 end
 
 
-function entete_lilypond(facteur, largeur)
+function entete_lilypond(staffsize, line_width)
     return string.format(
 [[%%File header
 \version "2.18.2"
@@ -136,19 +136,19 @@ function entete_lilypond(facteur, largeur)
 
 %%Follows original score
 ]],
-facteur,
-largeur.n, largeur.u
+staffsize,
+line_width.n, line_width.u
 )
 end
 
 
-function calcul_facteur(facteur)
-    if facteur == 0 then facteur = fontinfo(font.current()).size/39321.6 end
-    return facteur
+function calc_staffsize(staffsize)
+    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
+    return staffsize
 end
 
 
-function retour_tex(sortie, facteur)
+function retour_tex(sortie, staffsize)
     local i = io.open(sortie..'-systems.tex', 'r')
     local contenu = i:read("*all")
     i:close()
