@@ -52,7 +52,7 @@ function lilypond_fragment(ly_code, line_width, staffsize)
     local output =
     TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
     if not lfs.isfile(output..'-systems.tex') then
-        compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly_code, output, true)
+        run_lilypond(entete_lilypond(staffsize, line_width)..'\n'..ly_code, output, true)
     end
     retour_tex(output, staffsize)
 end
@@ -72,28 +72,28 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
     if fullpage then output = output..'-fullpage' end
     if not lfs.isfile(output..'-systems.tex') then
         if fullpage then
-            compiler_ly(ly_code, output, false, dirname(input_file))
+            run_lilypond(ly_code, output, false, dirname(input_file))
             i = io.open(output..'-systems.tex', 'w')
             i:write('\\includepdf[pages=-]{'..output..'}')
             i:close()
         else
-            compiler_ly(entete_lilypond(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
+            run_lilypond(entete_lilypond(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
         end
     end
     retour_tex(output, staffsize)
 end
 
 
-function compiler_ly(ly_code, output, eps, include)
+function run_lilypond(ly_code, output, eps, include)
     mkdirs(dirname(output))
-    local commande = LILYPOND.." "..
+    local cmd = LILYPOND.." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-ddelete-intermediate-files "
-    if eps then commande = commande.."-dbackend=eps " end
-    if include then commande = commande.."-I '"..lfs.currentdir().."/"..include.."' " end
-    commande = commande.."-o "..output.." -"
-    local p = io.popen(commande, 'w')
+    if eps then cmd = cmd.."-dbackend=eps " end
+    if include then cmd = cmd.."-I '"..lfs.currentdir().."/"..include.."' " end
+    cmd = cmd.."-o "..output.." -"
+    local p = io.popen(cmd, 'w')
     p:write(ly_code)
     p:close()
 end
