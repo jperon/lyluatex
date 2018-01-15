@@ -22,13 +22,17 @@ function ly_define_program(lilypond)
 end
 
 
-function contenuIntegral(contenu)
+function flattenContent(original_content)
+  --[[ Produce a flattend string from the original content,
+       including referenced files (if they can be opened.
+       Other files (from LilyPond's include path) are considered
+       irrelevant for the purpose of a hashsum.) --]]
     local content =""
-    for i, Line in ipairs(contenu:explode('\n')) do
+    for i, Line in ipairs(original_content:explode('\n')) do
 	if Line:find("^%s*[^%%]*\\include") then
 	    local i = io.open(Line:gsub('%s*\\include%s*"(.*)"%s*$', "%1"), 'r')
 	    if i then
-		content = content .. contenuIntegral(i:read('*a'))
+		content = content .. flattenContent(i:read('*a'))
 	    else
 		content = content .. Line .. "\n"
 	    end
@@ -46,7 +50,7 @@ function direct_ly(ly, largeur, facteur)
     facteur = calcul_facteur(facteur)
     ly = ly:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local sortie =
-    TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur.n..largeur.u, '%.', '-')
+    TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..facteur..'-'..largeur.n..largeur.u, '%.', '-')
     if not lfs.isfile(sortie..'-systems.tex') then
         compiler_ly(entete_lilypond(facteur, largeur)..'\n'..ly, sortie, true)
     end
@@ -64,7 +68,7 @@ function inclure_ly(entree, currfiledir, largeur, facteur, pleinepage)
     local i = io.open(entree, 'r')
     ly = i:read('*a')
     i:close()
-    local sortie = TMP..'/'..string.gsub(md5.sumhexa(contenuIntegral(ly))..'-'..facteur..'-'..largeur.n..largeur.u..'-', '%.', '-')
+    local sortie = TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly))..'-'..facteur..'-'..largeur.n..largeur.u..'-', '%.', '-')
     if pleinepage then sortie = sortie..'-pleinepage' end
     if not lfs.isfile(sortie..'-systems.tex') then
         if pleinepage then
