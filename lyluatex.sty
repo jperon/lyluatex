@@ -97,9 +97,14 @@ dofile(kpse.find_file("lyluatex.lua"))}
 \directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
 }
 
-\newkeyenvironment{ly}[staffsize=\staffsize,program=\lyluatex@program][other-options]{%
+\newkeyenvironment{ly}[%
+    staffsize=\staffsize%
+    ,line-width=\lilywidth%
+    ,program=\lyluatex@program%
+    ][other-options]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
+\def\localwidth{\commandkey{line-width}}%
 \compilerly%
 }{%
 \endcompilerly%
