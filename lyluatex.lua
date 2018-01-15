@@ -52,7 +52,7 @@ function lilypond_fragment(ly_code, line_width, staffsize)
     local output =
     TMP..'/'..string.gsub(md5.sumhexa(flattenContent(ly_code))..'-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-')
     if not lfs.isfile(output..'-systems.tex') then
-        run_lilypond(entete_lilypond(staffsize, line_width)..'\n'..ly_code, output, true)
+        run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true)
     end
     retour_tex(output, staffsize)
 end
@@ -77,7 +77,7 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
             i:write('\\includepdf[pages=-]{'..output..'}')
             i:close()
         else
-            run_lilypond(entete_lilypond(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
+            run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
         end
     end
     retour_tex(output, staffsize)
@@ -99,7 +99,7 @@ function run_lilypond(ly_code, output, eps, include)
 end
 
 
-function entete_lilypond(staffsize, line_width)
+function lilypond_fragment_header(staffsize, line_width)
     return string.format(
 [[%%File header
 \version "2.18.2"
