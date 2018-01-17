@@ -55,18 +55,18 @@ function hash_output_filename(ly_code, line_width, staffsize)
     return TMP..'/'..filename
 end
 
-function lilypond_fragment(ly_code, line_width, staffsize)
+function lilypond_fragment(ly_code, line_width, staffsize, left_margin)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
     if not lfs.isfile(output..'-systems.tex') then
-        run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true)
+        run_lilypond(lilypond_fragment_header(staffsize, line_width, left_margin)..'\n'..ly_code, output, true)
     end
     write_tex(output, staffsize)
 end
 
 
-function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
+function lilypond_file(input_file, currfiledir, line_width, staffsize, left_margin, fullpage)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
@@ -84,7 +84,7 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
             i:write('\\includepdf[pages=-]{'..output..'}')
             i:close()
         else
-            run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
+            run_lilypond(lilypond_fragment_header(staffsize, line_width, left_margin)..'\n'..ly_code, output, true, dirname(input_file))
         end
     end
     write_tex(output, staffsize)
@@ -106,7 +106,7 @@ function run_lilypond(ly_code, output, eps, include)
 end
 
 
-function lilypond_fragment_header(staffsize, line_width)
+function lilypond_fragment_header(staffsize, line_width, left_margin)
     return string.format(
 [[%%File header
 \version "2.18.2"
@@ -139,12 +139,14 @@ function lilypond_fragment_header(staffsize, line_width)
 \paper{
     indent = 0\mm
     line-width = %s\%s
+    left-margin = %s\pt
 }
 
 %%Follows original score
 ]],
 staffsize,
-line_width.n, line_width.u
+line_width.n, line_width.u,
+left_margin
 )
 end
 

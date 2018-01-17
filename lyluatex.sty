@@ -56,6 +56,7 @@ dofile(kpse.find_file("lyluatex.lua"))}
     ,staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
+    ,margin=50%
     ][other-options][1]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \directlua{%
@@ -64,6 +65,7 @@ dofile(kpse.find_file("lyluatex.lua"))}
         "\luatexluaescapestring{\currfiledir}",
         '\commandkey{line-width}',
         \luatexluaescapestring{\commandkey{staffsize}},
+        \commandkey{margin},
         \commandkey{fullpage}
     )%
 }%
@@ -77,7 +79,8 @@ dofile(kpse.find_file("lyluatex.lua"))}
     lilypond_fragment(
         "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}",
         '\localwidth',
-        \luatexluaescapestring{\localstaffsize}
+        \luatexluaescapestring{\localstaffsize},
+        '\localmargin'
     )%
 }%
 }
@@ -87,10 +90,12 @@ dofile(kpse.find_file("lyluatex.lua"))}
     staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
+    ,margin=50%
     ][other-options][1]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
+\def\localmargin{\commandkey{margin}}
 \begin{compilerly}%
 {#1}
 \end{compilerly}%
@@ -101,10 +106,12 @@ dofile(kpse.find_file("lyluatex.lua"))}
     staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
+    ,margin=50%
     ][other-options]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
+\def\localmargin{\commandkey{margin}}
 \compilerly%
 }{%
 \endcompilerly%
