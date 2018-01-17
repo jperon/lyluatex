@@ -83,7 +83,7 @@ function lilypond_fragment(ly_code, line_width, staffsize, left_margin)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
     if not lfs.isfile(output..'-systems.tex') then
-        run_lilypond(lilypond_fragment_header(staffsize, line_width, left_margin)..'\n'..ly_code, output, true)
+        compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, output, include)
     end
     write_tex(output, staffsize)
 end
@@ -108,20 +108,19 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, left_marg
             i:write('\\includepdf[pages=-]{'..output..'}')
             i:close()
         else
-            run_lilypond(lilypond_fragment_header(staffsize, line_width, left_margin)..'\n'..ly_code, output, true, dirname(input_file))
+            compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, output, include)
         end
     end
     write_tex(output, staffsize)
 end
 
 
-function run_lilypond(ly_code, output, eps, include)
+function run_lilypond(ly_code, output, include)
     mkdirs(dirname(output))
     local cmd = LILYPOND.." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
-        "-ddelete-intermediate-files "
-    if eps then cmd = cmd.."-dbackend=eps " end
+        "-dno-delete-intermediate-files "
     if include then cmd = cmd.."-I '"..lfs.currentdir().."/"..include.."' " end
     cmd = cmd.."-o "..output.." -"
     local p = io.popen(cmd, 'w')
@@ -129,30 +128,26 @@ function run_lilypond(ly_code, output, eps, include)
     p:close()
 end
 
+function compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, output, include)
+    ly_code = lilypond_fragment_header(staffsize, line_width, left_margin)..'\n'..ly_code
+    run_lilypond(ly_code, output, include)
+
+    --[[ Retrieves the number of points cropped from the left margin --]]
+    local f = io.open(output..'.eps')
+    f:read(); f:read()
+    local bb_line = f:read()
+    f:close()
+    local cropped = bb_line:match('%d+')
+
+    PROTRUDE = left_margin.n - cropped
+end
 
 function lilypond_fragment_header(staffsize, line_width, left_margin)
     return string.format(
 [[%%File header
 \version "2.18.2"
-#(define default-toplevel-book-handler
-  print-book-with-defaults-as-systems )
 
-#(define toplevel-book-handler
-  (lambda ( . rest)
-  (set! output-empty-score-list #f)
-  (apply print-book-with-defaults rest)))
-
-#(define toplevel-music-handler
-  (lambda ( . rest)
-   (apply collect-music-for-book rest)))
-
-#(define toplevel-score-handler
-  (lambda ( . rest)
-   (apply collect-scores-for-book rest)))
-
-#(define toplevel-text-handler
-  (lambda ( . rest)
-   (apply collect-scores-for-book rest)))
+#(ly:set-option 'backend 'eps)
 
 #(define inside-lyluatex #t)
 
