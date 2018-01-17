@@ -150,9 +150,6 @@ function lilypond_fragment_header(staffsize, line_width, left_margin)
 
 #(ly:set-option 'backend 'eps)
 
-#(define default-toplevel-book-handler
-  print-book-with-defaults-as-systems )
-
 #(define inside-lyluatex #t)
 
 #(set-global-staff-size %s)
