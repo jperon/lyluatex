@@ -140,7 +140,10 @@ function compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, 
     local bb_line = f:read()
     f:close()
     local cropped = bb_line:match('%d+')
-    PROTRUSION = string.format('\\hspace*{-%spt}', left_margin.n - cropped)
+    if cropped == 0 then PROTRUSION = ''
+    else
+      PROTRUSION = string.format('\\hspace*{-%spt}', cropped)
+    end
 end
 
 function lilypond_fragment_header(staffsize, line_width, left_margin)
@@ -148,7 +151,7 @@ function lilypond_fragment_header(staffsize, line_width, left_margin)
 [[%%File header
 \version "2.18.2"
 
-#(ly:set-option 'backend 'eps)
+\include "lilypond-book-preamble.ly"
 
 #(define inside-lyluatex #t)
 
