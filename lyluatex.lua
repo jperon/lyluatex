@@ -190,9 +190,9 @@ function write_tex(output, staffsize)
         end
     end
     local texoutput, nbre = content:gsub([[\includegraphics{]],
-        PROTRUSION..[[\includegraphics{]]..dirname(output))
+        [[\noindent]]..' '..PROTRUSION..[[\includegraphics{]]..dirname(output))
     PROTRUSION = ''
-    tex.print(([[\noindent]]..texoutput):explode('\n'))
+    tex.print(texoutput:explode('\n'))
 end
 
 
