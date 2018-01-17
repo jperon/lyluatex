@@ -11,6 +11,7 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local md5 = require 'md5'
 
+PROTRUSION = ''
 
 function ly_define_program(lilypond)
     if lilypond then LILYPOND = lilypond end
@@ -133,13 +134,13 @@ function compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, 
     run_lilypond(ly_code, output, include)
 
     --[[ Retrieves the number of points cropped from the left margin --]]
-    local f = io.open(output..'.eps')
+    local systems_file = output..'.eps'
+    local f = io.open(systems_file)
     f:read(); f:read()
     local bb_line = f:read()
     f:close()
     local cropped = bb_line:match('%d+')
-
-    PROTRUDE = left_margin.n - cropped
+    PROTRUSION = string.format('\\hspace*{-%spt}', left_margin.n - cropped)
 end
 
 function lilypond_fragment_header(staffsize, line_width, left_margin)
@@ -189,7 +190,8 @@ function write_tex(output, staffsize)
         end
     end
     local texoutput, nbre = content:gsub([[\includegraphics{]],
-        [[\includegraphics{]]..dirname(output))
+        PROTRUSION..[[\includegraphics{]]..dirname(output))
+    PROTRUSION = ''
     tex.print(([[\noindent]]..texoutput):explode('\n'))
 end
 
