@@ -35,7 +35,7 @@ dofile(kpse.find_file("lyluatex.lua"))}
 % A somewhat dirty trick to determine the line width
 \let\bs\textbackslash
 {\catcode`p=12 \catcode`t=12 \gdef\un#1pt{#1}}
-\newcommand*{\lilywidth}{[[\directlua{tex.print(\expandafter\un\the\linewidth - 10)}pt]]}
+\newcommand*{\lilywidth}{\the\linewidth}
 \else
 \catcode`-=11
 \let\lilywidth\lyluatex@line-width

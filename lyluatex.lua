@@ -11,7 +11,6 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local md5 = require 'md5'
 
-
 function ly_define_program(lilypond)
     if lilypond then LILYPOND = lilypond end
 end
@@ -38,8 +37,13 @@ function flatten_content(ly_code)
     return result
 end
 
+function extract_unit(input)
+  --[ split a TeX length into number and unit --]
+    return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
+end
+
 function extract_size_arguments(line_width, staffsize)
-    line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
+    line_width = extract_unit(line_width)
     staffsize = calc_staffsize(staffsize)
     return line_width, staffsize
 end
@@ -59,10 +63,12 @@ function lilypond_fragment(ly_code, line_width, staffsize)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
+    local compiled = false
     if not lfs.isfile(output..'-systems.tex') then
-        run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true)
+        compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
+        compiled = true
     end
-    write_tex(output, staffsize)
+    write_tex(output, compiled)
 end
 
 
@@ -77,27 +83,26 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
     i:close()
     local output = hash_output_filename(ly_code, line_width, staffsize)
     if fullpage then output = output..'-fullpage' end
-    if not lfs.isfile(output..'-systems.tex') then
+    local compiled = false
+    if not ( lfs.isfile(output..'-systems.tex') or
+        lfs.isfile(output..'-fullpage.pdf') ) then
+        compiled = true
         if fullpage then
             run_lilypond(ly_code, output, false, dirname(input_file))
-            i = io.open(output..'-systems.tex', 'w')
-            i:write('\\includepdf[pages=-]{'..output..'}')
-            i:close()
         else
-            run_lilypond(lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code, output, true, dirname(input_file))
+            compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
         end
     end
-    write_tex(output, staffsize)
+    write_tex(output, compiled)
 end
 
 
-function run_lilypond(ly_code, output, eps, include)
+function run_lilypond(ly_code, output, include)
     mkdirs(dirname(output))
     local cmd = LILYPOND.." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
-        "-ddelete-intermediate-files "
-    if eps then cmd = cmd.."-dbackend=eps " end
+        "-dno-delete-intermediate-files "
     if include then cmd = cmd.."-I '"..lfs.currentdir().."/"..include.."' " end
     cmd = cmd.."-o "..output.." -"
     local p = io.popen(cmd, 'w')
@@ -105,30 +110,17 @@ function run_lilypond(ly_code, output, eps, include)
     p:close()
 end
 
+function compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
+    ly_code = lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code
+    run_lilypond(ly_code, output, include)
+end
 
 function lilypond_fragment_header(staffsize, line_width)
     return string.format(
 [[%%File header
 \version "2.18.2"
-#(define default-toplevel-book-handler
-  print-book-with-defaults-as-systems )
 
-#(define toplevel-book-handler
-  (lambda ( . rest)
-  (set! output-empty-score-list #f)
-  (apply print-book-with-defaults rest)))
-
-#(define toplevel-music-handler
-  (lambda ( . rest)
-   (apply collect-music-for-book rest)))
-
-#(define toplevel-score-handler
-  (lambda ( . rest)
-   (apply collect-scores-for-book rest)))
-
-#(define toplevel-text-handler
-  (lambda ( . rest)
-   (apply collect-scores-for-book rest)))
+\include "lilypond-book-preamble.ly"
 
 #(define inside-lyluatex #t)
 
@@ -155,21 +147,65 @@ function calc_staffsize(staffsize)
 end
 
 
-function write_tex(output, staffsize)
-    local i = io.open(output..'-systems.tex', 'r')
-    local content = i:read("*all")
-    i:close()
-    i = io.open(output..'-systems.count', 'r')
-    if i then
-        local n = tonumber(i:read('*all'))
-        i:close()
-        for i = 1, n, 1 do
-            os.remove(output..'-'..i..'.eps')
+function delete_intermediate_files(output)
+  i = io.open(output..'-systems.count', 'r')
+  if i then
+      local n = tonumber(i:read('*all'))
+      i:close()
+      for i = 1, n, 1 do
+          os.remove(output..'-'..i..'.eps')
+      end
+      os.remove(output..'-systems.count')
+      os.remove(output..'-systems.texi')
+      os.remove(output..'.eps')
+      os.remove(output..'.pdf')
+  end
+end
+
+function calc_protrusion(output)
+    --[[
+      Determine the amount of space used to the left of the staff lines
+      and generate a horizontal offset command.
+    --]]
+    local protrusion = ''
+    local systems_file = output..'.eps'
+    local f = io.open(systems_file)
+    --[[ The information we need is in the third line --]]
+    f:read(); f:read()
+    local bb_line = f:read()
+    f:close()
+    local cropped = bb_line:match('%d+')
+    if cropped ~= 0 then
+        protrusion = string.format('\\hspace*{-%spt}', cropped)
+    end
+    return protrusion
+end
+
+function write_tex(output, compiled)
+    local systems_file = io.open(output..'-systems.tex', 'r')
+    if not systems_file then
+        --[[ Fullpage score, use \includepdf ]]
+        tex.print('\\includepdf[pages=-]{'..output..'}')
+    else
+        --[[ Fragment, use -systems.tex file]]
+        local content = systems_file:read("*all")
+        systems_file:close()
+        if compiled then
+            --[[ new compilation, calculate protrusion
+                 and update -systems.tex file --]]
+            local protrusion = calc_protrusion(output)
+            local texoutput, nbre = content:gsub([[\includegraphics{]],
+                [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(output))
+            tex.print(texoutput:explode('\n'))
+            local f = io.open(output..'-systems.tex', 'w')
+            f:write(texoutput)
+            f:close()
+            delete_intermediate_files(output)
+        else
+            --[[ simply reuse existing -systems.tex file --]]
+            tex.print(content:explode('\n'))
         end
     end
-    local texoutput, nbre = content:gsub([[\includegraphics{]],
-        [[\includegraphics{]]..dirname(output))
-    tex.print(([[\noindent]]..texoutput):explode('\n'))
 end
 
 
