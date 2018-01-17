@@ -50,23 +50,6 @@ function extract_size_arguments(line_width, staffsize)
     return line_width, staffsize
 end
 
-function convert_margin(margin)
-  --[[
-    Convert a length given in LaTeX format (e.g. "3cm")
-    to points (LaTeX big points 'bp').
-    Possible units are those understood by LilyPond
-  --]]
-    margin = extract_unit(margin)
-    convs = {
-      ['pt'] = 1,
-      ['in'] = 72,
-      ['cm'] = 28.3465,
-      ['mm'] = 2.8346
-    }
-    points = margin.n * convs[margin.u]
-    return { ['n'] = points, ['u'] = 'pt'}
-end
-
 function hash_output_filename(ly_code, line_width, staffsize)
     filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code))..
@@ -78,19 +61,18 @@ function hash_output_filename(ly_code, line_width, staffsize)
     return TMP..'/'..filename
 end
 
-function lilypond_fragment(ly_code, line_width, staffsize, left_margin)
+function lilypond_fragment(ly_code, line_width, staffsize)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
-    left_margin = convert_margin(left_margin)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
     if not lfs.isfile(output..'-systems.tex') then
-        compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, output, include)
+        compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
     end
     write_tex(output, staffsize)
 end
 
 
-function lilypond_file(input_file, currfiledir, line_width, staffsize, left_margin, fullpage)
+function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
     left_margin = convert_margin(left_margin)
     filename = splitext(input_file, 'ly')
@@ -109,7 +91,7 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, left_marg
             i:write('\\includepdf[pages=-]{'..output..'}')
             i:close()
         else
-            compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, output, include)
+            compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
         end
     end
     write_tex(output, staffsize)
@@ -129,8 +111,8 @@ function run_lilypond(ly_code, output, include)
     p:close()
 end
 
-function compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, output, include)
-    ly_code = lilypond_fragment_header(staffsize, line_width, left_margin)..'\n'..ly_code
+function compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
+    ly_code = lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code
     run_lilypond(ly_code, output, include)
 
     --[[ Retrieves the number of points cropped from the left margin --]]
@@ -146,7 +128,7 @@ function compile_lilypond_fragment(ly_code, staffsize, line_width, left_margin, 
     end
 end
 
-function lilypond_fragment_header(staffsize, line_width, left_margin)
+function lilypond_fragment_header(staffsize, line_width)
     return string.format(
 [[%%File header
 \version "2.18.2"
@@ -162,14 +144,12 @@ function lilypond_fragment_header(staffsize, line_width, left_margin)
 \paper{
     indent = 0\mm
     line-width = %s\%s
-    left-margin = %s\%s
 }
 
 %%Follows original score
 ]],
 staffsize,
-line_width.n, line_width.u,
-left_margin.n, left_margin.u
+line_width.n, line_width.u
 )
 end
 
