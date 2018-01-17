@@ -38,10 +38,32 @@ function flatten_content(ly_code)
     return result
 end
 
+function extract_unit(input)
+  --[ split a TeX length into number and unit --]
+    return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
+end
+
 function extract_size_arguments(line_width, staffsize)
-    line_width = {['n'] = line_width:match('%d+'), ['u'] = line_width:match('%a+')}
+    line_width = extract_unit(line_width)
     staffsize = calc_staffsize(staffsize)
     return line_width, staffsize
+end
+
+function convert_margin(margin)
+  --[[
+    Convert a length given in LaTeX format (e.g. "3cm")
+    to points (LaTeX big points 'bp').
+    Possible units are those understood by LilyPond
+  --]]
+    margin = extract_unit(margin)
+    convs = {
+      ['pt'] = 1,
+      ['in'] = 72,
+      ['cm'] = 28.3465,
+      ['mm'] = 2.8346
+    }
+    points = margin.n * convs[margin.u]
+    return { ['n'] = points, ['u'] = 'pt'}
 end
 
 function hash_output_filename(ly_code, line_width, staffsize)
@@ -57,6 +79,7 @@ end
 
 function lilypond_fragment(ly_code, line_width, staffsize, left_margin)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
+    left_margin = convert_margin(left_margin)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
     if not lfs.isfile(output..'-systems.tex') then
@@ -68,6 +91,7 @@ end
 
 function lilypond_file(input_file, currfiledir, line_width, staffsize, left_margin, fullpage)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
+    left_margin = convert_margin(left_margin)
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -139,14 +163,14 @@ function lilypond_fragment_header(staffsize, line_width, left_margin)
 \paper{
     indent = 0\mm
     line-width = %s\%s
-    left-margin = %s\pt
+    left-margin = %s\%s
 }
 
 %%Follows original score
 ]],
 staffsize,
 line_width.n, line_width.u,
-left_margin
+left_margin.n, left_margin.u
 )
 end
 

@@ -56,7 +56,7 @@ dofile(kpse.find_file("lyluatex.lua"))}
     ,staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
-    ,margin=50%
+    ,margin="50pt"%
     ][other-options][1]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \directlua{%
@@ -90,7 +90,7 @@ dofile(kpse.find_file("lyluatex.lua"))}
     staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
-    ,margin=50%
+    ,margin="50pt"%
     ][other-options][1]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
@@ -106,7 +106,7 @@ dofile(kpse.find_file("lyluatex.lua"))}
     staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
-    ,margin=50%
+    ,margin="50pt"%
     ][other-options]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
