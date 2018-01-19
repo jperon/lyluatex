@@ -59,16 +59,30 @@ function hash_output_filename(ly_code, line_width, staffsize)
     return TMP..'/'..filename
 end
 
+
+function is_compiled(output)
+    if output:find('fullpage') then
+        if lfs.isfile(output..'.pdf') then
+            return true else return false end
+    end
+
+    f = io.open(output..'-systems.tex')
+    if not f then return false end
+
+    head = f:read("*line")
+    if head == "% eof" then return false else return true end
+end
+
+
 function lilypond_fragment(ly_code, line_width, staffsize)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
-    local compiled = false
-    if not lfs.isfile(output..'-systems.tex') then
+    local new_score = not is_compiled(output)
+    if new_score then
         compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
-        compiled = true
     end
-    write_tex(output, compiled)
+    write_tex(output, new_score)
 end
 
 
@@ -83,17 +97,15 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
     i:close()
     local output = hash_output_filename(ly_code, line_width, staffsize)
     if fullpage then output = output..'-fullpage' end
-    local compiled = false
-    if not ( lfs.isfile(output..'-systems.tex') or
-        lfs.isfile(output..'-fullpage.pdf') ) then
-        compiled = true
+    local new_score = not is_compiled(output)
+    if new_score then
         if fullpage then
             run_lilypond(ly_code, output, false, dirname(input_file))
         else
             compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
         end
     end
-    write_tex(output, compiled)
+    write_tex(output, new_score)
 end
 
 
@@ -181,7 +193,21 @@ function calc_protrusion(output)
     return protrusion
 end
 
-function write_tex(output, compiled)
+function write_tex(output, new_score)
+    if not is_compiled(output) then
+      tex.print ([[
+
+\begin{quote}
+\fbox{Score failed to compile}
+\end{quote}
+
+]])
+        print("\nScore failed to compile, insert placeholder.\n")
+        --[[ ensure the score gets recompiled next time --]]
+        os.remove(output..'-systems.tex')
+    end
+
+    --[[ Now we know there is a proper score --]]
     local systems_file = io.open(output..'-systems.tex', 'r')
     if not systems_file then
         --[[ Fullpage score, use \includepdf ]]
@@ -190,7 +216,7 @@ function write_tex(output, compiled)
         --[[ Fragment, use -systems.tex file]]
         local content = systems_file:read("*all")
         systems_file:close()
-        if compiled then
+        if new_score then
             --[[ new compilation, calculate protrusion
                  and update -systems.tex file --]]
             local protrusion = calc_protrusion(output)
