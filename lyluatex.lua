@@ -115,7 +115,9 @@ function compile_lilypond_fragment(ly_code, staffsize, line_width, output, inclu
     run_lilypond(ly_code, output, include)
 end
 
+
 function lilypond_fragment_header(staffsize, line_width)
+    local fontdef = get_fonts()
     return string.format(
 [[%%File header
 \version "2.18.2"
@@ -131,12 +133,18 @@ function lilypond_fragment_header(staffsize, line_width)
 \paper{
     indent = 0\mm
     line-width = %s\%s
+    #(define fonts
+      (make-pango-font-tree "%s"
+                            "%s"
+                            "%s"
+                            (/ staff-height pt 20)))
 }
 
 %%Follows original score
 ]],
 staffsize,
-line_width.n, line_width.u
+line_width.n, line_width.u,
+fontdef.rm, fontdef.sf, fontdef.tt
 )
 end
 
@@ -245,6 +253,18 @@ function fontinfo(id)
         return f
     end
     return font.fonts[id]
+end
+
+
+function get_fonts()
+    --[[ This is preliminary and simply retrieves then
+         font that is *currently* in use. --]]
+    local family = fontinfo(font.current()).shared.rawdata.metadata['familyname']
+    return {
+      ['rm'] = family,
+      ['sf'] = family,
+      ['tt'] = family,
+    }
 end
 
 

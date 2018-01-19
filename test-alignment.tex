@@ -6,6 +6,8 @@
 \usepackage{musicexamples}
 \setXmpCaptionLabel{Example}
 
+%\usepackage{fontspec}
+%\usepackage{Libertine}
 \usepackage{libertine}
 \usepackage{microtype}
 \frenchspacing
@@ -14,7 +16,6 @@
 \usepackage[top=2cm,bottom=3cm]{geometry}
 \usepackage{multicol}
 \usepackage[colorlinks]{hyperref}
-
 
 \newcommand{\betweenLilyPondSystem}[1]{
 
@@ -29,7 +30,6 @@
 \lyluatex%
 \footnote{\url{https://github.com/jperon/lyluatex}}
  is a package for \LuaLaTeX\ that manages the engraving and integration of musical scores in text documents. The scores are encoded in chunks of LilyPond input which can be written directly in the document or maintained in standalone files.  They are compiled using LilyPond and cached intelligently. Line width and staff size can be inferred from the surrounding text (but also configured explicitly). The following Beethoven excerpt is included twice, first normally and then with a smaller staff size in a two-column section:
-
 
 \begin{musicExampleNonFloat}
 \includely[staffsize=18]{ly/Beethoven/opus-18-1.ly}
@@ -58,9 +58,10 @@ The other aspect is that the resulting systems of the score are generated as ind
 
 But the main point of this document is to provide material for discussing the \emph{alignment} of scores to the surrounding text. The examples so far show an achievement of the \lyluatex\ package: when aligning the score to the text the \emph{staff lines} exactly match the line width of the text, while brackets and instrument names protrude into the left margin.  This is actually a non-trivial task, as the width of that margin material is arbitrary and can't reasonably be predicted, at least not automatically and reliably.  In order to properly handle that task \lyluatex\ reads that width from an intermediate PostScript file and applies the corresponding negative offset when including the image file for each system.
 
+\setmainfont{Adobe Garamond Pro}
+
 \bigskip
 However, while this is a great default behaviour there are valid reasons for \emph{not} wanting such protrusion to (always) happen.  For example it might be considered inappropriate to use the margin at all (maybe there are other elements to be printed in the margin) or it may look awkward or  actually run off the page when the margin text is very wide:
-
 
 \begin{musicExampleNonFloat}
 \begin{ly}
