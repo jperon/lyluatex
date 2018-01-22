@@ -202,7 +202,7 @@ function write_tex(output, new_score)
 \end{quote}
 
 ]])
-        print("\nScore failed to compile, insert placeholder.\n")
+        err("\nScore failed to compile, please check LilyPond input.\n")
         --[[ ensure the score gets recompiled next time --]]
         os.remove(output..'-systems.tex')
     end
