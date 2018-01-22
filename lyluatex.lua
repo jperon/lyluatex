@@ -69,12 +69,13 @@ function extract_size_arguments(line_width, staffsize)
 end
 
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
-    filename = string.gsub(
+    local filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code, input_file))..
         '-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-'
     )
     local f = io.open(FILELIST, 'a')
-    f:write(filename, '\n')
+    if not input_file then input_file = '' end
+    f:write(filename, '\t', input_file, '\n')
     f:close()
     return TMP..'/'..filename
 end
