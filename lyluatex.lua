@@ -11,30 +11,50 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local md5 = require 'md5'
 
+
 function ly_define_program(lilypond)
     if lilypond then LILYPOND = lilypond end
 end
 
 
-function flatten_content(ly_code)
+function ly_define_includepaths(includepaths)
+    if includepaths then INCLUDEPATHS = includepaths:explode(',') end
+end
+
+
+function flatten_content(ly_code, input_file)
   --[[ Produce a flattend string from the original content,
        including referenced files (if they can be opened.
        Other files (from LilyPond's include path) are considered
        irrelevant for the purpose of a hashsum.) --]]
-    local result =""
-    for _, Line in ipairs(ly_code:explode('\n')) do
-	if Line:find("^%s*[^%%]*\\include") then
-	    local i = io.open(Line:gsub('%s*\\include%s*"(.*)"%s*$', "%1"), 'r')
-	    if i then
-		result = result .. flatten_content(i:read('*a'))
-	    else
-		result = result .. Line .. "\n"
-	    end
-	else
-	    result = result .. Line .. "\n"
-	end
+    local b, e, i, ly_file
+    while true do
+        b, e = ly_code:find('\\include%s*"[^"]*"', e)
+        if not e then break
+        else
+            ly_file = ly_code:match('\\include%s*"([^"]*)"', b)
+            i = io.open(ly_file, 'r')
+            if i then
+                ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a')))
+            else
+                if input_file then
+                    i = io.open(dirname(input_file)..'/'..ly_file, 'r')
+                end
+                if i then
+                    ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a')))
+                end
+                for _, f in ipairs(INCLUDEPATHS) do
+                    i = io.open(lfs.currentdir()..'/'..f..'/'..ly_file, 'r')
+                    if i then
+                        ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a')))
+                        break
+                    end
+                end
+            end
+            if i then i:close() end
+        end
     end
-    return result
+    return ly_code
 end
 
 function extract_unit(input)
@@ -48,9 +68,9 @@ function extract_size_arguments(line_width, staffsize)
     return line_width, staffsize
 end
 
-function hash_output_filename(ly_code, line_width, staffsize)
+function hash_output_filename(ly_code, line_width, staffsize, input_file)
     filename = string.gsub(
-        md5.sumhexa(flatten_content(ly_code))..
+        md5.sumhexa(flatten_content(ly_code, input_file))..
         '-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-'
     )
     local f = io.open(FILELIST, 'a')
@@ -77,10 +97,10 @@ end
 function lilypond_fragment(ly_code, line_width, staffsize)
     line_width, staffsize = extract_size_arguments(line_width, staffsize)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    local output = hash_output_filename(ly_code, line_width, staffsize)
+    local output = hash_output_filename(ly_code, line_width, staffsize, nil)
     local new_score = not is_compiled(output)
     if new_score then
-        compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
+        compile_lilypond_fragment(ly_code, staffsize, line_width, output, nil)
     end
     write_tex(output, new_score)
 end
@@ -95,14 +115,14 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
     local i = io.open(input_file, 'r')
     ly_code = i:read('*a')
     i:close()
-    local output = hash_output_filename(ly_code, line_width, staffsize)
+    local output = hash_output_filename(ly_code, line_width, staffsize, input_file)
     if fullpage then output = output..'-fullpage' end
     local new_score = not is_compiled(output)
     if new_score then
         if fullpage then
-            run_lilypond(ly_code, output, false, dirname(input_file))
+            run_lilypond(ly_code, output, dirname(input_file))
         else
-            compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
+            compile_lilypond_fragment(ly_code, staffsize, line_width, output, dirname(input_file))
         end
     end
     write_tex(output, new_score)
@@ -115,6 +135,9 @@ function run_lilypond(ly_code, output, include)
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
+    for _, dir in ipairs(INCLUDEPATHS) do
+        cmd = cmd.."-I '"..lfs.currentdir().."/"..dir.."' "
+    end
     if include then cmd = cmd.."-I '"..lfs.currentdir().."/"..include.."' " end
     cmd = cmd.."-o "..output.." -"
     local p = io.popen(cmd, 'w')

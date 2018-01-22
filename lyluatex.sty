@@ -14,22 +14,28 @@
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
 
 % Options
-\DeclareStringOption[lilypond]{program}[lilypond]
-\DeclareStringOption[default]{line-width}[lilypond]
-\DeclareStringOption[tmp_ly]{tmpdir}[lilypond]
+\DeclareStringOption[lilypond]{program}
+\DeclareStringOption[default]{line-width}
+\DeclareStringOption[tmp_ly]{tmpdir}
+\DeclareStringOption{includepaths}
 \newcommand{\pt}{pt}
 \newcommand{\mm}{mm}
 \newcommand{\cm}{cm}
 \ProcessKeyvalOptions*
 % Lua Script
 \directlua{
-LILYPOND = '\luatexluaescapestring{\lyluatex@program}'
-TMP = '\luatexluaescapestring{\lyluatex@tmpdir}'
-dofile(kpse.find_file("lyluatex.lua"))}
-\directlua{}
+  TMP = '\luatexluaescapestring{\lyluatex@tmpdir}'
+  dofile(kpse.find_file("lyluatex.lua"))
+  ly_define_program('\luatexluaescapestring{\lyluatex@program}')
+  ly_define_includepaths('\luatexluaescapestring{\lyluatex@includepaths}')
+}
 \newcommand{\lilypondCmd}[1]{%
     \directlua{ly_define_program("\luatexluaescapestring{#1}")}%
     \def\lyluatex@program{#1}
+}
+\newcommand{\lilypondIncludePaths}[1]{%
+    \directlua{ly_define_includepaths('\luatexluaescapestring{#1}')}%
+    \def\lyluatex@includepaths{#1}
 }
 
 \def\defaultwidth{default}
@@ -60,8 +66,10 @@ dofile(kpse.find_file("lyluatex.lua"))}
     ,staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
+    ,includepaths=\lyluatex@includepaths%
     ][other-options][1]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
+\directlua{ly_define_includepaths("\luatexluaescapestring{\commandkey{includepaths}}")}%
 \directlua{%
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -72,6 +80,7 @@ dofile(kpse.find_file("lyluatex.lua"))}
     )%
 }%
 \directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
+\directlua{ly_define_includepaths("\luatexluaescapestring{\lyluatex@includepaths}")}%
 }
 
 % Base environment to include a LilyPond fragment integrated into
@@ -91,28 +100,34 @@ dofile(kpse.find_file("lyluatex.lua"))}
     staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
+    ,includepaths=\lyluatex@includepaths%
     ][other-options][1]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
+\directlua{ly_define_includepaths("\luatexluaescapestring{\commandkey{includepaths}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \begin{compilerly}%
 {#1}
 \end{compilerly}%
 \directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
+\directlua{ly_define_includepaths("\luatexluaescapestring{\lyluatex@includepaths}")}%
 }
 
 \newkeyenvironment{ly}[%
     staffsize=\staffsize%
     ,line-width=\lilywidth%
     ,program=\lyluatex@program%
+    ,includepaths=\lyluatex@includepaths%
     ][other-options]{%
 \directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
+\directlua{ly_define_includepaths("\luatexluaescapestring{\commandkey{includepaths}}")}%
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \compilerly%
 }{%
 \endcompilerly%
 \directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
+\directlua{ly_define_includepaths("\luatexluaescapestring{\lyluatex@includepaths}")}%
 }
 
 % Commands for compatibility with lilypond-book
