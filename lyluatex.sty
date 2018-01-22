@@ -22,7 +22,8 @@
     ['tmpdir'] = 'tmp_ly',
     ['showfailed'] = 'true',
     ['staffsize'] = '0',
-    ['line-width'] = 'default'
+    ['line-width'] = 'default',
+    ['includepaths'] = ''
   } )
   set_default_options()
   reset_local_options()
@@ -60,7 +61,10 @@
   \directlua{set_option('line-width', #1)}
 }
 \catcode`-=12
-
+% Include paths for lilypond documents
+\newcommand{\lilypondIncludePaths}[1]{%
+    \directlua{set_option('includepaths', '#1')}
+}
 
 % Main commands
 % Inclusion of a .ly file
@@ -69,12 +73,14 @@
     ,staffsize%
     ,line-width%
     ,program%
+    ,includepaths%
     ][other-options][1]{%
 \calclinewidth
 \directlua{
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
+      ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
       ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
     lilypond_file(
@@ -102,11 +108,13 @@
     staffsize%
     ,line-width%
     ,program%
+    ,includepaths%
     ][other-options][1]{%
 \directlua{
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
+      ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
       ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
 }
@@ -120,11 +128,13 @@
     staffsize%
     ,line-width%
     ,program%
+    ,includepaths%
     ][other-options]{%
 \directlua{
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
+      ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
       ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
 }
