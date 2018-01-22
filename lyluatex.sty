@@ -25,19 +25,19 @@
 % Lua Script
 \directlua{
 OPTIONS = {
-  ['lilypondcmd'] = '\luatexluaescapestring{\lyluatex@program}',
-  ['tmpdir'] = '\luatexluaescapestring{\lyluatex@tmpdir}',
-  ['showfailed'] = '\luatexluaescapestring{\lyluatex@showfailed}'
+    ['lilypondcmd'] = '\luatexluaescapestring{\lyluatex@program}',
+    ['tmpdir'] = '\luatexluaescapestring{\lyluatex@tmpdir}',
+    ['showfailed'] = '\luatexluaescapestring{\lyluatex@showfailed}'
 }
---[[ TODO/HELP: I really want to have that as a DeclareBoolOption,
-     but for whatever reason I can't get that to work. --]]
-if OPTIONS.showfailed == "true" then OPTIONS.showfailed = true
-  else OPTIONS.showfailed = false end
+
+LOCAL_OPTIONS = {
+    ['lilypondcmd'] = '',
+    ['showfailed'] = 'false'
+}
 dofile(kpse.find_file("lyluatex.lua"))}
 \directlua{}
 \newcommand{\lilypondCmd}[1]{%
-    \directlua{ly_define_program("\luatexluaescapestring{#1}")}%
-    \def\lyluatex@program{#1}
+    \directlua{OPTIONS.lilypondcmd = [[#1]]}
 }
 
 \def\defaultwidth{default}
@@ -67,10 +67,12 @@ dofile(kpse.find_file("lyluatex.lua"))}
     fullpage=false%
     ,staffsize=\staffsize%
     ,line-width=\lilywidth%
-    ,program=\lyluatex@program%
+    ,program=\directlua{ get_option('lilypondcmd') }%
     ][other-options][1]{%
-\directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
-\directlua{%
+\directlua{
+    set_local_options({
+        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}'
+    })
     lilypond_file(
         "\luatexluaescapestring{#1}",
         "\luatexluaescapestring{\currfiledir}",
@@ -79,7 +81,7 @@ dofile(kpse.find_file("lyluatex.lua"))}
         \commandkey{fullpage}
     )%
 }%
-\directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
+\directlua{reset_local_options()}%
 }
 
 % Base environment to include a LilyPond fragment integrated into
@@ -98,29 +100,37 @@ dofile(kpse.find_file("lyluatex.lua"))}
 \newkeycommand{\lily}[%
     staffsize=\staffsize%
     ,line-width=\lilywidth%
-    ,program=\lyluatex@program%
+    ,program=\directlua{ get_option('lilypondcmd') }%
     ][other-options][1]{%
-\directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
+\directlua{
+    set_local_options({
+        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}'
+    })
+}
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \begin{compilerly}%
 {#1}
 \end{compilerly}%
-\directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
+\directlua{reset_local_options()}%
 }
 
 \newkeyenvironment{ly}[%
     staffsize=\staffsize%
     ,line-width=\lilywidth%
-    ,program=\lyluatex@program%
+    ,program=\directlua{ get_option('lilypondcmd') }%
     ][other-options]{%
-\directlua{ly_define_program("\luatexluaescapestring{\commandkey{program}}")}%
+\directlua{
+    set_local_options({
+        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}'
+    })
+}
 \def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \compilerly%
 }{%
 \endcompilerly%
-\directlua{ly_define_program("\luatexluaescapestring{\lyluatex@program}")}%
+\directlua{reset_local_options()}%
 }
 
 % Commands for compatibility with lilypond-book

@@ -11,10 +11,6 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local md5 = require 'md5'
 
-function ly_define_program(lilypond)
-    if lilypond then OPTIONS.lilypondcmd = lilypond end
-end
-
 
 function flatten_content(ly_code)
   --[[ Produce a flattend string from the original content,
@@ -111,7 +107,7 @@ end
 
 function run_lilypond(ly_code, output, include)
     mkdirs(dirname(output))
-    local cmd = OPTIONS.lilypondcmd.." "..
+    local cmd = get_local_option('lilypondcmd').." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
@@ -232,6 +228,27 @@ function write_tex(output, new_score)
             tex.print(content:explode('\n'))
         end
     end
+end
+
+
+function get_option(name)
+    return OPTIONS[name]
+end
+
+function get_local_option(name)
+    if LOCAL_OPTIONS[name] ~= '' then
+        return LOCAL_OPTIONS[name]
+    else
+        return OPTIONS[name]
+    end
+end
+
+function set_local_options(opts)
+    for k,v in pairs(opts) do LOCAL_OPTIONS[k] = v end
+end
+
+function reset_local_options()
+    OPTIONS.lilypondcmd = ''
 end
 
 
