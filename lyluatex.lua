@@ -38,11 +38,6 @@ function extract_unit(input)
     return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
 end
 
-function extract_size_arguments(line_width)
-    line_width = extract_unit(line_width)
-    return line_width
-end
-
 function hash_output_filename(ly_code, line_width, staffsize)
     filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code))..
@@ -71,7 +66,7 @@ end
 
 function lilypond_fragment(ly_code)
     staffsize = calc_staffsize(get_local_option('staffsize'))
-    line_width = extract_size_arguments(get_local_option('line-width'))
+    line_width = extract_unit(get_local_option('line-width'))
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
     local new_score = not is_compiled(output)
@@ -84,7 +79,7 @@ end
 
 function lilypond_file(input_file, currfiledir, fullpage)
     staffsize = calc_staffsize(get_local_option('staffsize'))
-    line_width = extract_size_arguments(get_local_option('line-width'))
+    line_width = extract_unit(get_local_option('line-width'))
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -318,5 +313,3 @@ function fontinfo(id)
     end
     return font.fonts[id]
 end
-
-
