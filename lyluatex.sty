@@ -18,6 +18,7 @@
 \DeclareStringOption[default]{line-width}[lilypond]
 \DeclareStringOption[tmp_ly]{tmpdir}[lilypond]
 \DeclareStringOption[true]{showfailed}
+\DeclareStringOption[0]{staffsize}[0]
 \newcommand{\pt}{pt}
 \newcommand{\mm}{mm}
 \newcommand{\cm}{cm}
@@ -27,17 +28,29 @@
 OPTIONS = {
     ['lilypondcmd'] = '\luatexluaescapestring{\lyluatex@program}',
     ['tmpdir'] = '\luatexluaescapestring{\lyluatex@tmpdir}',
-    ['showfailed'] = '\luatexluaescapestring{\lyluatex@showfailed}'
+    ['showfailed'] = '\luatexluaescapestring{\lyluatex@showfailed}',
+    ['staffsize'] = '\luatexluaescapestring{\lyluatex@staffsize}'
 }
 
 LOCAL_OPTIONS = {
     ['lilypondcmd'] = '',
-    ['showfailed'] = 'false'
+    ['showfailed'] = 'false',
+    ['staffsize'] = ''
 }
 dofile(kpse.find_file("lyluatex.lua"))}
 \directlua{}
+
+% Commands to change options during the document
 \newcommand{\lilypondCmd}[1]{%
     \directlua{OPTIONS.lilypondcmd = [[#1]]}
+}
+% Staff size is calculated in relation to text size if set to 0 (default)
+\newcommand{\lilypondStaffsize}[1]{%
+    \directlua{
+        ss = tostring([[#1]])
+        if ss == '0' then ss = '' end
+        OPTIONS.staffsize = ss
+    }
 }
 
 \def\defaultwidth{default}
@@ -53,11 +66,6 @@ dofile(kpse.find_file("lyluatex.lua"))}
 \let\lilywidth\lyluatex@line-width
 \catcode`-=12
 \fi
-% Staff size for LilyPond
-% If this is set to 0 (default) the value is calculated automatically
-% from «la taille de police».
-\def\staffsize{0}
-\let\localstaffsize\staffsize
 \let\localwidth\lilywidth
 
 
@@ -65,19 +73,19 @@ dofile(kpse.find_file("lyluatex.lua"))}
 % Inclusion of a .ly file
 \newkeycommand*\includely[%
     fullpage=false%
-    ,staffsize=\staffsize%
+    ,staffsize=\directlua{ get_option('staffsize') }%
     ,line-width=\lilywidth%
     ,program=\directlua{ get_option('lilypondcmd') }%
     ][other-options][1]{%
 \directlua{
     set_local_options({
-        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}'
+        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
+        ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
     lilypond_file(
         "\luatexluaescapestring{#1}",
         "\luatexluaescapestring{\currfiledir}",
         '\commandkey{line-width}',
-        \luatexluaescapestring{\commandkey{staffsize}},
         \commandkey{fullpage}
     )%
 }%
@@ -99,15 +107,16 @@ dofile(kpse.find_file("lyluatex.lua"))}
 % Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[%
     staffsize=\staffsize%
+    ,staffsize=\directlua{ get_option('staffsize') }%
     ,line-width=\lilywidth%
     ,program=\directlua{ get_option('lilypondcmd') }%
     ][other-options][1]{%
 \directlua{
     set_local_options({
-        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}'
+        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
+        ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
 }
-\def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \begin{compilerly}%
 {#1}
@@ -117,15 +126,16 @@ dofile(kpse.find_file("lyluatex.lua"))}
 
 \newkeyenvironment{ly}[%
     staffsize=\staffsize%
+    ,staffsize=\directlua{ get_option('staffsize') }%
     ,line-width=\lilywidth%
     ,program=\directlua{ get_option('lilypondcmd') }%
     ][other-options]{%
 \directlua{
     set_local_options({
-        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}'
+        ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
+        ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
 }
-\def\localstaffsize{\commandkey{staffsize}}%
 \def\localwidth{\commandkey{line-width}}%
 \compilerly%
 }{%

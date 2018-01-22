@@ -38,10 +38,9 @@ function extract_unit(input)
     return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
 end
 
-function extract_size_arguments(line_width, staffsize)
+function extract_size_arguments(line_width)
     line_width = extract_unit(line_width)
-    staffsize = calc_staffsize(staffsize)
-    return line_width, staffsize
+    return line_width
 end
 
 function hash_output_filename(ly_code, line_width, staffsize)
@@ -71,7 +70,8 @@ end
 
 
 function lilypond_fragment(ly_code, line_width, staffsize)
-    line_width, staffsize = extract_size_arguments(line_width, staffsize)
+  staffsize = calc_staffsize(get_local_option('staffsize'))
+  line_width = extract_size_arguments(line_width)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
     local new_score = not is_compiled(output)
@@ -82,8 +82,9 @@ function lilypond_fragment(ly_code, line_width, staffsize)
 end
 
 
-function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
-    line_width, staffsize = extract_size_arguments(line_width, staffsize)
+function lilypond_file(input_file, currfiledir, line_width, fullpage)
+    staffsize = calc_staffsize(get_local_option('staffsize'))
+    line_width = extract_size_arguments(line_width)
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -150,6 +151,7 @@ end
 
 
 function calc_staffsize(staffsize)
+    staffsize = tonumber(staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     return staffsize
 end
@@ -248,7 +250,8 @@ function set_local_options(opts)
 end
 
 function reset_local_options()
-    OPTIONS.lilypondcmd = ''
+    LOCAL_OPTIONS.lilypondcmd = ''
+    LOCAL_OPTIONS.staffsize = ''
 end
 
 
