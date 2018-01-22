@@ -32,12 +32,8 @@ OPTIONS = {
     ['staffsize'] = '\luatexluaescapestring{\lyluatex@staffsize}'
 }
 
-LOCAL_OPTIONS = {
-    ['lilypondcmd'] = '',
-    ['showfailed'] = 'false',
-    ['staffsize'] = ''
-}
-dofile(kpse.find_file("lyluatex.lua"))}
+dofile(kpse.find_file("lyluatex.lua"))
+reset_local_options()}
 \directlua{}
 
 % Commands to change options during the document

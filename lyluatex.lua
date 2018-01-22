@@ -250,8 +250,11 @@ function set_local_options(opts)
 end
 
 function reset_local_options()
-    LOCAL_OPTIONS.lilypondcmd = ''
-    LOCAL_OPTIONS.staffsize = ''
+  LOCAL_OPTIONS = {
+      ['lilypondcmd'] = '',
+      ['showfailed'] = 'false',
+      ['staffsize'] = ''
+  }
 end
 
 
