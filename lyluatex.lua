@@ -12,7 +12,7 @@ local err, warn, info, log = luatexbase.provides_module({
 local md5 = require 'md5'
 
 function ly_define_program(lilypond)
-    if lilypond then LILYPOND = lilypond end
+    if lilypond then OPTIONS.lilypondcmd = lilypond end
 end
 
 
@@ -56,7 +56,7 @@ function hash_output_filename(ly_code, line_width, staffsize)
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\n')
     f:close()
-    return TMP..'/'..filename
+    return OPTIONS.tmpdir..'/'..filename
 end
 
 
@@ -111,7 +111,7 @@ end
 
 function run_lilypond(ly_code, output, include)
     mkdirs(dirname(output))
-    local cmd = LILYPOND.." "..
+    local cmd = OPTIONS.lilypondcmd.." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
@@ -274,6 +274,6 @@ function fontinfo(id)
 end
 
 
-mkdirs(TMP)
-FILELIST = TMP..'/'..splitext(status.log_name, 'log')..'.list'
+mkdirs(OPTIONS.tmpdir)
+FILELIST = OPTIONS.tmpdir..'/'..splitext(status.log_name, 'log')..'.list'
 os.remove(FILELIST)

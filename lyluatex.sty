@@ -17,14 +17,22 @@
 \DeclareStringOption[lilypond]{program}[lilypond]
 \DeclareStringOption[default]{line-width}[lilypond]
 \DeclareStringOption[tmp_ly]{tmpdir}[lilypond]
+\DeclareStringOption[true]{showfailed}
 \newcommand{\pt}{pt}
 \newcommand{\mm}{mm}
 \newcommand{\cm}{cm}
 \ProcessKeyvalOptions*
 % Lua Script
 \directlua{
-LILYPOND = '\luatexluaescapestring{\lyluatex@program}'
-TMP = '\luatexluaescapestring{\lyluatex@tmpdir}'
+OPTIONS = {
+  ['lilypondcmd'] = '\luatexluaescapestring{\lyluatex@program}',
+  ['tmpdir'] = '\luatexluaescapestring{\lyluatex@tmpdir}',
+  ['showfailed'] = '\luatexluaescapestring{\lyluatex@showfailed}'
+}
+--[[ TODO/HELP: I really want to have that as a DeclareBoolOption,
+     but for whatever reason I can't get that to work. --]]
+if OPTIONS.showfailed == "true" then OPTIONS.showfailed = true
+  else OPTIONS.showfailed = false end
 dofile(kpse.find_file("lyluatex.lua"))}
 \directlua{}
 \newcommand{\lilypondCmd}[1]{%
