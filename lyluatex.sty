@@ -18,12 +18,13 @@
 \directlua{
   dofile(kpse.find_file("lyluatex.lua"))
   declare_package_options( {
+    ['cleantmp'] = false,
+    ['includepaths'] = './',
+    ['line-width'] = 'default',
     ['program'] = 'lilypond',
-    ['tmpdir'] = 'tmp_ly',
     ['showfailed'] = 'true',
     ['staffsize'] = '0',
-    ['line-width'] = 'default',
-    ['includepaths'] = ''
+    ['tmpdir'] = 'tmp_ly'
   } )
   set_default_options()
   reset_local_options()
