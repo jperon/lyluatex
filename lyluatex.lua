@@ -11,10 +11,6 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local md5 = require 'md5'
 
-function ly_define_program(lilypond)
-    if lilypond then LILYPOND = lilypond end
-end
-
 
 function flatten_content(ly_code)
   --[[ Produce a flattend string from the original content,
@@ -38,14 +34,8 @@ function flatten_content(ly_code)
 end
 
 function extract_unit(input)
-  --[ split a TeX length into number and unit --]
+    --[ split a TeX length into number and unit --]
     return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
-end
-
-function extract_size_arguments(line_width, staffsize)
-    line_width = extract_unit(line_width)
-    staffsize = calc_staffsize(staffsize)
-    return line_width, staffsize
 end
 
 function hash_output_filename(ly_code, line_width, staffsize)
@@ -56,7 +46,7 @@ function hash_output_filename(ly_code, line_width, staffsize)
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\n')
     f:close()
-    return TMP..'/'..filename
+    return OPTIONS.tmpdir..'/'..filename
 end
 
 
@@ -74,8 +64,9 @@ function is_compiled(output)
 end
 
 
-function lilypond_fragment(ly_code, line_width, staffsize)
-    line_width, staffsize = extract_size_arguments(line_width, staffsize)
+function lilypond_fragment(ly_code)
+    staffsize = calc_staffsize(get_local_option('staffsize'))
+    line_width = extract_unit(get_local_option('line-width'))
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
     local new_score = not is_compiled(output)
@@ -86,8 +77,9 @@ function lilypond_fragment(ly_code, line_width, staffsize)
 end
 
 
-function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
-    line_width, staffsize = extract_size_arguments(line_width, staffsize)
+function lilypond_file(input_file, currfiledir, fullpage)
+    staffsize = calc_staffsize(get_local_option('staffsize'))
+    line_width = extract_unit(get_local_option('line-width'))
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -111,7 +103,7 @@ end
 
 function run_lilypond(ly_code, output, include)
     mkdirs(dirname(output))
-    local cmd = LILYPOND.." "..
+    local cmd = get_local_option('program').." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
@@ -129,7 +121,8 @@ end
 
 function lilypond_fragment_header(staffsize, line_width)
     return string.format(
-[[%%File header
+        [[
+%%File header
 \version "2.18.2"
 
 \include "lilypond-book-preamble.ly"
@@ -147,13 +140,14 @@ function lilypond_fragment_header(staffsize, line_width)
 
 %%Follows original score
 ]],
-staffsize,
-line_width.n, line_width.u
-)
+        staffsize,
+        line_width.n, line_width.u
+    )
 end
 
 
 function calc_staffsize(staffsize)
+    staffsize = tonumber(staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     return staffsize
 end
@@ -228,10 +222,57 @@ function write_tex(output, new_score)
             f:close()
             delete_intermediate_files(output)
         else
-            --[[ simply reuse existing -systems.tex file --]]
+            -- simply reuse existing -systems.tex file
             tex.print(content:explode('\n'))
         end
     end
+end
+
+
+function declare_package_options(options)
+    OPTIONS = options
+    for k, v in pairs(options) do
+        tex.sprint(string.format([[\DeclareStringOption[%s]{%s}%%]], v, k))
+    end
+    tex.sprint([[\ProcessKeyvalOptions*]])
+    mkdirs(OPTIONS.tmpdir)
+    FILELIST = OPTIONS.tmpdir..'/'..splitext(status.log_name, 'log')..'.list'
+    os.remove(FILELIST)
+end
+
+
+function set_option(name, value)
+    OPTIONS[name] = value
+end
+
+
+function get_option(name)
+    return OPTIONS[name]
+end
+
+
+function set_default_options()
+    for k, v in pairs(OPTIONS) do
+        tex.sprint([[\directlua{OPTIONS[']]..k..
+                [['] = '\luatexluaescapestring{\lyluatex@]]..k..[[}'}%]])
+    end
+end
+
+
+function get_local_option(name)
+    if LOCAL_OPTIONS[name] then
+        return LOCAL_OPTIONS[name]
+    else
+        return OPTIONS[name]
+    end
+end
+
+function set_local_options(opts)
+    for k,v in pairs(opts) do if v ~= '' then LOCAL_OPTIONS[k] = v end end
+end
+
+function reset_local_options()
+    LOCAL_OPTIONS = {}
 end
 
 
@@ -272,8 +313,3 @@ function fontinfo(id)
     end
     return font.fonts[id]
 end
-
-
-mkdirs(TMP)
-FILELIST = TMP..'/'..splitext(status.log_name, 'log')..'.list'
-os.remove(FILELIST)
