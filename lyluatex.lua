@@ -34,7 +34,7 @@ function flatten_content(ly_code)
                     ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a')))
                 end
                 for _, f in ipairs(extract_includepaths(get_local_option('includepaths'))) do
-                    i = io.open(lfs.currentdir()..'/'..f..'/'..ly_file, 'r')
+                    i = io.open(f..'/'..ly_file, 'r')
                     if i then
                         ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a')))
                         break
@@ -52,13 +52,14 @@ function extract_unit(input)
     return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
 end
 
-function extract_size_arguments(line_width)
-    line_width = extract_unit(line_width)
-    return line_width
-end
 
 function extract_includepaths(includepaths)
-    return includepaths:explode(',')
+    includepaths = includepaths:explode(',')
+    -- delete initial space (in case someone puts a space after the comma)
+    for i, path in ipairs(includepaths) do
+        includepaths[i] = path:gsub('^ ', '')
+    end
+    return includepaths
 end
 
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
@@ -79,10 +80,8 @@ function is_compiled(output)
         if lfs.isfile(output..'.pdf') then
             return true else return false end
     end
-
     f = io.open(output..'-systems.tex')
     if not f then return false end
-
     head = f:read("*line")
     if head == "% eof" then return false else return true end
 end
@@ -90,7 +89,7 @@ end
 
 function lilypond_fragment(ly_code)
     staffsize = calc_staffsize(get_local_option('staffsize'))
-    line_width = extract_size_arguments(get_local_option('line-width'))
+    line_width = extract_unit(get_local_option('line-width'))
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize, nil)
     local new_score = not is_compiled(output)
@@ -103,7 +102,7 @@ end
 
 function lilypond_file(input_file, currfiledir, fullpage)
     staffsize = calc_staffsize(get_local_option('staffsize'))
-    line_width = extract_size_arguments(get_local_option('line-width'))
+    line_width = extract_unit(get_local_option('line-width'))
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -131,11 +130,12 @@ function run_lilypond(ly_code, output, include)
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
-    if include then cmd = cmd.."-I '"..lfs.currentdir().."/"..include.."' " end
+    if include then cmd = cmd.."-I "..lfs.currentdir()..'/'..include.." " end
     for _, dir in ipairs(extract_includepaths(get_local_option('includepaths'))) do
-        cmd = cmd.."-I '"..lfs.currentdir().."/"..dir.."' "
+        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
     end
     cmd = cmd.."-o "..output.." -"
+    print('\n', cmd)
     local p = io.popen(cmd, 'w')
     p:write(ly_code)
     p:close()
@@ -340,5 +340,3 @@ function fontinfo(id)
     end
     return font.fonts[id]
 end
-
-
