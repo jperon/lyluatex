@@ -61,6 +61,22 @@
 }
 \catcode`-=12
 
+% Retrieve the three main font families (rm, sf, tt)
+% and store them as options. Additionally store the
+% *current* font for optional use.
+\newcommand{\currentfonts}{%
+\begingroup%
+    \rmfamily \edef\rmfamilyid{\fontid\font}%
+    \sffamily \edef\sffamilyid{\fontid\font}%
+    \ttfamily \edef\ttfamilyid{\fontid\font}%
+    \directlua{
+        set_option('rmfamily', get_font_family(\rmfamilyid))
+        set_option('sffamily', get_font_family(\sffamilyid))
+        set_option('ttfamily', get_font_family(\ttfamilyid))
+        set_option('current-font', get_font_family(font.current()))
+    }%
+\endgroup%
+}
 
 % Main commands
 % Inclusion of a .ly file
@@ -71,6 +87,7 @@
     ,program%
     ][other-options][1]{%
 \calclinewidth
+\currentfonts
 \directlua{
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
@@ -90,6 +107,7 @@
 % the document.
 \NewEnviron{compilerly}{%
 \calclinewidth
+\currentfonts
 \directlua{%
     lilypond_fragment(
         "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}"

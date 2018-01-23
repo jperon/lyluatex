@@ -122,7 +122,6 @@ end
 
 
 function lilypond_fragment_header(staffsize, line_width)
-    local fontdef = get_fonts()
     return string.format(
         [[
 %%File header
@@ -150,7 +149,9 @@ function lilypond_fragment_header(staffsize, line_width)
 ]],
 staffsize,
 line_width.n, line_width.u,
-fontdef.rm, fontdef.sf, fontdef.tt
+get_local_option('rmfamily'),
+get_local_option('sffamily'),
+get_local_option('ttfamily')
 )
 end
 
@@ -323,25 +324,6 @@ function fontinfo(id)
     return font.fonts[id]
 end
 
-function get_current_font_family()
-    return fontinfo(font.current()).shared.rawdata.metadata['familyname']
-end
-
-function get_fonts()
-    --[[ This is preliminary and simply retrieves then
-         font that is *currently* in use. --]]
-    result = {}
-    tex.print('\noexpand\\begingroup')
-    tex.sprint('\noexpand\\rmfamily')
-    result.rm = get_current_font_family()
-    tex.sprint('\noexpand\\sffamily')
-    result.sf = get_current_font_family()
-    tex.sprint('\noexpand\\ttfamily')
-    result.tt = get_current_font_family()
-    tex.print('\noexpand\\endgroup')
-    print("")
-    print(result.rm)
-    print(result.sf)
-    print(result.tt)
-    return result
+function get_font_family(font_id)
+    return fontinfo(font_id).shared.rawdata.metadata['familyname']
 end
