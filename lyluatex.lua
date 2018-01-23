@@ -11,10 +11,6 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local md5 = require 'md5'
 
-function ly_define_program(lilypond)
-    if lilypond then LILYPOND = lilypond end
-end
-
 
 function flatten_content(ly_code)
   --[[ Produce a flattend string from the original content,
@@ -38,14 +34,8 @@ function flatten_content(ly_code)
 end
 
 function extract_unit(input)
-  --[ split a TeX length into number and unit --]
+    --[ split a TeX length into number and unit --]
     return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
-end
-
-function extract_size_arguments(line_width, staffsize)
-    line_width = extract_unit(line_width)
-    staffsize = calc_staffsize(staffsize)
-    return line_width, staffsize
 end
 
 function hash_output_filename(ly_code, line_width, staffsize)
@@ -56,24 +46,40 @@ function hash_output_filename(ly_code, line_width, staffsize)
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\n')
     f:close()
-    return TMP..'/'..filename
+    return OPTIONS.tmpdir..'/'..filename
 end
 
-function lilypond_fragment(ly_code, line_width, staffsize)
-    line_width, staffsize = extract_size_arguments(line_width, staffsize)
+
+function is_compiled(output)
+    if output:find('fullpage') then
+        if lfs.isfile(output..'.pdf') then
+            return true else return false end
+    end
+
+    f = io.open(output..'-systems.tex')
+    if not f then return false end
+
+    head = f:read("*line")
+    if head == "% eof" then return false else return true end
+end
+
+
+function lilypond_fragment(ly_code)
+    staffsize = calc_staffsize(get_local_option('staffsize'))
+    line_width = extract_unit(get_local_option('line-width'))
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     local output = hash_output_filename(ly_code, line_width, staffsize)
-    local compiled = false
-    if not lfs.isfile(output..'-systems.tex') then
+    local new_score = not is_compiled(output)
+    if new_score then
         compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
-        compiled = true
     end
-    write_tex(output, compiled)
+    write_tex(output, new_score)
 end
 
 
-function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
-    line_width, staffsize = extract_size_arguments(line_width, staffsize)
+function lilypond_file(input_file, currfiledir, fullpage)
+    staffsize = calc_staffsize(get_local_option('staffsize'))
+    line_width = extract_unit(get_local_option('line-width'))
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -83,23 +89,21 @@ function lilypond_file(input_file, currfiledir, line_width, staffsize, fullpage)
     i:close()
     local output = hash_output_filename(ly_code, line_width, staffsize)
     if fullpage then output = output..'-fullpage' end
-    local compiled = false
-    if not ( lfs.isfile(output..'-systems.tex') or
-        lfs.isfile(output..'-fullpage.pdf') ) then
-        compiled = true
+    local new_score = not is_compiled(output)
+    if new_score then
         if fullpage then
             run_lilypond(ly_code, output, false, dirname(input_file))
         else
             compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
         end
     end
-    write_tex(output, compiled)
+    write_tex(output, new_score)
 end
 
 
 function run_lilypond(ly_code, output, include)
     mkdirs(dirname(output))
-    local cmd = LILYPOND.." "..
+    local cmd = get_local_option('program').." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
@@ -119,7 +123,8 @@ end
 function lilypond_fragment_header(staffsize, line_width)
     local fontdef = get_fonts()
     return string.format(
-[[%%File header
+        [[
+%%File header
 \version "2.18.2"
 
 \include "lilypond-book-preamble.ly"
@@ -150,6 +155,7 @@ end
 
 
 function calc_staffsize(staffsize)
+    staffsize = tonumber(staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     return staffsize
 end
@@ -189,7 +195,21 @@ function calc_protrusion(output)
     return protrusion
 end
 
-function write_tex(output, compiled)
+function write_tex(output, new_score)
+    if not is_compiled(output) then
+      tex.print ([[
+
+\begin{quote}
+\fbox{Score failed to compile}
+\end{quote}
+
+]])
+        err("\nScore failed to compile, please check LilyPond input.\n")
+        --[[ ensure the score gets recompiled next time --]]
+        os.remove(output..'-systems.tex')
+    end
+
+    --[[ Now we know there is a proper score --]]
     local systems_file = io.open(output..'-systems.tex', 'r')
     if not systems_file then
         --[[ Fullpage score, use \includepdf ]]
@@ -198,7 +218,7 @@ function write_tex(output, compiled)
         --[[ Fragment, use -systems.tex file]]
         local content = systems_file:read("*all")
         systems_file:close()
-        if compiled then
+        if new_score then
             --[[ new compilation, calculate protrusion
                  and update -systems.tex file --]]
             local protrusion = calc_protrusion(output)
@@ -210,10 +230,57 @@ function write_tex(output, compiled)
             f:close()
             delete_intermediate_files(output)
         else
-            --[[ simply reuse existing -systems.tex file --]]
+            -- simply reuse existing -systems.tex file
             tex.print(content:explode('\n'))
         end
     end
+end
+
+
+function declare_package_options(options)
+    OPTIONS = options
+    for k, v in pairs(options) do
+        tex.sprint(string.format([[\DeclareStringOption[%s]{%s}%%]], v, k))
+    end
+    tex.sprint([[\ProcessKeyvalOptions*]])
+    mkdirs(OPTIONS.tmpdir)
+    FILELIST = OPTIONS.tmpdir..'/'..splitext(status.log_name, 'log')..'.list'
+    os.remove(FILELIST)
+end
+
+
+function set_option(name, value)
+    OPTIONS[name] = value
+end
+
+
+function get_option(name)
+    return OPTIONS[name]
+end
+
+
+function set_default_options()
+    for k, v in pairs(OPTIONS) do
+        tex.sprint([[\directlua{OPTIONS[']]..k..
+                [['] = '\luatexluaescapestring{\lyluatex@]]..k..[[}'}%]])
+    end
+end
+
+
+function get_local_option(name)
+    if LOCAL_OPTIONS[name] then
+        return LOCAL_OPTIONS[name]
+    else
+        return OPTIONS[name]
+    end
+end
+
+function set_local_options(opts)
+    for k,v in pairs(opts) do if v ~= '' then LOCAL_OPTIONS[k] = v end end
+end
+
+function reset_local_options()
+    LOCAL_OPTIONS = {}
 end
 
 
@@ -266,8 +333,3 @@ function get_fonts()
       ['tt'] = family,
     }
 end
-
-
-mkdirs(TMP)
-FILELIST = TMP..'/'..splitext(status.log_name, 'log')..'.list'
-os.remove(FILELIST)
