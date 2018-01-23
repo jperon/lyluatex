@@ -109,6 +109,7 @@ function run_lilypond(ly_code, output, include)
         "-dno-delete-intermediate-files "
     if include then cmd = cmd.."-I '"..lfs.currentdir().."/"..include.."' " end
     cmd = cmd.."-o "..output.." -"
+    print(cmd)
     local p = io.popen(cmd, 'w')
     p:write(ly_code)
     p:close()
@@ -322,14 +323,25 @@ function fontinfo(id)
     return font.fonts[id]
 end
 
+function get_current_font_family()
+    return fontinfo(font.current()).shared.rawdata.metadata['familyname']
+end
 
 function get_fonts()
     --[[ This is preliminary and simply retrieves then
          font that is *currently* in use. --]]
-    local family = fontinfo(font.current()).shared.rawdata.metadata['familyname']
-    return {
-      ['rm'] = family,
-      ['sf'] = family,
-      ['tt'] = family,
-    }
+    result = {}
+    tex.print('\noexpand\\begingroup')
+    tex.sprint('\noexpand\\rmfamily')
+    result.rm = get_current_font_family()
+    tex.sprint('\noexpand\\sffamily')
+    result.sf = get_current_font_family()
+    tex.sprint('\noexpand\\ttfamily')
+    result.tt = get_current_font_family()
+    tex.print('\noexpand\\endgroup')
+    print("")
+    print(result.rm)
+    print(result.sf)
+    print(result.tt)
+    return result
 end
