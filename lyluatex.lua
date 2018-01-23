@@ -65,7 +65,7 @@ end
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
     local filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code))..
-        '-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-'
+        '_'..staffsize..'_'..line_width.n..line_width.u, '%.', '_'
     )
     lilypond_set_roman_font()
     filename = fontify_output(filename)
@@ -199,6 +199,42 @@ function delete_intermediate_files(output)
   end
 end
 
+
+function clean_tmp_dir()
+    local hash, file_is_used
+    local hash_list = {}
+    local i = io.open(FILELIST)
+    if not i then return false end
+    for n, line in ipairs(i:read('*a'):explode('\n')) do
+        hash = line:explode('\t')[1]
+        if hash ~= '' then hash_list[n] = hash end
+    end
+    i:close()
+    for file in lfs.dir(get_option('tmpdir')) do
+        file_is_used = false
+        if file ~= '.' and file ~= '..' and file ~= basename(FILELIST) then
+            for _, hash in ipairs(hash_list) do
+                if file:find(hash) then
+                    file_is_used = true
+                    break
+                end
+            end
+            if not file_is_used then
+                os.remove(get_option('tmpdir')..'/'..file)
+            end
+        end
+    end
+end
+
+
+function conclusion_text()
+    print('\n'..string.format([[
+Output written on %s.pdf.
+Transcript written on %s.log.]],
+              tex.jobname, tex.jobname))
+end
+
+
 function calc_protrusion(output)
     --[[
       Determine the amount of space used to the left of the staff lines
@@ -284,8 +320,11 @@ end
 
 function set_default_options()
     for k, v in pairs(OPTIONS) do
-        tex.sprint([[\directlua{OPTIONS[']]..k..
-                [['] = '\luatexluaescapestring{\lyluatex@]]..k..[[}'}%]])
+        tex.sprint(
+            [[\directlua{OPTIONS[']]..
+                k..[['] = '\luatexluaescapestring{\lyluatex@]]..
+                k..[[}'}%]]
+        )
     end
 end
 
@@ -304,6 +343,16 @@ end
 
 function reset_local_options()
     LOCAL_OPTIONS = {}
+end
+
+
+function basename(str)
+    if str:match(".-/.-") then
+        local name = string.gsub(str, "(.*/)(.*)", "%2")
+        return name
+    else
+        return ''
+    end
 end
 
 
