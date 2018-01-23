@@ -22,7 +22,8 @@
     ['tmpdir'] = 'tmp_ly',
     ['showfailed'] = 'true',
     ['staffsize'] = '0',
-    ['line-width'] = 'default'
+    ['line-width'] = 'default',
+    ['pass-fonts'] = 'true'
   } )
   set_default_options()
   reset_local_options()
@@ -59,7 +60,11 @@
   \edef\lyluatex@line-width{#1}
   \directlua{set_option('line-width', #1)}
 }
+\newcommand{\lilypondPassFonts}[1]{%
+  \directlua{set_option('pass-fonts', #1)}
+}
 \catcode`-=12
+
 
 % Retrieve the three main font families (rm, sf, tt)
 % and store them as options. Additionally store the
@@ -85,6 +90,7 @@
     ,staffsize%
     ,line-width%
     ,program%
+    ,pass-fonts%
     ][other-options][1]{%
 \calclinewidth
 \currentfonts
@@ -92,7 +98,8 @@
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
+      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
+      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}'
     })
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -120,12 +127,14 @@
     staffsize%
     ,line-width%
     ,program%
+    ,pass-fonts%
     ][other-options][1]{%
 \directlua{
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
+      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
+      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}'
     })
 }
 \begin{compilerly}%
@@ -138,12 +147,14 @@
     staffsize%
     ,line-width%
     ,program%
+    ,pass-fonts%
     ][other-options]{%
 \directlua{
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
+      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
+      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}'
     })
 }
 \compilerly%

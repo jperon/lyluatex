@@ -121,6 +121,21 @@ function compile_lilypond_fragment(ly_code, staffsize, line_width, output, inclu
 end
 
 
+function define_lilypond_fonts()
+    if get_local_option('pass-fonts') == 'true' then
+        return string.format([[
+        #(define fonts
+          (make-pango-font-tree "%s"
+                                "%s"
+                                "%s"
+                                (/ staff-height pt 20)))
+        ]],
+        get_local_option('rmfamily'),
+        get_local_option('sffamily'),
+        get_local_option('ttfamily'))
+    else return '' end
+end
+
 function lilypond_fragment_header(staffsize, line_width)
     return string.format(
         [[
@@ -138,20 +153,14 @@ function lilypond_fragment_header(staffsize, line_width)
 \paper{
     indent = 0\mm
     line-width = %s\%s
-    #(define fonts
-      (make-pango-font-tree "%s"
-                            "%s"
-                            "%s"
-                            (/ staff-height pt 20)))
+    %s
 }
 
 %%Follows original score
 ]],
 staffsize,
 line_width.n, line_width.u,
-get_local_option('rmfamily'),
-get_local_option('sffamily'),
-get_local_option('ttfamily')
+define_lilypond_fonts()
 )
 end
 
