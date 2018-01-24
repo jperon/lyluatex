@@ -3,10 +3,9 @@ test:
 
 manual:
 	pandoc --pdf-engine=lualatex \
-				 -V fontfamily=libertine \
-		     -o lyluatex.pdf \
-				 lyluatex.md \
-				 && xdg-open lyluatex.pdf
+		-V fontfamily=libertine \
+		-o lyluatex.pdf \
+		lyluatex.md
 
 ctan:
 	mkdir -p ./ctan/lyluatex
