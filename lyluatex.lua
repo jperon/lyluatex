@@ -102,7 +102,7 @@ function process_lilypond_code(ly_code, input_file)
                 ly_code, staffsize, line_width, output, input, fullpage
             )
     end
-    write_tex(output, new_score, fullpage)
+    write_tex(output, new_score)
 end
 
 
@@ -275,7 +275,7 @@ function calc_protrusion(output)
     return protrusion
 end
 
-function write_tex(output, new_score, fullpage)
+function write_tex(output, new_score)
     if not is_compiled(output) then
       tex.print(
           [[
@@ -378,7 +378,8 @@ end
 
 function set_local_options(opts)
     for k,v in pairs(opts) do
-        if v ~= '' and v ~= 'false' then LOCAL_OPTIONS[k] = v end
+        if v == 'false' then v = false end
+        if v ~= '' then LOCAL_OPTIONS[k] = v end
     end
 end
 
