@@ -2,7 +2,7 @@
 documentclass: lyluatexmanual
 title: "\\lyluatex"
 author:
-- Jacques Peron
+- Fr. Jacques Peron
 - Urs Liska
 - Br. Samuel Springuel
 toc: yes
