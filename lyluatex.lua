@@ -67,6 +67,8 @@ function hash_output_filename(ly_code, line_width, staffsize, input_file)
         md5.sumhexa(flatten_content(ly_code))..
         '-'..staffsize..'-'..line_width.n..line_width.u, '%.', '-'
     )
+    lilypond_set_roman_font()
+    filename = fontify_output(filename)
     if not input_file then input_file = '' end
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\t', input_file, '\n')
@@ -135,7 +137,6 @@ function run_lilypond(ly_code, output, include)
         cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
     end
     cmd = cmd.."-o "..output.." -"
-    print('\n', cmd)
     local p = io.popen(cmd, 'w')
     p:write(ly_code)
     p:close()
@@ -145,6 +146,7 @@ function compile_lilypond_fragment(ly_code, staffsize, line_width, output, inclu
     ly_code = lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code
     run_lilypond(ly_code, output, include)
 end
+
 
 function lilypond_fragment_header(staffsize, line_width)
     return string.format(
@@ -163,13 +165,15 @@ function lilypond_fragment_header(staffsize, line_width)
 \paper{
     indent = 0\mm
     line-width = %s\%s
+    %s
 }
 
 %%Follows original score
 ]],
-        staffsize,
-        line_width.n, line_width.u
-    )
+staffsize,
+line_width.n, line_width.u,
+define_lilypond_fonts()
+)
 end
 
 
@@ -339,4 +343,41 @@ function fontinfo(id)
         return f
     end
     return font.fonts[id]
+end
+
+function get_font_family(font_id)
+    return fontinfo(font_id).shared.rawdata.metadata['familyname']
+end
+
+function define_lilypond_fonts()
+    if get_local_option('pass-fonts') then
+        return string.format([[
+        #(define fonts
+          (make-pango-font-tree "%s"
+                                "%s"
+                                "%s"
+                                (/ staff-height pt 20)))
+        ]],
+        get_local_option('rmfamily'),
+        get_local_option('sffamily'),
+        get_local_option('ttfamily'))
+    else return '' end
+end
+
+function lilypond_set_roman_font()
+    if get_local_option('current-font-as-main') == 'true' then
+        LOCAL_OPTIONS.rmfamily = get_local_option('current-font') end
+end
+
+function squash_fontname(family)
+    return get_local_option(family):gsub(' ', '')
+end
+
+function fontify_output(output)
+    if get_local_option('pass-fonts') == 'true' then
+        return output..'-'..
+          squash_fontname('rmfamily')..'-'..
+          squash_fontname('sffamily')..'-'..
+          squash_fontname('ttfamily')
+    else return output end
 end

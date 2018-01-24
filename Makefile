@@ -1,6 +1,13 @@
 test:
 	lualatex -interaction=nonstopmode -shell-escape test.tex
 
+manual:
+	pandoc --pdf-engine=lualatex \
+				 -V fontfamily=libertine \
+		     -o lyluatex.pdf \
+				 lyluatex.md \
+				 && xdg-open lyluatex.pdf
+
 ctan:
 	mkdir -p ./ctan/lyluatex
 	cp lyluatex.* LICENSE ./ctan/lyluatex/
