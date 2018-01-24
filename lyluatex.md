@@ -26,7 +26,61 @@ abstract: >
 
 ## Option Handling
 
-* Including conventions in this manual
+The behaviour of \lyluatex\ can be configured in detail.  For most aspects
+(except when it doesn't make sense) there are global and local options, as well
+as commands to change the behaviour along the way.  Currently \lyluatex\ only supports explicit boolean arguments:
+
+```tex
+% Correct:
+[key1=true,key2=false]
+
+% Incorrect:
+[key1] % as meaning the same as above
+```
+
+
+#### Package Options
+Options can be set globally through package options, which are used with
+
+```tex
+\usepackage[key1=value1,key2=value2]{lyluatex}
+```
+
+#### Local Options
+
+Options can also be applied on a per-score basis through optional arguments to
+the individual command or environments:
+
+```tex
+\includely[key1=value1]{path/to/file.ly}
+\lily[key1=value1]{ c' d' e' }
+\begin{ly}[key1=value1]
+{
+  c' d' e'
+}
+\end{ly}
+```
+
+#### Switching Commands
+
+Most options can be changed within the document to apply to all subsequent
+scores instead of only the current one.  These commands generally expect one
+argument, but details are described below.
+
+#### Convention in this Manual
+
+*Options* are printed with some negative indent. The option name is printed in
+bold face, followed by a parenthesized default value. At the end of the line is
+an indicator showing whether the option can be applied as package and/or as
+local option:
+
+\lyOption{option-name}{default}{pkg/local}
+followed by a description.
+
+*Commands* look very much the same but (of course) have a leading backslash. The
+item gives some information on the number of arguments (usually 1):
+
+\lyCmd{commandName}{1}
 
 ## Score Layout
 
