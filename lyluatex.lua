@@ -123,6 +123,8 @@ end
 
 function define_lilypond_fonts()
     if get_local_option('pass-fonts') == 'true' then
+        if get_local_option('current-font-as-main') == 'true' then
+            LOCAL_OPTIONS.rmfamily = get_local_option('current-font') end
         return string.format([[
         #(define fonts
           (make-pango-font-tree "%s"

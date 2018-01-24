@@ -23,7 +23,8 @@
     ['showfailed'] = 'true',
     ['staffsize'] = '0',
     ['line-width'] = 'default',
-    ['pass-fonts'] = 'true'
+    ['pass-fonts'] = 'true',
+    ['current-font-as-main'] = 'true'
   } )
   set_default_options()
   reset_local_options()
@@ -63,6 +64,9 @@
 \newcommand{\lilypondPassFonts}[1]{%
   \directlua{set_option('pass-fonts', #1)}
 }
+\newcommand{\lilypondCurrentFontAsMain}[1]{%
+  \directlua{set_option('current-font-as-main', #1)}
+}
 \catcode`-=12
 
 
@@ -71,6 +75,7 @@
 % *current* font for optional use.
 \newcommand{\currentfonts}{%
 \begingroup%
+    \directlua{set_option('current-font', get_font_family(font.current()))}
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
@@ -78,7 +83,6 @@
         set_option('rmfamily', get_font_family(\rmfamilyid))
         set_option('sffamily', get_font_family(\sffamilyid))
         set_option('ttfamily', get_font_family(\ttfamilyid))
-        set_option('current-font', get_font_family(font.current()))
     }%
 \endgroup%
 }
@@ -91,6 +95,7 @@
     ,line-width%
     ,program%
     ,pass-fonts%
+    ,current-font-as-main%
     ][other-options][1]{%
 \calclinewidth
 \currentfonts
@@ -99,7 +104,8 @@
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
       ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
-      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}'
+      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
+      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}'
     })
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -128,13 +134,15 @@
     ,line-width%
     ,program%
     ,pass-fonts%
+    ,current-font-as-main%
     ][other-options][1]{%
 \directlua{
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
       ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
-      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}'
+      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
+      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}'
     })
 }
 \begin{compilerly}%
@@ -148,13 +156,15 @@
     ,line-width%
     ,program%
     ,pass-fonts%
+    ,current-font-as-main%
     ][other-options]{%
 \directlua{
     set_local_options({
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
       ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
-      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}'
+      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
+      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}'
     })
 }
 \compilerly%
