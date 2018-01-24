@@ -12,7 +12,47 @@ abstract: >
 
 # Introduction
 
-# Font Handling
+* General idea
+* Main features
+* lilypond-book
+* Minimal Working Example
+
+## Installation
+
+# Usage
+
+* Basic operation with the three commands/environments
+* Subsection: lilypond-book compatibility chart
+
+## Option Handling
+
+* Including conventions in this manual
+
+## Score Layout
+
+### `line-width`
+
+### `staffsize`
+
+### Full Page Scores and Fragments
+
+### Alignment
+
+## Miscellaneous Options
+
+### LilyPond Include Paths
+
+### LilyPond Executable
+
+### Temp Directory for scores
+
+* tmpdir
+* cleantmp
+
+### Handling Failed LilyPond Compilations
+
+
+## Font Handling
 
 The choice of fonts is arguably the most obvious factor in the appearance of any
 document, be it text or music.  In text documents with interspersed scores the
