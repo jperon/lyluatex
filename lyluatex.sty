@@ -18,13 +18,15 @@
 \directlua{
   dofile(kpse.find_file("lyluatex.lua"))
   declare_package_options( {
-    ['program'] = 'lilypond',
-    ['tmpdir'] = 'tmp_ly',
-    ['showfailed'] = 'true',
-    ['staffsize'] = '0',
+    ['cleantmp'] = false,
+    ['current-font-as-main'] = 'true',
+    ['includepaths'] = './',
     ['line-width'] = 'default',
     ['pass-fonts'] = 'true',
-    ['current-font-as-main'] = 'true'
+    ['program'] = 'lilypond',
+    ['showfailed'] = 'true',
+    ['staffsize'] = '0',
+    ['tmpdir'] = 'tmp_ly'
   } )
   set_default_options()
   reset_local_options()
@@ -68,7 +70,10 @@
   \directlua{set_option('current-font-as-main', #1)}
 }
 \catcode`-=12
-
+% Include paths for lilypond documents
+\newcommand{\lilypondIncludePaths}[1]{%
+    \directlua{set_option('includepaths', '#1')}
+}
 
 % Retrieve the three main font families (rm, sf, tt)
 % and store them as options. Additionally store the
@@ -91,21 +96,23 @@
 % Inclusion of a .ly file
 \newkeycommand*\includely[%
     fullpage=false%
-    ,staffsize%
-    ,line-width%
-    ,program%
-    ,pass-fonts%
     ,current-font-as-main%
+    ,includepaths%
+    ,line-width%
+    ,pass-fonts%
+    ,program%
+    ,staffsize%
     ][other-options][1]{%
 \calclinewidth
 \currentfonts
 \directlua{
     set_local_options({
-      ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
-      ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
-      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}'
+    ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
+    ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
+    ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
+    ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
+    ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
+    ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -130,19 +137,21 @@
 
 % Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[%
-    staffsize%
-    ,line-width%
-    ,program%
-    ,pass-fonts%
     ,current-font-as-main%
+    ,includepaths%
+    ,line-width%
+    ,pass-fonts%
+    ,program%
+    ,staffsize%
     ][other-options][1]{%
 \directlua{
     set_local_options({
+    ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
+    ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
       ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}'
+      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
 }
 \begin{compilerly}%
@@ -152,19 +161,21 @@
 }
 
 \newkeyenvironment{ly}[%
-    staffsize%
+    current-font-as-main%
+    ,includepaths%
     ,line-width%
-    ,program%
     ,pass-fonts%
-    ,current-font-as-main%
+    ,program%
+    ,staffsize%
     ][other-options]{%
 \directlua{
     set_local_options({
+      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
+      ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
       ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
       ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}',
       ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}'
+      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
     })
 }
 \compilerly%
