@@ -3,6 +3,7 @@ test:
 
 manual:
 	pandoc --pdf-engine=lualatex \
+				 -V fontfamily=libertine \
 		     -o lyluatex.pdf \
 				 lyluatex.md \
 				 && xdg-open lyluatex.pdf
