@@ -22,12 +22,12 @@
 \newcommand{\lyOption}[3]{%
 
 \medskip
-\hspace*{-1em}\textbf{#1} (#2) {\small \textit{#3}} ---\\}
+\hspace*{-1em}\textbf{#1} (#2) {\small \textit{#3}}\\}
 
 \newcommand{\lyCmd}[2]{%
 
 \medskip
-\hspace*{-1em}\textbf{\textbackslash #1} (#2 args)---\\}
+\hspace*{-1em}\textbf{\textbackslash #1} (#2 args)\\}
 
 \newcommand{\lyIssue}[1]{%
 
