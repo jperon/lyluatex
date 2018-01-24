@@ -12,7 +12,7 @@ local err, warn, info, log = luatexbase.provides_module({
 local md5 = require 'md5'
 
 
-function flatten_content(ly_code)
+function flatten_content(ly_code, input_file)
     --[[ Produce a flattend string from the original content,
         including referenced files (if they can be opened.
         Other files (from LilyPond's include path) are considered
@@ -25,18 +25,18 @@ function flatten_content(ly_code)
             ly_file = ly_code:match('\\include%s*"([^"]*)"', b)
             i = io.open(ly_file, 'r')
             if i then
-                ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a')))
+                ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a'), input_file))
             else
                 if input_file then
                     i = io.open(dirname(input_file)..'/'..ly_file, 'r')
                 end
                 if i then
-                    ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a')))
+                    ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a'), input_file))
                 end
                 for _, f in ipairs(extract_includepaths(get_local_option('includepaths'))) do
                     i = io.open(f..'/'..ly_file, 'r')
                     if i then
-                        ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a')))
+                        ly_code = ly_code:gsub(ly_code:sub(b, e), flatten_content(i:read('*a'), input_file))
                         break
                     end
                 end
@@ -64,7 +64,7 @@ end
 
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
     local filename = string.gsub(
-        md5.sumhexa(flatten_content(ly_code))..
+        md5.sumhexa(flatten_content(ly_code), input_file)..
         '_'..staffsize..'_'..line_width.n..line_width.u, '%.', '_'
     )
     lilypond_set_roman_font()
@@ -89,22 +89,30 @@ function is_compiled(output)
 end
 
 
-function lilypond_fragment(ly_code)
-    staffsize = calc_staffsize(get_local_option('staffsize'))
-    line_width = extract_unit(get_local_option('line-width'))
-    ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    local output = hash_output_filename(ly_code, line_width, staffsize, nil)
+function process_lilypond_code(ly_code, input_file)
+    local fullpage = get_local_option('fullpage')
+    local line_width = extract_unit(get_local_option('line-width'))
+    local staffsize = calc_staffsize(get_local_option('staffsize'))
+    local output = hash_output_filename(ly_code, line_width, staffsize, input_file)
+    if fullpage then output = output..'-fullpage' end
     local new_score = not is_compiled(output)
     if new_score then
-        compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
+        if input_file then local input = dirname(input_file) end
+            compile_lilypond_fragment(
+                ly_code, staffsize, line_width, output, input, fullpage
+            )
     end
-    write_tex(output, new_score)
+    write_tex(output, new_score, fullpage)
+end
+
+
+function lilypond_fragment(ly_code)
+    ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
+    process_lilypond_code(ly_code, nil)
 end
 
 
 function lilypond_file(input_file, currfiledir, fullpage)
-    staffsize = calc_staffsize(get_local_option('staffsize'))
-    line_width = extract_unit(get_local_option('line-width'))
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -112,17 +120,7 @@ function lilypond_file(input_file, currfiledir, fullpage)
     local i = io.open(input_file, 'r')
     ly_code = i:read('*a')
     i:close()
-    local output = hash_output_filename(ly_code, line_width, staffsize, input_file)
-    if fullpage then output = output..'-fullpage' end
-    local new_score = not is_compiled(output)
-    if new_score then
-        if fullpage then
-            run_lilypond(ly_code, output, dirname(input_file))
-        else
-            compile_lilypond_fragment(ly_code, staffsize, line_width, output, dirname(input_file))
-        end
-    end
-    write_tex(output, new_score)
+    process_lilypond_code(ly_code, input_file)
 end
 
 
@@ -142,38 +140,56 @@ function run_lilypond(ly_code, output, include)
     p:close()
 end
 
-function compile_lilypond_fragment(ly_code, staffsize, line_width, output, include)
-    ly_code = lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code
+function compile_lilypond_fragment(
+        ly_code, staffsize, line_width, output, include, fullpage)
+    ly_code = lilypond_fragment_header(staffsize, line_width, fullpage)..'\n'..ly_code
     run_lilypond(ly_code, output, include)
 end
 
 
-function lilypond_fragment_header(staffsize, line_width)
-    return string.format(
-        [[
+function lilypond_fragment_header(staffsize, line_width, fullpage)
+    header = [[
 %%File header
 \version "2.18.2"
+]]
+    if not fullpage then
+        header = header..[[\include "lilypond-book-preamble.ly"]]..'\n'
+    else
+        header = header..
+            string.format(
+                [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
+                get_local_option('pagewidth'):sub(1,-3),
+                get_local_option('paperheight'):sub(1,-3)
+            )
+    end
+    header = header..
+        string.format(
+            [[
+            #(define inside-lyluatex #t)
 
-\include "lilypond-book-preamble.ly"
+            #(set-global-staff-size %s)
 
-#(define inside-lyluatex #t)
-
-#(set-global-staff-size %s)
-
-
-%%Score parameters
-\paper{
-    indent = 0\mm
-    line-width = %s\%s
-    %s
-}
-
-%%Follows original score
-]],
-staffsize,
-line_width.n, line_width.u,
-define_lilypond_fonts()
-)
+            %%Score parameters
+            \paper{
+            ]],
+            staffsize
+        )
+    if not fullpage then
+        header = header..[[indent = 0\mm]]
+    else
+        header = header..[[#(set-paper-size "lyluatexfmt")]]
+    end
+    header = header..
+        string.format(
+            [[
+            line-width = %s\%s
+            %s}
+            %%Follows original score
+            ]],
+            line_width.n, line_width.u,
+            define_lilypond_fonts()
+        )
+    return header
 end
 
 
@@ -205,7 +221,6 @@ function clean_tmp_dir()
     local hash_list = {}
     for file in lfs.dir(get_option('tmpdir')) do
         if file:sub(-5, -1) == '.list' then
-            print('\n', file)
             local i = io.open(get_option('tmpdir')..'/'..file)
             for _, line in ipairs(i:read('*a'):explode('\n')) do
                 hash = line:explode('\t')[1]
@@ -232,10 +247,12 @@ end
 
 
 function conclusion_text()
-    print('\n'..string.format([[
-Output written on %s.pdf.
-Transcript written on %s.log.]],
-              tex.jobname, tex.jobname))
+    print(
+        string.format(
+            '\nOutput written on %s.pdf.\nTranscript written on %s.log.',
+            tex.jobname, tex.jobname
+        )
+    )
 end
 
 
@@ -258,15 +275,16 @@ function calc_protrusion(output)
     return protrusion
 end
 
-function write_tex(output, new_score)
+function write_tex(output, new_score, fullpage)
     if not is_compiled(output) then
-      tex.print ([[
+      tex.print(
+          [[
+          \begin{quote}
+          \fbox{Score failed to compile}
+          \end{quote}
 
-\begin{quote}
-\fbox{Score failed to compile}
-\end{quote}
-
-]])
+          ]]
+      )
         err("\nScore failed to compile, please check LilyPond input.\n")
         --[[ ensure the score gets recompiled next time --]]
         os.remove(output..'-systems.tex')
@@ -283,7 +301,7 @@ function write_tex(output, new_score)
         systems_file:close()
         if new_score then
             --[[ new compilation, calculate protrusion
-                 and update -systems.tex file --]]
+                 and update -systems.tex file]]
             local protrusion = calc_protrusion(output)
             local texoutput, nbre = content:gsub([[\includegraphics{]],
                 [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(output))
@@ -313,6 +331,7 @@ end
 
 
 function set_option(name, value)
+    if value == 'false' then value = false end
     OPTIONS[name] = value
 end
 
@@ -325,9 +344,12 @@ end
 function set_default_options()
     for k, v in pairs(OPTIONS) do
         tex.sprint(
-            [[\directlua{OPTIONS[']]..
-                k..[['] = '\luatexluaescapestring{\lyluatex@]]..
-                k..[[}'}%]]
+            string.format(
+                [[
+                \directlua{
+                  set_option('%s', '\luatexluaescapestring{\lyluatex@%s}')
+                }]], k, k
+            )
         )
     end
 end
@@ -341,8 +363,23 @@ function get_local_option(name)
     end
 end
 
+function process_local_options(opts)
+    tex.sprint([[\directlua{set_local_options({]])
+    for _, v in ipairs(opts) do
+        tex.sprint(
+            string.format(
+                [[['%s'] = '\luatexluaescapestring{\commandkey{%s}}',]],
+                v, v
+            )
+        )
+    end
+    tex.sprint([[})}]])
+end
+
 function set_local_options(opts)
-    for k,v in pairs(opts) do if v ~= '' then LOCAL_OPTIONS[k] = v end end
+    for k,v in pairs(opts) do
+        if v ~= '' and v ~= 'false' then LOCAL_OPTIONS[k] = v end
+    end
 end
 
 function reset_local_options()
@@ -428,9 +465,9 @@ end
 
 function fontify_output(output)
     if get_local_option('pass-fonts') == 'true' then
-        return output..'-'..
-          squash_fontname('rmfamily')..'-'..
-          squash_fontname('sffamily')..'-'..
+        return output..'_'..
+          squash_fontname('rmfamily')..'_'..
+          squash_fontname('sffamily')..'_'..
           squash_fontname('ttfamily')
     else return output end
 end

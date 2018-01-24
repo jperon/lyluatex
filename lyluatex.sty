@@ -18,10 +18,13 @@
 \directlua{
   dofile(kpse.find_file("lyluatex.lua"))
   declare_package_options( {
-    ['cleantmp'] = false,
+    ['cleantmp'] = 'false',
     ['current-font-as-main'] = 'true',
+    ['fullpage'] = 'false',
     ['includepaths'] = './',
     ['line-width'] = 'default',
+    ['pagewidth'] = 'default',
+    ['paperheight'] = 'default',
     ['pass-fonts'] = 'true',
     ['program'] = 'lilypond',
     ['showfailed'] = 'true',
@@ -52,10 +55,10 @@
     \directlua{set_option('staffsize', '#1')}
 }
 % Line width is calculated if set to 'default'
-\def\defaultwidth{default}
+\def\defaultlen{default}
 \catcode`-=11
-\def\calclinewidth{
-  \ifx\lyluatex@line-width\defaultwidth
+\def\calcdimensions{
+  \ifx\lyluatex@line-width\defaultlen
   \directlua{
     set_option('line-width', '\the\linewidth')
   }
@@ -64,10 +67,31 @@
     set_option('line-width',\lyluatex@line-width)
   }
   \fi
+  \ifx\lyluatex@pagewidth\defaultlen
+  \directlua{
+    set_option('pagewidth', '\the\pagewidth')
+  }
+  \else
+  \directlua{
+    set_option('pagewidth',\lyluatex@pagewidth)
+  }
+  \fi
+  \ifx\lyluatex@paperheight\defaultlen
+  \directlua{
+    set_option('paperheight', '\the\paperheight')
+  }
+  \else
+  \directlua{
+    set_option('paperheight',\lyluatex@paperheight)
+  }
+  \fi
 }
 \newcommand{\lilypondLinewidth}[1]{%
   \edef\lyluatex@line-width{#1}
   \directlua{set_option('line-width', #1)}
+}
+\newcommand{\lilypondFullpage}[1]{%
+  \directlua{set_option('fullpage', #1)}
 }
 \newcommand{\lilypondPassFonts}[1]{%
   \directlua{set_option('pass-fonts', #1)}
@@ -101,29 +125,31 @@
 % Main commands
 % Inclusion of a .ly file
 \newkeycommand*\includely[%
-    fullpage=false%
-    ,current-font-as-main%
+    current-font-as-main%
+    ,fullpage%
     ,includepaths%
     ,line-width%
     ,pass-fonts%
     ,program%
     ,staffsize%
     ][other-options][1]{%
-\calclinewidth
+\calcdimensions
 \currentfonts
 \directlua{
-    set_local_options({
-    ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
-    ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
-    ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
-    ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-    ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-    ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
-    })
+  process_local_options({
+    'current-font-as-main',
+    'fullpage',
+    'includepaths',
+    'line-width',
+    'pass-fonts',
+    'program',
+    'staffsize',
+  })
+}
+\directlua{
     lilypond_file(
         "\luatexluaescapestring{#1}",
-        "\luatexluaescapestring{\currfiledir}",
-        \commandkey{fullpage}
+        "\luatexluaescapestring{\currfiledir}"
     )%
 }%
 \directlua{reset_local_options()}%
@@ -132,7 +158,7 @@
 % Base environment to include a LilyPond fragment integrated into
 % the document.
 \NewEnviron{compilerly}{%
-\calclinewidth
+\calcdimensions
 \currentfonts
 \directlua{%
     lilypond_fragment(
@@ -143,7 +169,8 @@
 
 % Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[%
-    ,current-font-as-main%
+    current-font-as-main%
+    ,fullpage%
     ,includepaths%
     ,line-width%
     ,pass-fonts%
@@ -151,14 +178,15 @@
     ,staffsize%
     ][other-options][1]{%
 \directlua{
-    set_local_options({
-    ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
-    ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
-      ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
-      ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
-    })
+  process_local_options({
+    'current-font-as-main',
+    'fullpage',
+    'includepaths',
+    'line-width',
+    'pass-fonts',
+    'program',
+    'staffsize',
+  })
 }
 \begin{compilerly}%
 {#1}
@@ -168,6 +196,7 @@
 
 \newkeyenvironment{ly}[%
     current-font-as-main%
+    ,fullpage%
     ,includepaths%
     ,line-width%
     ,pass-fonts%
@@ -175,14 +204,15 @@
     ,staffsize%
     ][other-options]{%
 \directlua{
-    set_local_options({
-      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
-      ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
-      ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
-      ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
-    })
+  process_local_options({
+    'current-font-as-main',
+    'fullpage',
+    'includepaths',
+    'line-width',
+    'pass-fonts',
+    'program',
+    'staffsize',
+  })
 }
 \compilerly%
 }{%
