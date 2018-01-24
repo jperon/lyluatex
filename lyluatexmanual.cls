@@ -16,6 +16,8 @@
 
 \usepackage{lyluatex}
 
+\usepackage[colorlinks=true]{hyperref}
+
 \newcommand{\cmd}[1]{%
 \textbackslash \texttt{#1}}
 
