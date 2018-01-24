@@ -198,16 +198,20 @@ end
 function clean_tmp_dir()
     local hash, file_is_used
     local hash_list = {}
-    local i = io.open(FILELIST)
-    if not i then return false end
-    for n, line in ipairs(i:read('*a'):explode('\n')) do
-        hash = line:explode('\t')[1]
-        if hash ~= '' then hash_list[n] = hash end
+    for file in lfs.dir(get_option('tmpdir')) do
+        if file:sub(-5, -1) == '.list' then
+            print('\n', file)
+            local i = io.open(get_option('tmpdir')..'/'..file)
+            for _, line in ipairs(i:read('*a'):explode('\n')) do
+                hash = line:explode('\t')[1]
+                if hash ~= '' then table.insert(hash_list, hash) end
+            end
+            i:close()
+        end
     end
-    i:close()
     for file in lfs.dir(get_option('tmpdir')) do
         file_is_used = false
-        if file ~= '.' and file ~= '..' and file ~= basename(FILELIST) then
+        if file ~= '.' and file ~= '..' and file:sub(-5, -1) ~= '.list' then
             for _, hash in ipairs(hash_list) do
                 if file:find(hash) then
                     file_is_used = true
