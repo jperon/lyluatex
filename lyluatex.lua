@@ -358,8 +358,9 @@ end
 
 
 function get_local_option(name)
-    if LOCAL_OPTIONS[name] then
-        return LOCAL_OPTIONS[name]
+    local loc = LOCAL_OPTIONS[name]
+    if not type(loc) == 'nil' then
+        return loc
     else
         return OPTIONS[name]
     end
