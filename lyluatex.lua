@@ -53,6 +53,30 @@ function extract_unit(input)
 end
 
 
+function check_boolean(name, val)
+    if type(val) == 'boolean' then return val end
+    if val == 'true' then return true
+    else
+        if val == 'false' then return false
+        else
+            warn("\nExpected boolean argument for '%s',\nvalue '%s' given instead.\nFall back to 'false'.", name, val)
+            return false
+        end
+    end
+end
+
+function check_boolean_option(key)
+    return check_boolean(key, get_option(key))
+end
+
+function check_boolean_options(keys)
+    for _, key in ipairs(keys) do
+      set_option(key, check_boolean_option(key))
+    end
+end
+
+
+
 function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
     -- delete initial space (in case someone puts a space after the comma)
@@ -418,7 +442,7 @@ function define_lilypond_fonts()
 end
 
 function lilypond_set_roman_font()
-    if get_local_option('current-font-as-main') == 'true' then
+    if get_local_option('current-font-as-main') then
         LOCAL_OPTIONS.rmfamily = get_local_option('current-font') end
 end
 
@@ -427,7 +451,7 @@ function squash_fontname(family)
 end
 
 function fontify_output(output)
-    if get_local_option('pass-fonts') == 'true' then
+    if get_local_option('pass-fonts') then
         return output..'-'..
           squash_fontname('rmfamily')..'_'..
           squash_fontname('sffamily')..'_'..

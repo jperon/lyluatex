@@ -18,7 +18,7 @@
 \directlua{
   dofile(kpse.find_file("lyluatex.lua"))
   declare_package_options( {
-    ['cleantmp'] = false,
+    ['cleantmp'] = 'false',
     ['current-font-as-main'] = 'true',
     ['includepaths'] = './',
     ['line-width'] = 'default',
@@ -32,7 +32,13 @@
   reset_local_options()
 }
 \directlua{
-  if get_option('cleantmp') == 'true' then
+  check_boolean_options({
+    'cleantmp',
+    'current-font-as-main',
+    'pass-fonts',
+    'showfailed'
+  })
+  if get_option('cleantmp') then
     luatexbase.add_to_callback('stop_run', clean_tmp_dir, 'lyluatex cleantmp')
     luatexbase.add_to_callback('stop_run', conclusion_text, 'lyluatex cleantmp')
   end
