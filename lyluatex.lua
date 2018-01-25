@@ -429,8 +429,8 @@ end
 function fontify_output(output)
     if get_local_option('pass-fonts') == 'true' then
         return output..'-'..
-          squash_fontname('rmfamily')..'-'..
-          squash_fontname('sffamily')..'-'..
+          squash_fontname('rmfamily')..'_'..
+          squash_fontname('sffamily')..'_'..
           squash_fontname('ttfamily')
     else return output end
 end
