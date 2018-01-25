@@ -135,17 +135,7 @@
     ][other-options][1]{%
 \calcdimensions
 \currentfonts
-\directlua{
-  process_local_options({
-    'current-font-as-main',
-    'fullpage',
-    'includepaths',
-    'line-width',
-    'pass-fonts',
-    'program',
-    'staffsize',
-  })
-}
+\directlua{process_local_options()}
 \directlua{
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -177,17 +167,7 @@
     ,program%
     ,staffsize%
     ][other-options][1]{%
-\directlua{
-  process_local_options({
-    'current-font-as-main',
-    'fullpage',
-    'includepaths',
-    'line-width',
-    'pass-fonts',
-    'program',
-    'staffsize',
-  })
-}
+\directlua{process_local_options()}
 \begin{compilerly}%
 {#1}
 \end{compilerly}%
@@ -203,17 +183,7 @@
     ,program%
     ,staffsize%
     ][other-options]{%
-\directlua{
-  process_local_options({
-    'current-font-as-main',
-    'fullpage',
-    'includepaths',
-    'line-width',
-    'pass-fonts',
-    'program',
-    'staffsize',
-  })
-}
+\directlua{process_local_options()}
 \compilerly%
 }{%
 \endcompilerly%

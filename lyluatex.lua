@@ -363,9 +363,18 @@ function get_local_option(name)
     end
 end
 
-function process_local_options(opts)
+local LOC_OPT_NAMES = {
+    'current-font-as-main',
+    'fullpage',
+    'includepaths',
+    'line-width',
+    'pass-fonts',
+    'program',
+    'staffsize',
+}
+function process_local_options()
     tex.sprint([[\directlua{set_local_options({]])
-    for _, v in ipairs(opts) do
+    for _, v in ipairs(LOC_OPT_NAMES) do
         tex.sprint(
             string.format(
                 [[['%s'] = '\luatexluaescapestring{\commandkey{%s}}',]],
