@@ -222,7 +222,6 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
             lilymargin..'\n',
             define_lilypond_fonts()
         )
-    print('\n', header)
     return header
 end
 
