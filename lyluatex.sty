@@ -85,6 +85,9 @@
     set_option('paperheight',\lyluatex@paperheight)
   }
   \fi
+  \directlua{
+    PAGE = \thepage
+  }
 }
 \newcommand{\lilypondLinewidth}[1]{%
   \edef\lyluatex@line-width{#1}

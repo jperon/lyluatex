@@ -63,9 +63,11 @@ function extract_includepaths(includepaths)
 end
 
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
+    local evenodd = ''
+    if get_local_option('fullpage') then evenodd = '_'..(PAGE % 2) end
     local filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code), input_file)..
-        '_'..staffsize..'_'..line_width.n..line_width.u, '%.', '_'
+        '_'..staffsize..'_'..line_width.n..line_width.u..evenodd, '%.', '_'
     )
     lilypond_set_roman_font()
     filename = fontify_output(filename)
@@ -175,21 +177,52 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
             ]],
             staffsize
         )
+    local lilymargin = ''
     if not fullpage then
         header = header..[[indent = 0\mm]]
     else
         header = header..[[#(set-paper-size "lyluatexfmt")]]
+        lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'
+        if PAGE % 2 == 1 then
+            lilymargin = lilymargin..[[inner-margin = %s\pt]]
+        else
+            lilymargin = lilymargin..[[outer-margin = %s\pt]]
+        end
+        local margins = {}
+        margins.top = (
+            tex.sp('1in') +
+            tex.dimen.voffset +
+            tex.dimen.topmargin +
+            tex.dimen.headheight +
+            tex.dimen.headsep
+        )
+        margins.bottom = (
+            tex.dimen.paperheight -
+            (margins.top + tex.dimen.textheight + tex.dimen.footskip)
+        )
+        margins.inner = (
+            tex.sp('1in') +
+            tex.dimen.oddsidemargin +
+            tex.dimen.hoffset
+        )
+        lilymargin = string.format(
+            lilymargin,
+            margins.top / 65536, margins.bottom / 65536, margins.inner / 65536
+        )
     end
     header = header..
-        string.format(
+        string.format('\n'..
             [[
+            two-sided = ##t
             line-width = %s\%s
-            %s}
+            %s%s}
             %%Follows original score
             ]],
             line_width.n, line_width.u,
+            lilymargin..'\n',
             define_lilypond_fonts()
         )
+    print('\n', header)
     return header
 end
 
