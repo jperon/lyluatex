@@ -82,9 +82,9 @@ function is_compiled(output)
         if lfs.isfile(output..'.pdf') then
             return true else return false end
     end
-    f = io.open(output..'-systems.tex')
+    local f = io.open(output..'-systems.tex')
     if not f then return false end
-    head = f:read("*line")
+    local head = f:read("*line")
     if head == "% eof" then return false else return true end
 end
 
@@ -97,7 +97,8 @@ function process_lilypond_code(ly_code, input_file)
     if fullpage then output = output..'-fullpage' end
     local new_score = not is_compiled(output)
     if new_score then
-        if input_file then local input = dirname(input_file) end
+        local input
+        if input_file then input = dirname(input_file) end
             compile_lilypond_fragment(
                 ly_code, staffsize, line_width, output, input, fullpage
             )
@@ -148,7 +149,7 @@ end
 
 
 function lilypond_fragment_header(staffsize, line_width, fullpage)
-    header = [[
+    local header = [[
 %%File header
 \version "2.18.2"
 ]]
@@ -201,7 +202,7 @@ end
 
 
 function delete_intermediate_files(output)
-  i = io.open(output..'-systems.count', 'r')
+  local i = io.open(output..'-systems.count', 'r')
   if i then
       local n = tonumber(i:read('*all'))
       i:close()
@@ -303,7 +304,7 @@ function write_tex(output, new_score)
             --[[ new compilation, calculate protrusion
                  and update -systems.tex file]]
             local protrusion = calc_protrusion(output)
-            local texoutput, nbre = content:gsub([[\includegraphics{]],
+            local texoutput, _ = content:gsub([[\includegraphics{]],
                 [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(output))
             tex.print(texoutput:explode('\n'))
             local f = io.open(output..'-systems.tex', 'w')
@@ -428,7 +429,7 @@ end
 
 
 function mkdirs(str)
-    path = '.'
+    local path = '.'
     for dir in string.gmatch(str, '([^%/]+)') do
         path = path .. '/' .. dir
         lfs.mkdir(path)
