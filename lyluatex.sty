@@ -147,7 +147,7 @@
 
 % Base environment to include a LilyPond fragment integrated into
 % the document.
-\NewEnviron{compilerly}{%
+\NewEnviron{compilely}{%
 \calcdimensions
 \currentfonts
 \directlua{%
@@ -168,9 +168,9 @@
     ,staffsize%
     ][other-options][1]{%
 \directlua{process_local_options()}
-\begin{compilerly}%
+\begin{compilely}%
 {#1}
-\end{compilerly}%
+\end{compilely}%
 \directlua{reset_local_options()}%
 }
 
@@ -184,9 +184,9 @@
     ,staffsize%
     ][other-options]{%
 \directlua{process_local_options()}
-\compilerly%
+\compilely%
 }{%
-\endcompilerly%
+\endcompilely%
 \directlua{reset_local_options()}%
 }
 
