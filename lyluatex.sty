@@ -172,6 +172,7 @@
     ][other-options][1]{%
 \directlua{process_local_options()}
 \let\ly@oldrepeat\repeat \def\repeat{}% Ugly workaround to a strange bug
+% (https://github.com/jperon/lyluatex/issues/51)
 \begin{compilely}%
 {#1}
 \end{compilely}%
@@ -190,6 +191,7 @@
     ][other-options]{%
 \directlua{process_local_options()}
 \let\ly@oldrepeat\repeat \def\repeat{}% Ugly workaround to a strange bug
+% (https://github.com/jperon/lyluatex/issues/51)
 \compilely%
 }{%
 \endcompilely%
