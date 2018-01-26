@@ -171,9 +171,11 @@
     ,staffsize%
     ][other-options][1]{%
 \directlua{process_local_options()}
+\let\ly@oldrepeat\repeat \def\repeat{}% Ugly workaround to a strange bug
 \begin{compilely}%
 {#1}
 \end{compilely}%
+\let\repeat\ly@oldrepeat%
 \directlua{reset_local_options()}%
 }
 
@@ -187,9 +189,11 @@
     ,staffsize%
     ][other-options]{%
 \directlua{process_local_options()}
+\let\ly@oldrepeat\repeat \def\repeat{}% Ugly workaround to a strange bug
 \compilely%
 }{%
 \endcompilely%
+\let\repeat\ly@oldrepeat%
 \directlua{reset_local_options()}%
 }
 
