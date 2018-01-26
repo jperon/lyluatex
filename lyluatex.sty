@@ -27,6 +27,7 @@
     ['pagewidth'] = 'default',
     ['paperheight'] = 'default',
     ['pass-fonts'] = 'true',
+    ['print-page-number'] = 'false',
     ['program'] = 'lilypond',
     ['showfailed'] = 'true',
     ['staffsize'] = '0',
@@ -113,6 +114,8 @@
 \newcommand{\lilypondIncludePaths}[1]{%
     \directlua{set_option('includepaths', '#1')}
 }
+\newcommand{\lilypondPrintPageNumber}[1]{%}
+    \directlua{set_option('print-page-number', '#1')}}    
 
 % Retrieve the three main font families (rm, sf, tt)
 % and store them as options. Additionally store the
@@ -139,6 +142,7 @@
     ,includepaths%
     ,line-width%
     ,pass-fonts%
+    ,print-page-number%
     ,program%
     ,staffsize%
     ][other-options][1]{%
@@ -177,6 +181,7 @@
     ,includepaths%
     ,line-width%
     ,pass-fonts%
+    ,print-page-number%
     ,program%
     ,staffsize%
     ][other-options][1]{%
@@ -191,6 +196,7 @@
     ,includepaths%
     ,line-width%
     ,pass-fonts%
+    ,print-page-number%
     ,program%
     ,staffsize%
     ][other-options]{%

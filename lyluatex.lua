@@ -65,9 +65,11 @@ end
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
     local evenodd = ''
     if get_local_option('fullpage') then evenodd = '_'..(PAGE % 2) end
+    local ppn = ''
+    if get_local_option('print-page-number') then ppn = '_ppn' end
     local filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code), input_file)..
-        '_'..staffsize..'_'..line_width.n..line_width.u..evenodd, '%.', '_'
+        '_'..staffsize..'_'..line_width.n..line_width.u..evenodd..ppn, '%.', '_'
     )
     lilypond_set_roman_font()
     filename = fontify_output(filename)
@@ -187,10 +189,14 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
     if not fullpage then
         header = header..[[indent = 0\mm]]
     else
+        local ppn = 'f'
+        if get_local_option('print-page-number') then ppn = 't' end
         header = header..string.format(
         [[#(set-paper-size "lyluatexfmt")
-        print-page-number = ##f
+        print-page-number = ##%s
+        print-first-page-number = ##t
         first-page-number = %s]],
+        ppn,
         PAGE)
         lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'..
             'inner-margin = %s\\pt'
@@ -412,6 +418,7 @@ local LOC_OPT_NAMES = {
     'includepaths',
     'line-width',
     'pass-fonts',
+    'print-page-numbers',
     'program',
     'staffsize',
 }
