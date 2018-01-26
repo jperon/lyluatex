@@ -185,7 +185,7 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
         [[#(set-paper-size "lyluatexfmt")
         print-first-page-number = ##t
         first-page-number = %s]],
-        PAGE + 1)
+        PAGE)
         lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'..
             'inner-margin = %s\\pt'
         local margins = {}
@@ -306,6 +306,10 @@ function calc_protrusion(output)
         protrusion = string.format('\\hspace*{-%spt}', cropped)
     end
     return protrusion
+end
+
+function newpage_if_fullpage()
+    if get_local_option(fullpage) then tex.sprint([[\newpage]]) end
 end
 
 function write_tex(output, new_score)

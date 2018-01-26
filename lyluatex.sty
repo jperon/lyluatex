@@ -136,9 +136,10 @@
     ,program%
     ,staffsize%
     ][other-options][1]{%
+\directlua{process_local_options()}
 \calcdimensions
 \currentfonts
-\directlua{process_local_options()}
+\directlua{newpage_if_fullpage()}
 \directlua{
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -151,13 +152,16 @@
 % Base environment to include a LilyPond fragment integrated into
 % the document.
 \NewEnviron{compilely}{%
+\directlua{process_local_options()}
 \calcdimensions
 \currentfonts
+\directlua{newpage_if_fullpage()}
 \directlua{%
     lilypond_fragment(
         "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}"
     )%
 }%
+\directlua{reset_local_options()}%
 }
 
 % Parametrized command and environment for included LilyPond fragment
@@ -170,11 +174,9 @@
     ,program%
     ,staffsize%
     ][other-options][1]{%
-\directlua{process_local_options()}
 \begin{compilely}%
 {#1}
 \end{compilely}%
-\directlua{reset_local_options()}%
 }
 
 \newkeyenvironment{ly}[%
@@ -186,11 +188,9 @@
     ,program%
     ,staffsize%
     ][other-options]{%
-\directlua{process_local_options()}
 \compilely%
 }{%
 \endcompilely%
-\directlua{reset_local_options()}%
 }
 
 % Commands for compatibility with lilypond-book
