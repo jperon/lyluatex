@@ -21,6 +21,7 @@
     ['cleantmp'] = 'false',
     ['current-font-as-main'] = 'true',
     ['fullpage'] = 'false',
+    ['fullpagestyle'] = 'plain',
     ['includepaths'] = './',
     ['line-width'] = 'default',
     ['pagewidth'] = 'default',
@@ -41,6 +42,11 @@
   end
 }
 \catcode`-=12
+
+% Set default pagestyle for fullpage scores
+\includepdfset{pagecommand=\thispagestyle{%
+  \directlua{tex.sprint(get_option('fullpagestyle'))}%
+}}
 
 \newcommand{\pt}{pt}
 \newcommand{\mm}{mm}

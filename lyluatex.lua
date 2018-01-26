@@ -173,6 +173,9 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
             #(set-global-staff-size %s)
 
             %%Score parameters
+
+            \header { copyright = "" }
+
             \paper{
             ]],
             staffsize
@@ -183,7 +186,7 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
     else
         header = header..string.format(
         [[#(set-paper-size "lyluatexfmt")
-        print-first-page-number = ##t
+        print-page-number = ##f
         first-page-number = %s]],
         PAGE)
         lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'..
