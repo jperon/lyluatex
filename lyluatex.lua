@@ -174,7 +174,10 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
 
             %%Score parameters
 
-            \header { copyright = "" }
+            \header {
+              copyright = ""
+              tagline = ##f
+            }
 
             \paper{
             ]],
