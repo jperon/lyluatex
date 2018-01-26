@@ -181,13 +181,13 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
     if not fullpage then
         header = header..[[indent = 0\mm]]
     else
-        header = header..[[#(set-paper-size "lyluatexfmt")]]
-        lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'
-        if PAGE % 2 == 1 then
-            lilymargin = lilymargin..[[inner-margin = %s\pt]]
-        else
-            lilymargin = lilymargin..[[outer-margin = %s\pt]]
-        end
+        header = header..string.format(
+        [[#(set-paper-size "lyluatexfmt")
+        print-first-page-number = ##t
+        first-page-number = %s]],
+        PAGE + 1)
+        lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'..
+            'inner-margin = %s\\pt'
         local margins = {}
         margins.top = (
             tex.sp('1in') +
