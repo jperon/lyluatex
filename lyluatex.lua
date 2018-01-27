@@ -321,7 +321,7 @@ function calc_protrusion(output)
 end
 
 function newpage_if_fullpage()
-    if get_local_option(fullpage) then tex.sprint([[\newpage]]) end
+    if get_local_option('fullpage') then tex.sprint([[\newpage]]) end
 end
 
 function write_tex(output, new_score)
@@ -338,8 +338,15 @@ function write_tex(output, new_score)
         --[[ ensure the score gets recompiled next time --]]
         os.remove(output..'-systems.tex')
     end
-
     --[[ Now we know there is a proper score --]]
+    local fullpagestyle = get_local_option('fullpagestyle')
+    if fullpagestyle == 'default' then
+        if get_local_option('print-page-number') then
+            lilypond_set_fullpagestyle('empty')
+        else lilypond_set_fullpagestyle(nil)
+        end
+    else lilypond_set_fullpagestyle(fullpagestyle)
+    end
     local systems_file = io.open(output..'-systems.tex', 'r')
     if not systems_file then
         --[[ Fullpage score, use \includepdf ]]
@@ -366,6 +373,14 @@ function write_tex(output, new_score)
     end
 end
 
+
+function lilypond_set_fullpagestyle(style)
+    if style then
+        tex.sprint('\\includepdfset{pagecommand=\\thispagestyle{'..style..'}}')
+    else
+        tex.sprint('\\includepdfset{pagecommand=}')
+    end
+end
 
 function declare_package_options(options)
     OPTIONS = options

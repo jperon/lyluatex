@@ -21,7 +21,7 @@
     ['cleantmp'] = 'false',
     ['current-font-as-main'] = 'true',
     ['fullpage'] = 'false',
-    ['fullpagestyle'] = 'plain',
+    ['fullpagestyle'] = 'default',
     ['includepaths'] = './',
     ['line-width'] = 'default',
     ['pagewidth'] = 'default',
@@ -32,7 +32,7 @@
     ['showfailed'] = 'true',
     ['staffsize'] = '0',
     ['tmpdir'] = 'tmp_ly'
-  } )
+  })
   set_default_options()
   reset_local_options()
 }
@@ -43,11 +43,6 @@
   end
 }
 \catcode`-=12
-
-% Set default pagestyle for fullpage scores
-\includepdfset{pagecommand=\thispagestyle{%
-  \directlua{tex.sprint(get_option('fullpagestyle'))}%
-}}
 
 \newcommand{\pt}{pt}
 \newcommand{\mm}{mm}
@@ -92,9 +87,7 @@
     set_option('paperheight',\lyluatex@paperheight)
   }
   \fi
-  \directlua{
-    PAGE = \thepage
-  }
+  \directlua{PAGE = \thepage}
 }
 \newcommand{\lilypondLinewidth}[1]{%
   \edef\lyluatex@line-width{#1}
@@ -115,7 +108,7 @@
     \directlua{set_option('includepaths', '#1')}
 }
 \newcommand{\lilypondPrintPageNumber}[1]{%}
-    \directlua{set_option('print-page-number', '#1')}}    
+    \directlua{set_option('print-page-number', '#1')}}
 
 % Retrieve the three main font families (rm, sf, tt)
 % and store them as options. Additionally store the
@@ -147,9 +140,9 @@
     ,staffsize%
     ][other-options][1]{%
 \directlua{process_local_options()}
+\directlua{newpage_if_fullpage()}
 \calcdimensions
 \currentfonts
-\directlua{newpage_if_fullpage()}
 \directlua{
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -163,9 +156,9 @@
 % the document.
 \NewEnviron{compilely}{%
 \directlua{process_local_options()}
+\directlua{newpage_if_fullpage()}
 \calcdimensions
 \currentfonts
-\directlua{newpage_if_fullpage()}
 \directlua{%
     lilypond_fragment(
         "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}"
