@@ -107,6 +107,9 @@
 \newcommand{\lilypondIncludePaths}[1]{%
     \directlua{set_option('includepaths', '#1')}
 }
+\newcommand{\lilypondFullPageStyle}[1]{%
+    \directlua{set_option('fullpagestyle', '#1')}
+}
 \newcommand{\lilypondPrintPageNumber}[1]{%}
     \directlua{set_option('print-page-number', '#1')}}
 
