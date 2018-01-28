@@ -430,6 +430,7 @@ end
 local LOC_OPT_NAMES = {
     'current-font-as-main',
     'fullpage',
+    'fullpagestyle',
     'includepaths',
     'line-width',
     'pass-fonts',
