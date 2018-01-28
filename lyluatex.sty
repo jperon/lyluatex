@@ -21,16 +21,18 @@
     ['cleantmp'] = 'false',
     ['current-font-as-main'] = 'true',
     ['fullpage'] = 'false',
+    ['fullpagestyle'] = 'default',
     ['includepaths'] = './',
     ['line-width'] = 'default',
     ['pagewidth'] = 'default',
     ['paperheight'] = 'default',
     ['pass-fonts'] = 'true',
+    ['print-page-number'] = 'false',
     ['program'] = 'lilypond',
     ['showfailed'] = 'true',
     ['staffsize'] = '0',
     ['tmpdir'] = 'tmp_ly'
-  } )
+  })
   set_default_options()
   reset_local_options()
 }
@@ -85,6 +87,7 @@
     set_option('paperheight',\lyluatex@paperheight)
   }
   \fi
+  \directlua{PAGE = \thepage}
 }
 \newcommand{\lilypondLinewidth}[1]{%
   \edef\lyluatex@line-width{#1}
@@ -104,6 +107,11 @@
 \newcommand{\lilypondIncludePaths}[1]{%
     \directlua{set_option('includepaths', '#1')}
 }
+\newcommand{\lilypondFullPageStyle}[1]{%
+    \directlua{set_option('fullpagestyle', '#1')}
+}
+\newcommand{\lilypondPrintPageNumber}[1]{%}
+    \directlua{set_option('print-page-number', '#1')}}
 
 % Retrieve the three main font families (rm, sf, tt)
 % and store them as options. Additionally store the
@@ -127,15 +135,18 @@
 \newkeycommand*\includely[%
     current-font-as-main%
     ,fullpage%
+    ,fullpagestyle%
     ,includepaths%
     ,line-width%
     ,pass-fonts%
+    ,print-page-number%
     ,program%
     ,staffsize%
     ][other-options][1]{%
+\directlua{process_local_options()}
+\directlua{newpage_if_fullpage()}
 \calcdimensions
 \currentfonts
-\directlua{process_local_options()}
 \directlua{
     lilypond_file(
         "\luatexluaescapestring{#1}",
@@ -148,6 +159,8 @@
 % Base environment to include a LilyPond fragment integrated into
 % the document.
 \NewEnviron{compilely}{%
+\directlua{process_local_options()}
+\directlua{newpage_if_fullpage()}
 \calcdimensions
 \currentfonts
 \directlua{%
@@ -155,39 +168,40 @@
         "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}"
     )%
 }%
+\directlua{reset_local_options()}%
 }
 
 % Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[%
     current-font-as-main%
     ,fullpage%
+    ,fullpagestyle%
     ,includepaths%
     ,line-width%
     ,pass-fonts%
+    ,print-page-number%
     ,program%
     ,staffsize%
     ][other-options][1]{%
-\directlua{process_local_options()}
 \begin{compilely}%
 {#1}
 \end{compilely}%
-\directlua{reset_local_options()}%
 }
 
 \newkeyenvironment{ly}[%
     current-font-as-main%
     ,fullpage%
+    ,fullpagestyle%
     ,includepaths%
     ,line-width%
     ,pass-fonts%
+    ,print-page-number%
     ,program%
     ,staffsize%
     ][other-options]{%
-\directlua{process_local_options()}
 \compilely%
 }{%
 \endcompilely%
-\directlua{reset_local_options()}%
 }
 
 % Commands for compatibility with lilypond-book

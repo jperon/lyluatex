@@ -63,9 +63,13 @@ function extract_includepaths(includepaths)
 end
 
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
+    local evenodd = ''
+    if get_local_option('fullpage') then evenodd = '_'..(PAGE % 2) end
+    local ppn = ''
+    if get_local_option('print-page-number') then ppn = '_ppn' end
     local filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code), input_file)..
-        '_'..staffsize..'_'..line_width.n..line_width.u, '%.', '_'
+        '_'..staffsize..'_'..line_width.n..line_width.u..evenodd..ppn, '%.', '_'
     )
     lilypond_set_roman_font()
     filename = fontify_output(filename)
@@ -171,23 +175,63 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
             #(set-global-staff-size %s)
 
             %%Score parameters
+
+            \header {
+              copyright = ""
+              tagline = ##f
+            }
+
             \paper{
             ]],
             staffsize
         )
+    local lilymargin = ''
     if not fullpage then
         header = header..[[indent = 0\mm]]
     else
-        header = header..[[#(set-paper-size "lyluatexfmt")]]
+        local ppn = 'f'
+        if get_local_option('print-page-number') then ppn = 't' end
+        header = header..string.format(
+        [[#(set-paper-size "lyluatexfmt")
+        print-page-number = ##%s
+        print-first-page-number = ##t
+        first-page-number = %s]],
+        ppn,
+        PAGE)
+        lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'..
+            'inner-margin = %s\\pt'
+        local margins = {}
+        margins.top = (
+            tex.sp('1in') +
+            tex.dimen.voffset +
+            tex.dimen.topmargin +
+            tex.dimen.headheight +
+            tex.dimen.headsep
+        )
+        margins.bottom = (
+            tex.dimen.paperheight -
+            (margins.top + tex.dimen.textheight + tex.dimen.footskip)
+        )
+        margins.inner = (
+            tex.sp('1in') +
+            tex.dimen.oddsidemargin +
+            tex.dimen.hoffset
+        )
+        lilymargin = string.format(
+            lilymargin,
+            margins.top / 65536, margins.bottom / 65536, margins.inner / 65536
+        )
     end
     header = header..
-        string.format(
+        string.format('\n'..
             [[
+            two-sided = ##t
             line-width = %s\%s
-            %s}
+            %s%s}
             %%Follows original score
             ]],
             line_width.n, line_width.u,
+            lilymargin..'\n',
             define_lilypond_fonts()
         )
     return header
@@ -276,6 +320,10 @@ function calc_protrusion(output)
     return protrusion
 end
 
+function newpage_if_fullpage()
+    if get_local_option('fullpage') then tex.sprint([[\newpage]]) end
+end
+
 function write_tex(output, new_score)
     if not is_compiled(output) then
       tex.print(
@@ -290,8 +338,15 @@ function write_tex(output, new_score)
         --[[ ensure the score gets recompiled next time --]]
         os.remove(output..'-systems.tex')
     end
-
     --[[ Now we know there is a proper score --]]
+    local fullpagestyle = get_local_option('fullpagestyle')
+    if fullpagestyle == 'default' then
+        if get_local_option('print-page-number') then
+            lilypond_set_fullpagestyle('empty')
+        else lilypond_set_fullpagestyle(nil)
+        end
+    else lilypond_set_fullpagestyle(fullpagestyle)
+    end
     local systems_file = io.open(output..'-systems.tex', 'r')
     if not systems_file then
         --[[ Fullpage score, use \includepdf ]]
@@ -318,6 +373,14 @@ function write_tex(output, new_score)
     end
 end
 
+
+function lilypond_set_fullpagestyle(style)
+    if style then
+        tex.sprint('\\includepdfset{pagecommand=\\thispagestyle{'..style..'}}')
+    else
+        tex.sprint('\\includepdfset{pagecommand=}')
+    end
+end
 
 function declare_package_options(options)
     OPTIONS = options
@@ -367,9 +430,11 @@ end
 local LOC_OPT_NAMES = {
     'current-font-as-main',
     'fullpage',
+    'fullpagestyle',
     'includepaths',
     'line-width',
     'pass-fonts',
+    'print-page-numbers',
     'program',
     'staffsize',
 }
