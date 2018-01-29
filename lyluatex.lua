@@ -154,9 +154,9 @@ function lilypond_fragment(ly_code)
 end
 
 
-function lilypond_file(input_file, currfiledir)
+function lilypond_file(input_file)
     filename = splitext(input_file, 'ly')
-    input_file = currfiledir..filename..'.ly'
+    input_file = CURRENTDIR..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
     if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
     local i = io.open(input_file, 'r')

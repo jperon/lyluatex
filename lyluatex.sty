@@ -13,6 +13,7 @@
 \RequirePackage{metalogo}
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
 
+\directlua{CURRENTDIR = '\currfiledir'}
 % Options
 \catcode`-=11
 \directlua{
@@ -162,12 +163,7 @@
 \directlua{newpage_if_fullpage()}
 \calcdimensions
 \currentfonts
-\directlua{
-    lilypond_file(
-        "\luatexluaescapestring{#1}",
-        "\luatexluaescapestring{\currfiledir}"
-    )%
-}%
+\directlua{lilypond_file("\luatexluaescapestring{#1}")}%
 \directlua{reset_local_options()}%
 }
 
