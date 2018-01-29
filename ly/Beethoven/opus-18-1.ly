@@ -4,6 +4,7 @@
 
 \paper {
   ragged-last = ##f
+  max-systems-per-page = 3
 }
 
 \header {
