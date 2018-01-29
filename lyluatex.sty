@@ -20,6 +20,8 @@
   declare_package_options( {
     ['cleantmp'] = 'false',
     ['current-font-as-main'] = 'true',
+    ['extra-bottom-margin'] = '0',
+    ['extra-top-margin'] = '0',
     ['fullpage'] = 'false',
     ['fullpagealign'] = 'staffline',
     ['fullpagestyle'] = 'default',
@@ -107,6 +109,12 @@
   \directlua{set_option('current-font-as-main', #1)}
 }
 \catcode`-=12
+\newcommand{\lilypondExtraTopMargin}[1]{
+    \directlua{set_option('extra-top-margin', '#1')}
+}
+\newcommand{\lilypondExtraBottomMargin}[1]{
+    \directlua{set_option('extra-bottom-margin', '#1')}
+}
 % Include paths for lilypond documents
 \newcommand{\lilypondIncludePaths}[1]{%
     \directlua{set_option('includepaths', '#1')}
@@ -138,6 +146,8 @@
 % Inclusion of a .ly file
 \newkeycommand*\includely[%
     current-font-as-main%
+    ,extra-bottom-margin%
+    ,extra-top-margin%
     ,fullpage%
     ,fullpagealign%
     ,fullpagestyle%
@@ -179,6 +189,8 @@
 % Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[%
     current-font-as-main%
+    ,extra-bottom-margin%
+    ,extra-top-margin%
     ,fullpage%
     ,fullpagealign%
     ,fullpagestyle%
@@ -201,6 +213,8 @@
 
 \newkeyenvironment{ly}[%
     current-font-as-main%
+    ,extra-bottom-margin%
+    ,extra-top-margin%
     ,fullpage%
     ,fullpagestyle%
     ,fullpagealign%
