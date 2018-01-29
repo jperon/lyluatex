@@ -1,6 +1,6 @@
-\version "2.19.20"
+\version "2.18"
 
-\include "lilypond-book-preamble.ly"
+%\include "lilypond-book-preamble.ly"
 
 \paper {
   ragged-last = ##f

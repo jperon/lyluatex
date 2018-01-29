@@ -209,8 +209,7 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
             tex.dimen.headsep
         )
         margins.bottom = (
-            tex.dimen.paperheight -
-            (margins.top + tex.dimen.textheight + tex.dimen.footskip)
+            tex.dimen.paperheight - (margins.top + tex.dimen.textheight)
         )
         margins.inner = (
             tex.sp('1in') +
@@ -350,7 +349,7 @@ function write_tex(output, new_score)
     local systems_file = io.open(output..'-systems.tex', 'r')
     if not systems_file then
         --[[ Fullpage score, use \includepdf ]]
-        tex.print('\\includepdf[pages=-]{'..output..'}')
+        tex.sprint('\\includepdf[pages=-]{'..output..'}')
     else
         --[[ Fragment, use -systems.tex file]]
         local content = systems_file:read("*all")
@@ -368,7 +367,7 @@ function write_tex(output, new_score)
             delete_intermediate_files(output)
         else
             -- simply reuse existing -systems.tex file
-            tex.print(content:explode('\n'))
+            tex.sprint(content:explode('\n'))
         end
     end
 end
