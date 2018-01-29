@@ -151,13 +151,12 @@ function compile_lilypond_fragment(
     run_lilypond(ly_code, output, include)
 end
 
-function calc_margins()
-    local template = [[
-    top-margin = %s\pt
-    bottom-margin = %s\pt
-    inner-margin = %s\pt
-    ]]
+function pt_to_staffspaces(pt, staffsize)
+    local s_sp = staffsize / 4
+    return pt / s_sp
+end
 
+function calc_margins(staffsize)
     local tex_top = (
         tex.sp('1in') +
         tex.dimen.voffset +
@@ -167,23 +166,56 @@ function calc_margins()
     )
     local tex_bottom = (
         tex.dimen.paperheight - (tex_top + tex.dimen.textheight)
-    )
+    ) / 65536
+    tex_top = tex_top / 65536
     local inner = (
         tex.sp('1in') +
         tex.dimen.oddsidemargin +
         tex.dimen.hoffset
-    )
+    ) / 65536
     local v_align = get_local_option('fullpagealign')
     if v_align == 'crop'
     then
-        return string.format(
-          template,
+        return string.format([[
+        top-margin = %s\pt
+        bottom-margin = %s\pt
+        inner-margin = %s\pt
+        ]],
           tex_top,
           tex_bottom,
           inner
         )
     elseif v_align == 'staffline' then
-        err("not implemented yet")
+      local top_distance = pt_to_staffspaces(tex_top, staffsize) + 2
+      local bottom_distance = pt_to_staffspaces(tex_bottom, staffsize) + 2
+        return string.format([[
+        top-margin = 0\pt
+        bottom-margin = 0\pt
+        inner-margin = %s\pt
+        top-system-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        top-markup-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        last-bottom-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        ]],
+        inner,
+        top_distance,
+        top_distance,
+        top_distance,
+        top_distance,
+        bottom_distance,
+        bottom_distance
+      )
 
     else
         err([[
@@ -241,7 +273,7 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
         first-page-number = %s]],
         ppn,
         PAGE)
-        lilymargin = calc_margins()
+        lilymargin = calc_margins(staffsize)
     end
     header = header..
         string.format('\n'..
