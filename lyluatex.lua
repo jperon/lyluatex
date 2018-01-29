@@ -89,11 +89,12 @@ function extract_includepaths(includepaths)
 end
 
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
+    local fullpage = get_local_option('fullpage')
     local evenodd = ''
     local etm = 0
     local ebm = 0
     local ppn = ''
-    if get_local_option('fullpage') then
+    if fullpage then
         evenodd = '_'..(PAGE % 2)
         if get_local_option('print-page-number') then ppn = '_ppn' end
         etm = get_local_option('extra-top-margin')
@@ -107,6 +108,9 @@ function hash_output_filename(ly_code, line_width, staffsize, input_file)
     if ebm ~= 0 then filename = filename..'_ebm_'..ebm end
     lilypond_set_roman_font()
     filename = fontify_output(filename)
+    if fullpage then
+        filename = filename..'-fullpage'
+    end
     if not input_file then input_file = '' end
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\t', input_file, '\n')
@@ -128,18 +132,16 @@ end
 
 
 function process_lilypond_code(ly_code, input_file)
-    local fullpage = get_local_option('fullpage')
     local line_width = extract_unit(get_local_option('line-width'))
     local staffsize = calc_staffsize(get_local_option('staffsize'))
     process_extra_margins()
     local output = hash_output_filename(ly_code, line_width, staffsize, input_file)
-    if fullpage then output = output..'-fullpage' end
     local new_score = not is_compiled(output)
     if new_score then
         local input
         if input_file then input = dirname(input_file) end
             compile_lilypond_fragment(
-                ly_code, staffsize, line_width, output, input, fullpage
+                ly_code, staffsize, line_width, output, input
             )
     end
     write_tex(output, new_score)
@@ -152,7 +154,7 @@ function lilypond_fragment(ly_code)
 end
 
 
-function lilypond_file(input_file, currfiledir, fullpage)
+function lilypond_file(input_file, currfiledir)
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -181,8 +183,8 @@ function run_lilypond(ly_code, output, include)
 end
 
 function compile_lilypond_fragment(
-        ly_code, staffsize, line_width, output, include, fullpage)
-    ly_code = lilypond_fragment_header(staffsize, line_width, fullpage)..'\n'..ly_code
+        ly_code, staffsize, line_width, output, include)
+    ly_code = lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code
     run_lilypond(ly_code, output, include)
 end
 
@@ -280,7 +282,8 @@ function calc_margins(staffsize)
     end
 end
 
-function lilypond_fragment_header(staffsize, line_width, fullpage)
+function lilypond_fragment_header(staffsize, line_width)
+    local fullpage = get_local_option('fullpage')
     local header = [[
 %%File header
 \version "2.18.2"
