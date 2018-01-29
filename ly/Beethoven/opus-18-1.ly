@@ -7,6 +7,7 @@
 }
 
 \header {
+  title=Beethoven
   % Remove default LilyPond tagline
   tagline = ##f
 }

@@ -47,6 +47,32 @@ function flatten_content(ly_code, input_file)
     return ly_code
 end
 
+local CONVERSIONS = {
+    ['pt'] = {
+        ['mm'] = 0.351459804,
+        ['cm'] = 0.0351459804,
+        ['in'] = 0.013837
+    },
+    ['mm'] = {
+        ['pt'] = 2.845275591,
+        ['cm'] = 0.1,
+        ['in'] = 0.039370079
+    },
+    ['cm'] = {
+        ['pt'] = 28,346456693,
+        ['mm'] = 10,
+        ['in'] = 0.393700787
+    },
+    ['in'] = {
+        ['pt'] = 72.27,
+        ['mm'] = 25.4,
+        ['cm'] = 2.54
+    }
+}
+function convert_unit(value, from, to)
+    return value * CONVERSIONS[from][to]
+end
+
 function extract_unit(input)
     --[ split a TeX length into number and unit --]
     return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
@@ -63,16 +89,28 @@ function extract_includepaths(includepaths)
 end
 
 function hash_output_filename(ly_code, line_width, staffsize, input_file)
+    local fullpage = get_local_option('fullpage')
     local evenodd = ''
-    if get_local_option('fullpage') then evenodd = '_'..(PAGE % 2) end
+    local etm = 0
+    local ebm = 0
     local ppn = ''
-    if get_local_option('print-page-number') then ppn = '_ppn' end
+    if fullpage then
+        evenodd = '_'..(PAGE % 2)
+        if get_local_option('print-page-number') then ppn = '_ppn' end
+        etm = get_local_option('extra-top-margin')
+        ebm = get_local_option('extra-bottom-margin')
+    end
     local filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code), input_file)..
         '_'..staffsize..'_'..line_width.n..line_width.u..evenodd..ppn, '%.', '_'
     )
+    if etm ~= 0 then filename = filename..'_etm_'..etm end
+    if ebm ~= 0 then filename = filename..'_ebm_'..ebm end
     lilypond_set_roman_font()
     filename = fontify_output(filename)
+    if fullpage then
+        filename = filename..'-fullpage'
+    end
     if not input_file then input_file = '' end
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\t', input_file, '\n')
@@ -94,17 +132,16 @@ end
 
 
 function process_lilypond_code(ly_code, input_file)
-    local fullpage = get_local_option('fullpage')
     local line_width = extract_unit(get_local_option('line-width'))
     local staffsize = calc_staffsize(get_local_option('staffsize'))
+    process_extra_margins()
     local output = hash_output_filename(ly_code, line_width, staffsize, input_file)
-    if fullpage then output = output..'-fullpage' end
     local new_score = not is_compiled(output)
     if new_score then
         local input
         if input_file then input = dirname(input_file) end
             compile_lilypond_fragment(
-                ly_code, staffsize, line_width, output, input, fullpage
+                ly_code, staffsize, line_width, output, input
             )
     end
     write_tex(output, new_score)
@@ -117,7 +154,7 @@ function lilypond_fragment(ly_code)
 end
 
 
-function lilypond_file(input_file, currfiledir, fullpage)
+function lilypond_file(input_file, currfiledir)
     filename = splitext(input_file, 'ly')
     input_file = currfiledir..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
@@ -146,35 +183,107 @@ function run_lilypond(ly_code, output, include)
 end
 
 function compile_lilypond_fragment(
-        ly_code, staffsize, line_width, output, include, fullpage)
-    ly_code = lilypond_fragment_header(staffsize, line_width, fullpage)..'\n'..ly_code
+        ly_code, staffsize, line_width, output, include)
+    ly_code = lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code
     run_lilypond(ly_code, output, include)
 end
 
-function calc_margins()
-    local top = (
+function process_extra_margins()
+    local top_extra = get_local_option('extra-top-margin')
+    local top = tonumber(top_extra)
+    if not top then
+        local margin = extract_unit(top_extra)
+        top = convert_unit(margin.n, margin.u, 'pt')
+    end
+    LOCAL_OPTIONS['extra-top-margin'] = top
+    local bottom_extra = get_local_option('extra-bottom-margin')
+    local bottom = tonumber(bottom_extra)
+    if not bottom then
+        local margin = extract_unit(bottom_extra)
+        bottom = convert_unit(margin.n, margin.u, 'pt')
+    end
+    LOCAL_OPTIONS['extra-bottom-margin'] = bottom
+end
+
+function pt_to_staffspaces(pt, staffsize)
+    local s_sp = staffsize / 4
+    return pt / s_sp
+end
+
+function calc_margins(staffsize)
+    local tex_top = (
         tex.sp('1in') +
         tex.dimen.voffset +
         tex.dimen.topmargin +
         tex.dimen.headheight +
         tex.dimen.headsep
     )
-    local bottom = (
-        tex.dimen.paperheight - (top + tex.dimen.textheight)
-    )
+    local tex_bottom = (
+        tex.dimen.paperheight - (tex_top + tex.dimen.textheight)
+    ) / 65536
+    tex_top = (tex_top / 65536) + get_local_option('extra-top-margin')
+    tex_bottom = tex_bottom + get_local_option('extra-bottom-margin')
     local inner = (
         tex.sp('1in') +
         tex.dimen.oddsidemargin +
         tex.dimen.hoffset
-    )
-    return {
-        ['top'] = top,
-        ['bottom'] = bottom,
-        ['inner'] = inner
-    }
+    ) / 65536
+    local v_align = get_local_option('fullpagealign')
+    if v_align == 'crop'
+    then
+        return string.format([[
+        top-margin = %s\pt
+        bottom-margin = %s\pt
+        inner-margin = %s\pt
+        ]],
+          tex_top,
+          tex_bottom,
+          inner
+        )
+    elseif v_align == 'staffline' then
+      local top_distance = pt_to_staffspaces(tex_top, staffsize) + 2
+      local bottom_distance = pt_to_staffspaces(tex_bottom, staffsize) + 2
+        return string.format([[
+        top-margin = 0\pt
+        bottom-margin = 0\pt
+        inner-margin = %s\pt
+        top-system-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        top-markup-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        last-bottom-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        ]],
+        inner,
+        top_distance,
+        top_distance,
+        top_distance,
+        top_distance,
+        bottom_distance,
+        bottom_distance
+      )
+
+    else
+        err([[
+        Invalid argument for option 'fullpagealign'.
+        Allowed: 'crop', 'staffline'.
+        Given: %s
+        ]],
+        v_align)
+    end
 end
 
-function lilypond_fragment_header(staffsize, line_width, fullpage)
+function lilypond_fragment_header(staffsize, line_width)
+    local fullpage = get_local_option('fullpage')
     local header = [[
 %%File header
 \version "2.18.2"
@@ -220,13 +329,7 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
         first-page-number = %s]],
         ppn,
         PAGE)
-        lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'..
-            'inner-margin = %s\\pt'
-        local margins = calc_margins()
-        lilymargin = string.format(
-            lilymargin,
-            margins.top / 65536, margins.bottom / 65536, margins.inner / 65536
-        )
+        lilymargin = calc_margins(staffsize)
     end
     header = header..
         string.format('\n'..
@@ -435,7 +538,10 @@ end
 
 local LOC_OPT_NAMES = {
     'current-font-as-main',
+    'extra-bottom-margin',
+    'extra-top-margin',
     'fullpage',
+    'fullpagealign',
     'fullpagestyle',
     'includepaths',
     'line-width',
