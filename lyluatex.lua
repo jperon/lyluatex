@@ -151,6 +151,24 @@ function compile_lilypond_fragment(
     run_lilypond(ly_code, output, include)
 end
 
+function calc_margins()
+    return {
+    ['top'] = (
+        tex.sp('1in') +
+        tex.dimen.voffset +
+        tex.dimen.topmargin +
+        tex.dimen.headheight +
+        tex.dimen.headsep
+    ),
+    ['bottom'] = (
+        tex.dimen.paperheight - (margins.top + tex.dimen.textheight)
+    ),
+    ['inner'] = (
+        tex.sp('1in') +
+        tex.dimen.oddsidemargin +
+        tex.dimen.hoffset
+    )}
+end
 
 function lilypond_fragment_header(staffsize, line_width, fullpage)
     local header = [[
@@ -200,22 +218,7 @@ function lilypond_fragment_header(staffsize, line_width, fullpage)
         PAGE)
         lilymargin = 'top-margin = %s\\pt\nbottom-margin = %s\\pt\n'..
             'inner-margin = %s\\pt'
-        local margins = {}
-        margins.top = (
-            tex.sp('1in') +
-            tex.dimen.voffset +
-            tex.dimen.topmargin +
-            tex.dimen.headheight +
-            tex.dimen.headsep
-        )
-        margins.bottom = (
-            tex.dimen.paperheight - (margins.top + tex.dimen.textheight)
-        )
-        margins.inner = (
-            tex.sp('1in') +
-            tex.dimen.oddsidemargin +
-            tex.dimen.hoffset
-        )
+        local margins = calc_margins()
         lilymargin = string.format(
             lilymargin,
             margins.top / 65536, margins.bottom / 65536, margins.inner / 65536
