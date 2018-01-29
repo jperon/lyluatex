@@ -158,27 +158,41 @@ function calc_margins()
     inner-margin = %s\pt
     ]]
 
-    local top = (
+    local tex_top = (
         tex.sp('1in') +
         tex.dimen.voffset +
         tex.dimen.topmargin +
         tex.dimen.headheight +
         tex.dimen.headsep
     )
-    local bottom = (
-        tex.dimen.paperheight - (top + tex.dimen.textheight)
+    local tex_bottom = (
+        tex.dimen.paperheight - (tex_top + tex.dimen.textheight)
     )
     local inner = (
         tex.sp('1in') +
         tex.dimen.oddsidemargin +
         tex.dimen.hoffset
     )
-    return string.format(
-      template,
-      top,
-      bottom,
-      inner
-    )
+    local v_align = get_local_option('fullpagealign')
+    if v_align == 'crop'
+    then
+        return string.format(
+          template,
+          tex_top,
+          tex_bottom,
+          inner
+        )
+    elseif v_align == 'staffline' then
+        err("not implemented yet")
+
+    else
+        err([[
+        Invalid argument for option 'fullpagealign'.
+        Allowed: 'crop', 'staffline'.
+        Given: %s
+        ]],
+        v_align)
+    end
 end
 
 function lilypond_fragment_header(staffsize, line_width, fullpage)
@@ -437,6 +451,7 @@ end
 local LOC_OPT_NAMES = {
     'current-font-as-main',
     'fullpage',
+    'fullpagealign',
     'fullpagestyle',
     'includepaths',
     'line-width',

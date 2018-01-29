@@ -21,6 +21,7 @@
     ['cleantmp'] = 'false',
     ['current-font-as-main'] = 'true',
     ['fullpage'] = 'false',
+    ['fullpagealign'] = 'crop',
     ['fullpagestyle'] = 'default',
     ['includepaths'] = './',
     ['line-width'] = 'default',
@@ -96,6 +97,9 @@
 \newcommand{\lilypondFullpage}[1]{%
   \directlua{set_option('fullpage', #1)}
 }
+\newcommand{\lilypondFullpageAlign}[1]{%
+  \directlua{set_option('fullpagealign', '#1')}
+}
 \newcommand{\lilypondPassFonts}[1]{%
   \directlua{set_option('pass-fonts', #1)}
 }
@@ -135,6 +139,7 @@
 \newkeycommand*\includely[%
     current-font-as-main%
     ,fullpage%
+    ,fullpagealign%
     ,fullpagestyle%
     ,includepaths%
     ,line-width%
@@ -175,6 +180,7 @@
 \newkeycommand{\lily}[%
     current-font-as-main%
     ,fullpage%
+    ,fullpagealign%
     ,fullpagestyle%
     ,includepaths%
     ,line-width%
@@ -197,6 +203,7 @@
     current-font-as-main%
     ,fullpage%
     ,fullpagestyle%
+    ,fullpagealign%
     ,includepaths%
     ,line-width%
     ,pass-fonts%
