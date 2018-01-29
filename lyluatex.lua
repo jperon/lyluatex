@@ -152,22 +152,26 @@ function compile_lilypond_fragment(
 end
 
 function calc_margins()
-    return {
-    ['top'] = (
+    local top = (
         tex.sp('1in') +
         tex.dimen.voffset +
         tex.dimen.topmargin +
         tex.dimen.headheight +
         tex.dimen.headsep
-    ),
-    ['bottom'] = (
-        tex.dimen.paperheight - (margins.top + tex.dimen.textheight)
-    ),
-    ['inner'] = (
+    )
+    local bottom = (
+        tex.dimen.paperheight - (top + tex.dimen.textheight)
+    )
+    local inner = (
         tex.sp('1in') +
         tex.dimen.oddsidemargin +
         tex.dimen.hoffset
-    )}
+    )
+    return {
+        ['top'] = top,
+        ['bottom'] = bottom,
+        ['inner'] = inner
+    }
 end
 
 function lilypond_fragment_header(staffsize, line_width, fullpage)
