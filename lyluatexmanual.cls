@@ -5,7 +5,7 @@
 \usepackage{fontspec}
 \usepackage{microtype}
 \usepackage{libertine}
-\setmonofont{Inconsolata}
+\setmonofont[Scale=MatchLowercase]{Inconsolata}
 \defaultfontfeatures{
 	Ligatures=TeX,
 	Scale=MatchLowercase,
