@@ -95,7 +95,7 @@ function write_to_filelist(filename)
     f:close()
 end
 
-function hash_output_filename(ly_code, staffsize)
+function hash_output_filename(ly_code)
     local line_width = get_local_option('line-width')
     local fullpage = get_local_option('fullpage')
     local evenodd = ''
@@ -110,7 +110,13 @@ function hash_output_filename(ly_code, staffsize)
     end
     local filename = string.gsub(
         md5.sumhexa(flatten_content(ly_code, get_local_option('input-file')))..
-        '_'..staffsize..'_'..line_width.n..line_width.u..evenodd..ppn, '%.', '_'
+        '_'..
+        get_local_option('staffsize')..
+        '_'..
+        line_width.n..line_width.u..
+        evenodd..
+        ppn,
+        '%.', '_'
     )
     if etm ~= 0 then filename = filename..'_etm_'..etm end
     if ebm ~= 0 then filename = filename..'_ebm_'..ebm end
@@ -137,14 +143,14 @@ end
 
 
 function process_lilypond_code(ly_code)
-    local staffsize = calc_staffsize(get_local_option('staffsize'))
+    set_local_option('staffsize', calc_staffsize(get_local_option('staffsize')))
     set_local_option('line-width', extract_unit(get_local_option('line-width')))
     process_extra_margins()
-    local output = hash_output_filename(ly_code, staffsize)
+    local output = hash_output_filename(ly_code)
     local new_score = not is_compiled(output)
     if new_score then
         compile_lilypond_fragment(
-            ly_code, staffsize, output
+            ly_code, output
         )
     end
     write_tex(output, new_score)
@@ -188,8 +194,8 @@ function run_lilypond(ly_code, output)
 end
 
 function compile_lilypond_fragment(
-        ly_code, staffsize, output)
-    ly_code = lilypond_fragment_header(staffsize)..'\n'..ly_code
+        ly_code, output)
+    ly_code = lilypond_fragment_header()..'\n'..ly_code
     run_lilypond(ly_code, output)
 end
 
@@ -215,7 +221,8 @@ function pt_to_staffspaces(pt, staffsize)
     return pt / s_sp
 end
 
-function calc_margins(staffsize)
+function calc_margins()
+    local staffsize = get_local_option('staffsize')
     local tex_top = (
         tex.sp('1in') +
         tex.dimen.voffset +
@@ -287,8 +294,9 @@ function calc_margins(staffsize)
     end
 end
 
-function lilypond_fragment_header(staffsize)
+function lilypond_fragment_header()
     local line_width = get_local_option('line-width')
+    local staffsize = get_local_option('staffsize')
     local fullpage = get_local_option('fullpage')
     local header = [[
 %%File header
@@ -335,7 +343,7 @@ function lilypond_fragment_header(staffsize)
         first-page-number = %s]],
         ppn,
         PAGE)
-        lilymargin = calc_margins(staffsize)
+        lilymargin = calc_margins()
     end
     header = header..
         string.format('\n'..
