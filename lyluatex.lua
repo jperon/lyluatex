@@ -150,11 +150,9 @@ function process_lilypond_code()
     set_local_option('line-width', extract_unit(get_local_option('line-width')))
     process_extra_margins()
     set_local_option('output', hash_output_filename())
-    local new_score = not is_compiled()
-    if new_score then
-        compile_lilypond_fragment()
-    end
-    write_tex(new_score)
+    local do_compile = not is_compiled()
+    if do_compile then compile_lilypond_fragment() end
+    write_tex(do_compile)
 end
 
 
@@ -450,7 +448,7 @@ function newpage_if_fullpage()
     if get_local_option('fullpage') then tex.sprint([[\newpage]]) end
 end
 
-function write_tex(new_score)
+function write_tex(do_compile)
     local output = get_local_option('output')
     if not is_compiled() then
       tex.print(
@@ -482,7 +480,7 @@ function write_tex(new_score)
         --[[ Fragment, use -systems.tex file]]
         local content = systems_file:read("*all")
         systems_file:close()
-        if new_score then
+        if do_compile then
             --[[ new compilation, calculate protrusion
                  and update -systems.tex file]]
             local protrusion = calc_protrusion()
