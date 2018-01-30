@@ -89,8 +89,7 @@ function extract_includepaths(includepaths)
 end
 
 function write_to_filelist(filename)
-    local input_file = get_local_option('input-file')
-    if not input_file then input_file = '' end
+    local input_file = get_local_option('input-file', '')
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\t', input_file, '\n')
     f:close()
@@ -533,11 +532,13 @@ function set_default_options()
 end
 
 
-function get_local_option(name)
+function get_local_option(name, default)
     if LOCAL_OPTIONS[name] then
         return LOCAL_OPTIONS[name]
-    else
+    elseif OPTIONS[name] then
         return OPTIONS[name]
+    elseif default then
+        return default
     end
 end
 
