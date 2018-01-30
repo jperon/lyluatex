@@ -164,7 +164,7 @@ function lilypond_file(input_file)
     local i = io.open(input_file, 'r')
     ly_code = i:read('*a')
     i:close()
-    LOCAL_OPTIONS['input-file'] = input_file
+    set_local_option('input-file', input_file)
     process_lilypond_code(ly_code)
 end
 
@@ -199,14 +199,14 @@ function process_extra_margins()
         local margin = extract_unit(top_extra)
         top = convert_unit(margin.n, margin.u, 'pt')
     end
-    LOCAL_OPTIONS['extra-top-margin'] = top
+    set_local_option('extra-top-margin', top)
     local bottom_extra = get_local_option('extra-bottom-margin')
     local bottom = tonumber(bottom_extra)
     if not bottom then
         local margin = extract_unit(bottom_extra)
         bottom = convert_unit(margin.n, margin.u, 'pt')
     end
-    LOCAL_OPTIONS['extra-bottom-margin'] = bottom
+    set_local_option('extra-bottom-margin', bottom)
 end
 
 function pt_to_staffspaces(pt, staffsize)
@@ -529,6 +529,12 @@ function set_default_options()
             )
         )
     end
+end
+
+
+function set_local_option(name, value)
+    if value == 'false' then value = false end
+    LOCAL_OPTIONS[name] = value
 end
 
 
