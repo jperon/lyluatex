@@ -1,3 +1,4 @@
+-- luacheck: ignore ly warn info log luatexbase internalversion font fonts tex kpse status
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
@@ -10,9 +11,118 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 local md5 = require 'md5'
+local lfs = require 'lfs'
+local FILELIST, OPTIONS, LOCAL_OPTIONS
+ly = {}
 
 
-function flatten_content(ly_code, input_file)
+local function dirname(str)
+    if str:match(".-/.-") then
+        local name = string.gsub(str, "(.*/)(.*)", "%1")
+        return name
+    else
+        return ''
+    end
+end
+
+
+local function mkdirs(str)
+    local path = '.'
+    for dir in string.gmatch(str, '([^%/]+)') do
+        path = path .. '/' .. dir
+        lfs.mkdir(path)
+    end
+end
+
+
+local function splitext(str, ext)
+    if str:match(".-%..-") then
+        local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
+        return name
+    else
+        return str
+    end
+end
+
+
+local function extract_includepaths(includepaths)
+    includepaths = includepaths:explode(',')
+    -- delete initial space (in case someone puts a space after the comma)
+    for i, path in ipairs(includepaths) do
+        includepaths[i] = path:gsub('^ ', '')
+    end
+    return includepaths
+end
+
+
+local fontdata = fonts.hashes.identifiers
+local function fontinfo(id)
+    local f = fontdata[id]
+    if f then
+        return f
+    end
+    return font.fonts[id]
+end
+
+
+local function get_local_option(name, default)
+    if LOCAL_OPTIONS[name] then
+        return LOCAL_OPTIONS[name]
+    elseif OPTIONS[name] then
+        return OPTIONS[name]
+    elseif default then
+        return default
+    end
+end
+
+
+local function set_fullpagestyle(style)
+    if style then
+        tex.sprint('\\includepdfset{pagecommand=\\thispagestyle{'..style..'}}')
+    else
+        tex.sprint('\\includepdfset{pagecommand=}')
+    end
+end
+
+
+local function lilypond_set_roman_font()
+    if get_local_option('current-font-as-main') == 'true' then
+        LOCAL_OPTIONS.rmfamily = get_local_option('current-font') end
+end
+
+
+local function squash_fontname(family)
+    return get_local_option(family):gsub(' ', '')
+end
+
+
+local function fontify_output(output)
+    if get_local_option('pass-fonts') == 'true' then
+        return output..'_'..
+          squash_fontname('rmfamily')..'_'..
+          squash_fontname('sffamily')..'_'..
+          squash_fontname('ttfamily')
+    else return output end
+end
+
+
+local function define_lilypond_fonts()
+    if get_local_option('pass-fonts') then
+        return string.format([[
+        #(define fonts
+          (make-pango-font-tree "%s"
+                                "%s"
+                                "%s"
+                                (/ staff-height pt 20)))
+        ]],
+        get_local_option('rmfamily'),
+        get_local_option('sffamily'),
+        get_local_option('ttfamily'))
+    else return '' end
+end
+
+
+local function flatten_content(ly_code, input_file)
     --[[ Produce a flattend string from the original content,
         including referenced files (if they can be opened.
         Other files (from LilyPond's include path) are considered
@@ -69,33 +179,23 @@ local CONVERSIONS = {
         ['cm'] = 2.54
     }
 }
-function convert_unit(value, from, to)
+local function convert_unit(value, from, to)
     return value * CONVERSIONS[from][to]
 end
 
-function extract_unit(input)
+local function extract_unit(input)
     --[ split a TeX length into number and unit --]
     return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
 end
 
-
-function extract_includepaths(includepaths)
-    includepaths = includepaths:explode(',')
-    -- delete initial space (in case someone puts a space after the comma)
-    for i, path in ipairs(includepaths) do
-        includepaths[i] = path:gsub('^ ', '')
-    end
-    return includepaths
-end
-
-function write_to_filelist(filename)
+local function write_to_filelist(filename)
     local input_file = get_local_option('input-file', '')
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\t', input_file, '\n')
     f:close()
 end
 
-function hash_output_filename()
+local function hash_output_filename()
     local line_width = get_local_option('line-width')
     local fullpage = get_local_option('fullpage')
     local evenodd = ''
@@ -103,7 +203,7 @@ function hash_output_filename()
     local ebm = 0
     local ppn = ''
     if fullpage then
-        evenodd = '_'..(PAGE % 2)
+        evenodd = '_'..(ly.PAGE % 2)
         if get_local_option('print-page-number') then ppn = '_ppn' end
         etm = get_local_option('extra-top-margin')
         ebm = get_local_option('extra-bottom-margin')
@@ -132,7 +232,7 @@ function hash_output_filename()
 end
 
 
-function is_compiled()
+local function is_compiled()
     local output = get_local_option('output')
     if output:find('fullpage') then
         if lfs.isfile(output..'.pdf') then
@@ -145,81 +245,44 @@ function is_compiled()
 end
 
 
-function process_lilypond_code()
-    set_local_option('staffsize', calc_staffsize(get_local_option('staffsize')))
-    set_local_option('line-width', extract_unit(get_local_option('line-width')))
-    process_extra_margins()
-    set_local_option('output', hash_output_filename())
-    local do_compile = not is_compiled()
-    if do_compile then
-        apply_lilypond_header()
-        run_lilypond()
-    end
-    write_tex(do_compile)
+local function calc_staffsize(staffsize)
+    staffsize = tonumber(staffsize)
+    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
+    return staffsize
 end
 
 
-function lilypond_fragment(ly_code)
-    set_local_option('ly-code', ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'))
-    process_lilypond_code()
+function ly.set_local_option(name, value)
+    if value == 'false' then value = false end
+    LOCAL_OPTIONS[name] = value
 end
 
 
-function lilypond_file(input_file)
-    filename = splitext(input_file, 'ly')
-    input_file = CURFILEDIR..filename..'.ly'
-    if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
-    if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
-    set_local_option('input-file', input_file)
-    local i = io.open(input_file, 'r')
-    set_local_option('ly-code', i:read('*a'))
-    i:close()
-    process_lilypond_code()
-end
-
-
-function run_lilypond()
-    local output = get_local_option('output')
-    mkdirs(dirname(output))
-    local include = get_local_option('input-file')
-    local cmd = get_local_option('program').." "..
-        "-dno-point-and-click "..
-        "-djob-count=2 "..
-        "-dno-delete-intermediate-files "
-    if include then cmd = cmd.."-I "..lfs.currentdir()..'/'..include.." " end
-    for _, dir in ipairs(extract_includepaths(get_local_option('includepaths'))) do
-        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
-    end
-    cmd = cmd.."-o "..output.." -"
-    local p = io.popen(cmd, 'w')
-    p:write(get_local_option('ly-code'))
-    p:close()
-end
-
-
-function process_extra_margins()
+local function process_extra_margins()
     local top_extra = get_local_option('extra-top-margin')
     local top = tonumber(top_extra)
     if not top then
         local margin = extract_unit(top_extra)
         top = convert_unit(margin.n, margin.u, 'pt')
     end
-    set_local_option('extra-top-margin', top)
+    ly.set_local_option('extra-top-margin', top)
     local bottom_extra = get_local_option('extra-bottom-margin')
     local bottom = tonumber(bottom_extra)
     if not bottom then
         local margin = extract_unit(bottom_extra)
         bottom = convert_unit(margin.n, margin.u, 'pt')
     end
-    set_local_option('extra-bottom-margin', bottom)
+    ly.set_local_option('extra-bottom-margin', bottom)
 end
 
-function pt_to_staffspaces(pt, staffsize)
+
+local function pt_to_staffspaces(pt, staffsize)
     local s_sp = staffsize / 4
     return pt / s_sp
 end
 
-function calc_margins()
+
+local function calc_margins()
     local staffsize = get_local_option('staffsize')
     local tex_top = (
         tex.sp('1in') +
@@ -292,7 +355,28 @@ function calc_margins()
     end
 end
 
-function apply_lilypond_header()
+
+local function calc_protrusion()
+    --[[
+      Determine the amount of space used to the left of the staff lines
+      and generate a horizontal offset command.
+    --]]
+    local protrusion = ''
+    local systems_file = get_local_option('output')..'.eps'
+    local f = io.open(systems_file)
+    --[[ The information we need is in the third line --]]
+    f:read(); f:read()
+    local bb_line = f:read()
+    f:close()
+    local cropped = bb_line:match('%d+')
+    if cropped ~= 0 then
+        protrusion = string.format('\\hspace*{-%spt}', cropped)
+    end
+    return protrusion
+end
+
+
+local function apply_lilypond_header()
     local line_width = get_local_option('line-width')
     local staffsize = get_local_option('staffsize')
     local fullpage = get_local_option('fullpage')
@@ -340,7 +424,7 @@ function apply_lilypond_header()
         print-first-page-number = ##t
         first-page-number = %s]],
         ppn,
-        PAGE)
+        ly.PAGE)
         lilymargin = calc_margins()
     end
     header = header..
@@ -355,26 +439,38 @@ function apply_lilypond_header()
             lilymargin..'\n',
             define_lilypond_fonts()
         )
-    set_local_option('ly-code',
+    ly.set_local_option('ly-code',
         header..'\n'..get_local_option('ly-code'))
 end
 
 
-function calc_staffsize(staffsize)
-    staffsize = tonumber(staffsize)
-    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
-    return staffsize
+local function run_lilypond()
+    local output = get_local_option('output')
+    mkdirs(dirname(output))
+    local include = get_local_option('input-file')
+    local cmd = get_local_option('program').." "..
+        "-dno-point-and-click "..
+        "-djob-count=2 "..
+        "-dno-delete-intermediate-files "
+    if include then cmd = cmd.."-I "..lfs.currentdir()..'/'..include.." " end
+    for _, dir in ipairs(extract_includepaths(get_local_option('includepaths'))) do
+        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
+    end
+    cmd = cmd.."-o "..output.." -"
+    local p = io.popen(cmd, 'w')
+    p:write(get_local_option('ly-code'))
+    p:close()
 end
 
 
-function delete_intermediate_files()
+local function delete_intermediate_files()
   local output = get_local_option('output')
   local i = io.open(output..'-systems.count', 'r')
   if i then
       local n = tonumber(i:read('*all'))
       i:close()
-      for i = 1, n, 1 do
-          os.remove(output..'-'..i..'.eps')
+      for j = 1, n, 1 do
+          os.remove(output..'-'..j..'.eps')
       end
       os.remove(output..'-systems.count')
       os.remove(output..'-systems.texi')
@@ -384,70 +480,7 @@ function delete_intermediate_files()
 end
 
 
-function clean_tmp_dir()
-    local hash, file_is_used
-    local hash_list = {}
-    for file in lfs.dir(get_option('tmpdir')) do
-        if file:sub(-5, -1) == '.list' then
-            local i = io.open(get_option('tmpdir')..'/'..file)
-            for _, line in ipairs(i:read('*a'):explode('\n')) do
-                hash = line:explode('\t')[1]
-                if hash ~= '' then table.insert(hash_list, hash) end
-            end
-            i:close()
-        end
-    end
-    for file in lfs.dir(get_option('tmpdir')) do
-        file_is_used = false
-        if file ~= '.' and file ~= '..' and file:sub(-5, -1) ~= '.list' then
-            for _, hash in ipairs(hash_list) do
-                if file:find(hash) then
-                    file_is_used = true
-                    break
-                end
-            end
-            if not file_is_used then
-                os.remove(get_option('tmpdir')..'/'..file)
-            end
-        end
-    end
-end
-
-
-function conclusion_text()
-    print(
-        string.format(
-            '\nOutput written on %s.pdf.\nTranscript written on %s.log.',
-            tex.jobname, tex.jobname
-        )
-    )
-end
-
-
-function calc_protrusion()
-    --[[
-      Determine the amount of space used to the left of the staff lines
-      and generate a horizontal offset command.
-    --]]
-    local protrusion = ''
-    local systems_file = get_local_option('output')..'.eps'
-    local f = io.open(systems_file)
-    --[[ The information we need is in the third line --]]
-    f:read(); f:read()
-    local bb_line = f:read()
-    f:close()
-    local cropped = bb_line:match('%d+')
-    if cropped ~= 0 then
-        protrusion = string.format('\\hspace*{-%spt}', cropped)
-    end
-    return protrusion
-end
-
-function newpage_if_fullpage()
-    if get_local_option('fullpage') then tex.sprint([[\newpage]]) end
-end
-
-function write_tex(do_compile)
+local function write_tex(do_compile)
     local output = get_local_option('output')
     if not is_compiled() then
       tex.print(
@@ -466,10 +499,10 @@ function write_tex(do_compile)
     local fullpagestyle = get_local_option('fullpagestyle')
     if fullpagestyle == 'default' then
         if get_local_option('print-page-number') then
-            lilypond_set_fullpagestyle('empty')
-        else lilypond_set_fullpagestyle(nil)
+            set_fullpagestyle('empty')
+        else set_fullpagestyle(nil)
         end
-    else lilypond_set_fullpagestyle(fullpagestyle)
+    else set_fullpagestyle(fullpagestyle)
     end
     local systems_file = io.open(output..'-systems.tex', 'r')
     if not systems_file then
@@ -498,15 +531,61 @@ function write_tex(do_compile)
 end
 
 
-function lilypond_set_fullpagestyle(style)
-    if style then
-        tex.sprint('\\includepdfset{pagecommand=\\thispagestyle{'..style..'}}')
-    else
-        tex.sprint('\\includepdfset{pagecommand=}')
+local function process_lilypond_code()
+    ly.set_local_option('staffsize', calc_staffsize(get_local_option('staffsize')))
+    ly.set_local_option('line-width', extract_unit(get_local_option('line-width')))
+    process_extra_margins()
+    ly.set_local_option('output', hash_output_filename())
+    local do_compile = not is_compiled()
+    if do_compile then
+        apply_lilypond_header()
+        run_lilypond()
+    end
+    write_tex(do_compile)
+end
+
+
+function ly.clean_tmp_dir()
+    local hash, file_is_used
+    local hash_list = {}
+    for file in lfs.dir(ly.get_option('tmpdir')) do
+        if file:sub(-5, -1) == '.list' then
+            local i = io.open(ly.get_option('tmpdir')..'/'..file)
+            for _, line in ipairs(i:read('*a'):explode('\n')) do
+                hash = line:explode('\t')[1]
+                if hash ~= '' then table.insert(hash_list, hash) end
+            end
+            i:close()
+        end
+    end
+    for file in lfs.dir(ly.get_option('tmpdir')) do
+        file_is_used = false
+        if file ~= '.' and file ~= '..' and file:sub(-5, -1) ~= '.list' then
+            for _, lhash in ipairs(hash_list) do
+                if file:find(lhash) then
+                    file_is_used = true
+                    break
+                end
+            end
+            if not file_is_used then
+                os.remove(ly.get_option('tmpdir')..'/'..file)
+            end
+        end
     end
 end
 
-function declare_package_options(options)
+
+function ly.conclusion_text()
+    print(
+        string.format(
+            '\nOutput written on %s.pdf.\nTranscript written on %s.log.',
+            tex.jobname, tex.jobname
+        )
+    )
+end
+
+
+function ly.declare_package_options(options)
     OPTIONS = options
     for k, v in pairs(options) do
         tex.sprint(string.format([[\DeclareStringOption[%s]{%s}%%]], v, k))
@@ -518,45 +597,37 @@ function declare_package_options(options)
 end
 
 
-function set_option(name, value)
-    if value == 'false' then value = false end
-    OPTIONS[name] = value
+function ly.file(input_file)
+    local filename = splitext(input_file, 'ly')
+    input_file = ly.CURFILEDIR..filename..'.ly'
+    if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
+    if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
+    ly.set_local_option('input-file', input_file)
+    local i = io.open(input_file, 'r')
+    ly.set_local_option('ly-code', i:read('*a'))
+    i:close()
+    process_lilypond_code()
 end
 
 
-function get_option(name)
+function ly.fragment(ly_code)
+    ly.set_local_option('ly-code', ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'))
+    process_lilypond_code()
+end
+
+
+function ly.get_font_family(font_id)
+    return fontinfo(font_id).shared.rawdata.metadata['familyname']
+end
+
+
+function ly.get_option(name)
     return OPTIONS[name]
 end
 
 
-function set_default_options()
-    for k, v in pairs(OPTIONS) do
-        tex.sprint(
-            string.format(
-                [[
-                \directlua{
-                  set_option('%s', '\luatexluaescapestring{\lyluatex@%s}')
-                }]], k, k
-            )
-        )
-    end
-end
-
-
-function set_local_option(name, value)
-    if value == 'false' then value = false end
-    LOCAL_OPTIONS[name] = value
-end
-
-
-function get_local_option(name, default)
-    if LOCAL_OPTIONS[name] then
-        return LOCAL_OPTIONS[name]
-    elseif OPTIONS[name] then
-        return OPTIONS[name]
-    elseif default then
-        return default
-    end
+function ly.newpage_if_fullpage()
+    if get_local_option('fullpage') then tex.sprint([[\newpage]]) end
 end
 
 local LOC_OPT_NAMES = {
@@ -573,8 +644,8 @@ local LOC_OPT_NAMES = {
     'program',
     'staffsize',
 }
-function process_local_options()
-    tex.sprint([[\directlua{set_local_options({]])
+function ly.process_local_options()
+    tex.sprint([[\directlua{ly.set_local_options({]])
     for _, v in ipairs(LOC_OPT_NAMES) do
         tex.sprint(
             string.format(
@@ -586,99 +657,37 @@ function process_local_options()
     tex.sprint([[})}]])
 end
 
-function set_local_options(opts)
+
+function ly.reset_local_options()
+    LOCAL_OPTIONS = {}
+end
+
+
+function ly.set_default_options()
+    for k, _ in pairs(OPTIONS) do
+        tex.sprint(
+            string.format(
+                [[
+                \directlua{
+                  ly.set_option('%s', '\luatexluaescapestring{\lyluatex@%s}')
+                }]], k, k
+            )
+        )
+    end
+end
+
+
+function ly.set_local_options(opts)
     for k,v in pairs(opts) do
         if v == 'false' then v = false end
         if v ~= '' then LOCAL_OPTIONS[k] = v end
     end
 end
 
-function reset_local_options()
-    LOCAL_OPTIONS = {}
+
+function ly.set_option(name, value)
+    if value == 'false' then value = false end
+    OPTIONS[name] = value
 end
 
-
-function basename(str)
-    if str:match(".-/.-") then
-        local name = string.gsub(str, "(.*/)(.*)", "%2")
-        return name
-    else
-        return ''
-    end
-end
-
-
-function dirname(str)
-    if str:match(".-/.-") then
-        local name = string.gsub(str, "(.*/)(.*)", "%1")
-        return name
-    else
-        return ''
-    end
-end
-
-
-function splitext(str, ext)
-    if str:match(".-%..-") then
-        local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
-        return name
-    else
-        return str
-    end
-end
-
-
-function mkdirs(str)
-    local path = '.'
-    for dir in string.gmatch(str, '([^%/]+)') do
-        path = path .. '/' .. dir
-        lfs.mkdir(path)
-    end
-end
-
-
-local fontdata = fonts.hashes.identifiers
-function fontinfo(id)
-    local f = fontdata[id]
-    if f then
-        return f
-    end
-    return font.fonts[id]
-end
-
-function get_font_family(font_id)
-    return fontinfo(font_id).shared.rawdata.metadata['familyname']
-end
-
-function define_lilypond_fonts()
-    if get_local_option('pass-fonts') then
-        return string.format([[
-        #(define fonts
-          (make-pango-font-tree "%s"
-                                "%s"
-                                "%s"
-                                (/ staff-height pt 20)))
-        ]],
-        get_local_option('rmfamily'),
-        get_local_option('sffamily'),
-        get_local_option('ttfamily'))
-    else return '' end
-end
-
-function lilypond_set_roman_font()
-    if get_local_option('current-font-as-main') == 'true' then
-        LOCAL_OPTIONS.rmfamily = get_local_option('current-font') end
-end
-
-function squash_fontname(family)
-    return get_local_option(family):gsub(' ', '')
-end
-
-function fontify_output(output)
-    if get_local_option('pass-fonts') == 'true' then
-        return output..'_'..
-          squash_fontname('rmfamily')..'_'..
-          squash_fontname('sffamily')..'_'..
-          squash_fontname('ttfamily')
-    else return output end
-end
+return ly
