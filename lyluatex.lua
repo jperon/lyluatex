@@ -88,7 +88,15 @@ function extract_includepaths(includepaths)
     return includepaths
 end
 
-function hash_output_filename(ly_code, line_width, staffsize, input_file)
+function write_to_filelist(filename)
+    local input_file = get_local_option('input-file')
+    if not input_file then input_file = '' end
+    local f = io.open(FILELIST, 'a')
+    f:write(filename, '\t', input_file, '\n')
+    f:close()
+end
+
+function hash_output_filename(ly_code, line_width, staffsize)
     local fullpage = get_local_option('fullpage')
     local evenodd = ''
     local etm = 0
@@ -101,7 +109,7 @@ function hash_output_filename(ly_code, line_width, staffsize, input_file)
         ebm = get_local_option('extra-bottom-margin')
     end
     local filename = string.gsub(
-        md5.sumhexa(flatten_content(ly_code), input_file)..
+        md5.sumhexa(flatten_content(ly_code, get_local_option('input-file')))..
         '_'..staffsize..'_'..line_width.n..line_width.u..evenodd..ppn, '%.', '_'
     )
     if etm ~= 0 then filename = filename..'_etm_'..etm end
@@ -111,10 +119,7 @@ function hash_output_filename(ly_code, line_width, staffsize, input_file)
     if fullpage then
         filename = filename..'-fullpage'
     end
-    if not input_file then input_file = '' end
-    local f = io.open(FILELIST, 'a')
-    f:write(filename, '\t', input_file, '\n')
-    f:close()
+    write_to_filelist(filename)
     return OPTIONS.tmpdir..'/'..filename
 end
 
@@ -131,18 +136,16 @@ function is_compiled(output)
 end
 
 
-function process_lilypond_code(ly_code, input_file)
+function process_lilypond_code(ly_code)
     local line_width = extract_unit(get_local_option('line-width'))
     local staffsize = calc_staffsize(get_local_option('staffsize'))
     process_extra_margins()
-    local output = hash_output_filename(ly_code, line_width, staffsize, input_file)
+    local output = hash_output_filename(ly_code, line_width, staffsize)
     local new_score = not is_compiled(output)
     if new_score then
-        local input
-        if input_file then input = dirname(input_file) end
-            compile_lilypond_fragment(
-                ly_code, staffsize, line_width, output, input
-            )
+        compile_lilypond_fragment(
+            ly_code, staffsize, line_width, output
+        )
     end
     write_tex(output, new_score)
 end
@@ -150,7 +153,7 @@ end
 
 function lilypond_fragment(ly_code)
     ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    process_lilypond_code(ly_code, nil)
+    process_lilypond_code(ly_code)
 end
 
 
@@ -162,12 +165,14 @@ function lilypond_file(input_file)
     local i = io.open(input_file, 'r')
     ly_code = i:read('*a')
     i:close()
-    process_lilypond_code(ly_code, input_file)
+    LOCAL_OPTIONS['input-file'] = input_file
+    process_lilypond_code(ly_code)
 end
 
 
-function run_lilypond(ly_code, output, include)
+function run_lilypond(ly_code, output)
     mkdirs(dirname(output))
+    local include = get_local_option('input-file')
     local cmd = get_local_option('program').." "..
         "-dno-point-and-click "..
         "-djob-count=2 "..
@@ -183,9 +188,9 @@ function run_lilypond(ly_code, output, include)
 end
 
 function compile_lilypond_fragment(
-        ly_code, staffsize, line_width, output, include)
+        ly_code, staffsize, line_width, output)
     ly_code = lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code
-    run_lilypond(ly_code, output, include)
+    run_lilypond(ly_code, output)
 end
 
 function process_extra_margins()
