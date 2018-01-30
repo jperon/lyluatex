@@ -95,7 +95,7 @@ function write_to_filelist(filename)
     f:close()
 end
 
-function hash_output_filename(ly_code)
+function hash_output_filename()
     local line_width = get_local_option('line-width')
     local fullpage = get_local_option('fullpage')
     local evenodd = ''
@@ -109,7 +109,9 @@ function hash_output_filename(ly_code)
         ebm = get_local_option('extra-bottom-margin')
     end
     local filename = string.gsub(
-        md5.sumhexa(flatten_content(ly_code, get_local_option('input-file')))..
+        md5.sumhexa(flatten_content(
+            get_local_option('ly-code'),
+            get_local_option('input-file')))..
         '_'..
         get_local_option('staffsize')..
         '_'..
@@ -130,7 +132,8 @@ function hash_output_filename(ly_code)
 end
 
 
-function is_compiled(output)
+function is_compiled()
+    local output = get_local_option('output')
     if output:find('fullpage') then
         if lfs.isfile(output..'.pdf') then
             return true else return false end
@@ -142,24 +145,22 @@ function is_compiled(output)
 end
 
 
-function process_lilypond_code(ly_code)
+function process_lilypond_code()
     set_local_option('staffsize', calc_staffsize(get_local_option('staffsize')))
     set_local_option('line-width', extract_unit(get_local_option('line-width')))
     process_extra_margins()
-    local output = hash_output_filename(ly_code)
-    local new_score = not is_compiled(output)
+    set_local_option('output', hash_output_filename())
+    local new_score = not is_compiled()
     if new_score then
-        compile_lilypond_fragment(
-            ly_code, output
-        )
+        compile_lilypond_fragment()
     end
-    write_tex(output, new_score)
+    write_tex(new_score)
 end
 
 
 function lilypond_fragment(ly_code)
-    ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-    process_lilypond_code(ly_code)
+    set_local_option('ly-code', ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'))
+    process_lilypond_code()
 end
 
 
@@ -168,15 +169,16 @@ function lilypond_file(input_file)
     input_file = CURRENTDIR..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
     if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
-    local i = io.open(input_file, 'r')
-    ly_code = i:read('*a')
-    i:close()
     set_local_option('input-file', input_file)
-    process_lilypond_code(ly_code)
+    local i = io.open(input_file, 'r')
+    set_local_option('ly-code', i:read('*a'))
+    i:close()
+    process_lilypond_code()
 end
 
 
-function run_lilypond(ly_code, output)
+function run_lilypond()
+    local output = get_local_option('output')
     mkdirs(dirname(output))
     local include = get_local_option('input-file')
     local cmd = get_local_option('program').." "..
@@ -189,14 +191,13 @@ function run_lilypond(ly_code, output)
     end
     cmd = cmd.."-o "..output.." -"
     local p = io.popen(cmd, 'w')
-    p:write(ly_code)
+    p:write(get_local_option('ly-code'))
     p:close()
 end
 
-function compile_lilypond_fragment(
-        ly_code, output)
-    ly_code = lilypond_fragment_header()..'\n'..ly_code
-    run_lilypond(ly_code, output)
+function compile_lilypond_fragment()
+    lilypond_fragment_header()
+    run_lilypond()
 end
 
 function process_extra_margins()
@@ -357,7 +358,8 @@ function lilypond_fragment_header()
             lilymargin..'\n',
             define_lilypond_fonts()
         )
-    return header
+    set_local_option('ly-code',
+        header..'\n'..get_local_option('ly-code'))
 end
 
 
@@ -368,7 +370,8 @@ function calc_staffsize(staffsize)
 end
 
 
-function delete_intermediate_files(output)
+function delete_intermediate_files()
+  local output = get_local_option('output')
   local i = io.open(output..'-systems.count', 'r')
   if i then
       local n = tonumber(i:read('*all'))
@@ -424,13 +427,13 @@ function conclusion_text()
 end
 
 
-function calc_protrusion(output)
+function calc_protrusion()
     --[[
       Determine the amount of space used to the left of the staff lines
       and generate a horizontal offset command.
     --]]
     local protrusion = ''
-    local systems_file = output..'.eps'
+    local systems_file = get_local_option('output')..'.eps'
     local f = io.open(systems_file)
     --[[ The information we need is in the third line --]]
     f:read(); f:read()
@@ -447,8 +450,9 @@ function newpage_if_fullpage()
     if get_local_option('fullpage') then tex.sprint([[\newpage]]) end
 end
 
-function write_tex(output, new_score)
-    if not is_compiled(output) then
+function write_tex(new_score)
+    local output = get_local_option('output')
+    if not is_compiled() then
       tex.print(
           [[
           \begin{quote}
@@ -481,14 +485,14 @@ function write_tex(output, new_score)
         if new_score then
             --[[ new compilation, calculate protrusion
                  and update -systems.tex file]]
-            local protrusion = calc_protrusion(output)
+            local protrusion = calc_protrusion()
             local texoutput, _ = content:gsub([[\includegraphics{]],
                 [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(output))
             tex.print(texoutput:explode('\n'))
             local f = io.open(output..'-systems.tex', 'w')
             f:write(texoutput)
             f:close()
-            delete_intermediate_files(output)
+            delete_intermediate_files()
         else
             -- simply reuse existing -systems.tex file
             tex.sprint(content:explode('\n'))
