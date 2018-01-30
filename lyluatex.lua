@@ -95,7 +95,8 @@ function write_to_filelist(filename)
     f:close()
 end
 
-function hash_output_filename(ly_code, line_width, staffsize)
+function hash_output_filename(ly_code, staffsize)
+    local line_width = get_local_option('line-width')
     local fullpage = get_local_option('fullpage')
     local evenodd = ''
     local etm = 0
@@ -136,14 +137,14 @@ end
 
 
 function process_lilypond_code(ly_code)
-    local line_width = extract_unit(get_local_option('line-width'))
     local staffsize = calc_staffsize(get_local_option('staffsize'))
+    set_local_option('line-width', extract_unit(get_local_option('line-width')))
     process_extra_margins()
-    local output = hash_output_filename(ly_code, line_width, staffsize)
+    local output = hash_output_filename(ly_code, staffsize)
     local new_score = not is_compiled(output)
     if new_score then
         compile_lilypond_fragment(
-            ly_code, staffsize, line_width, output
+            ly_code, staffsize, output
         )
     end
     write_tex(output, new_score)
@@ -187,8 +188,8 @@ function run_lilypond(ly_code, output)
 end
 
 function compile_lilypond_fragment(
-        ly_code, staffsize, line_width, output)
-    ly_code = lilypond_fragment_header(staffsize, line_width)..'\n'..ly_code
+        ly_code, staffsize, output)
+    ly_code = lilypond_fragment_header(staffsize)..'\n'..ly_code
     run_lilypond(ly_code, output)
 end
 
@@ -286,7 +287,8 @@ function calc_margins(staffsize)
     end
 end
 
-function lilypond_fragment_header(staffsize, line_width)
+function lilypond_fragment_header(staffsize)
+    local line_width = get_local_option('line-width')
     local fullpage = get_local_option('fullpage')
     local header = [[
 %%File header
