@@ -167,7 +167,7 @@ end
 
 function lilypond_file(input_file)
     filename = splitext(input_file, 'ly')
-    input_file = CURRENTDIR..filename..'.ly'
+    input_file = CURFILEDIR..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
     if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
     set_local_option('input-file', input_file)
