@@ -151,7 +151,10 @@ function process_lilypond_code()
     process_extra_margins()
     set_local_option('output', hash_output_filename())
     local do_compile = not is_compiled()
-    if do_compile then compile_lilypond_fragment() end
+    if do_compile then
+        apply_lilypond_header()
+        run_lilypond()
+    end
     write_tex(do_compile)
 end
 
@@ -193,10 +196,6 @@ function run_lilypond()
     p:close()
 end
 
-function compile_lilypond_fragment()
-    lilypond_fragment_header()
-    run_lilypond()
-end
 
 function process_extra_margins()
     local top_extra = get_local_option('extra-top-margin')
@@ -293,7 +292,7 @@ function calc_margins()
     end
 end
 
-function lilypond_fragment_header()
+function apply_lilypond_header()
     local line_width = get_local_option('line-width')
     local staffsize = get_local_option('staffsize')
     local fullpage = get_local_option('fullpage')
