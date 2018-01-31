@@ -12,7 +12,10 @@ local err, warn, info, log = luatexbase.provides_module({
 
 local md5 = require 'md5'
 local lfs = require 'lfs'
-local FILELIST, OPTIONS, LOCAL_OPTIONS
+local FILELIST
+local OPTIONS = {}
+local LOCAL_OPTIONS = {}
+setmetatable(LOCAL_OPTIONS, {__index = OPTIONS})
 ly = {}
 
 
@@ -65,14 +68,8 @@ local function fontinfo(id)
 end
 
 
-local function get_local_option(name, default)
-    if LOCAL_OPTIONS[name] then
-        return LOCAL_OPTIONS[name]
-    elseif OPTIONS[name] then
-        return OPTIONS[name]
-    elseif default then
-        return default
-    end
+local function get_local_option(name)
+    return LOCAL_OPTIONS[name]
 end
 
 
@@ -183,17 +180,14 @@ local function convert_unit(value, from, to)
     return value * CONVERSIONS[from][to]
 end
 
-local function extract_unit(input)
-    --[ split a TeX length into number and unit --]
-    return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
-end
 
 local function write_to_filelist(filename)
-    local input_file = get_local_option('input-file', '')
+    local input_file = get_local_option('input-file') or ''
     local f = io.open(FILELIST, 'a')
     f:write(filename, '\t', input_file, '\n')
     f:close()
 end
+
 
 local function hash_output_filename()
     local line_width = get_local_option('line-width')
@@ -245,16 +239,32 @@ local function is_compiled()
 end
 
 
-local function calc_staffsize(staffsize)
-    staffsize = tonumber(staffsize)
-    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
-    return staffsize
+local function extract_unit(input)
+    --[ split a TeX length into number and unit --]
+    return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
 end
 
 
-function ly.set_local_option(name, value)
-    if value == 'false' then value = false end
-    LOCAL_OPTIONS[name] = value
+local function calc_dimensions()
+    local staffsize = tonumber(get_local_option('staffsize'))
+    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
+    ly.set_local_option('staffsize', staffsize)
+    local value, n
+    for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
+        value = get_local_option(dimension)
+        if dimension == 'line-width' then n = tex.dimen.linewidth
+        else n = tex.dimen[dimension]
+        end
+        if value == 'default' then
+            value = {
+                ['u'] = 'pt',
+                ['n'] = n / 65536
+            }
+        else
+            value = extract_unit(value)
+        end
+        ly.set_local_option(dimension, value)
+    end
 end
 
 
@@ -389,9 +399,9 @@ local function apply_lilypond_header()
     else
         header = header..
             string.format(
-                [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
-                get_local_option('pagewidth'):sub(1,-3),
-                get_local_option('paperheight'):sub(1,-3)
+                [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s %s) (* %s %s))) paper-alist))]],
+                get_local_option('paperwidth').n, get_local_option('paperwidth').u,
+                get_local_option('paperheight').n, get_local_option('paperheight').u
             )
     end
     header = header..
@@ -532,8 +542,7 @@ end
 
 
 local function process_lilypond_code()
-    ly.set_local_option('staffsize', calc_staffsize(get_local_option('staffsize')))
-    ly.set_local_option('line-width', extract_unit(get_local_option('line-width')))
+    calc_dimensions()
     process_extra_margins()
     ly.set_local_option('output', hash_output_filename())
     local do_compile = not is_compiled()
@@ -599,7 +608,7 @@ end
 
 function ly.file(input_file)
     local filename = splitext(input_file, 'ly')
-    input_file = ly.CURFILEDIR..filename..'.ly'
+    input_file = ly.CURRFILEDIR..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
     if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
     ly.set_local_option('input-file', input_file)
@@ -630,36 +639,28 @@ function ly.newpage_if_fullpage()
     if get_local_option('fullpage') then tex.sprint([[\newpage]]) end
 end
 
-local LOC_OPT_NAMES = {
-    'current-font-as-main',
-    'extra-bottom-margin',
-    'extra-top-margin',
-    'fullpage',
-    'fullpagealign',
-    'fullpagestyle',
-    'includepaths',
-    'line-width',
-    'pass-fonts',
-    'print-page-numbers',
-    'program',
-    'staffsize',
-}
-function ly.process_local_options()
-    tex.sprint([[\directlua{ly.set_local_options({]])
-    for _, v in ipairs(LOC_OPT_NAMES) do
-        tex.sprint(
-            string.format(
-                [[['%s'] = '\luatexluaescapestring{\commandkey{%s}}',]],
-                v, v
-            )
-        )
+
+function ly.set_local_option(name, value)
+    if value == 'false' then value = false end
+    LOCAL_OPTIONS[name] = value
+end
+
+
+function ly.set_local_options(opts)
+    for _, opt in pairs(opts:explode(',')) do
+        local i = opt:find('=')
+        if i then
+            local k, v = opt:sub(1, i - 1), opt:sub(i + 4, -4)
+            if v == 'false' then v = false end
+            if v ~= '' then LOCAL_OPTIONS[k] = v end
+        end
     end
-    tex.sprint([[})}]])
 end
 
 
 function ly.reset_local_options()
     LOCAL_OPTIONS = {}
+    setmetatable(LOCAL_OPTIONS, {__index = OPTIONS})
 end
 
 
@@ -673,14 +674,6 @@ function ly.set_default_options()
                 }]], k, k
             )
         )
-    end
-end
-
-
-function ly.set_local_options(opts)
-    for k,v in pairs(opts) do
-        if v == 'false' then v = false end
-        if v ~= '' then LOCAL_OPTIONS[k] = v end
     end
 end
 

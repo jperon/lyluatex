@@ -17,7 +17,7 @@
 \catcode`-=11
 \directlua{
   ly = require(kpse.find_file("lyluatex.lua"))
-  ly.CURFILEDIR = '\currfiledir'
+  ly.CURRFILEDIR = '\currfiledir'
   ly.declare_package_options( {
     ['cleantmp'] = 'false',
     ['current-font-as-main'] = 'true',
@@ -28,7 +28,7 @@
     ['fullpagestyle'] = 'default',
     ['includepaths'] = './',
     ['line-width'] = 'default',
-    ['pagewidth'] = 'default',
+    ['paperwidth'] = 'default',
     ['paperheight'] = 'default',
     ['pass-fonts'] = 'true',
     ['print-page-number'] = 'false',
@@ -52,84 +52,18 @@
 \newcommand{\mm}{mm}
 \newcommand{\cm}{cm}
 
-% Commands to change options during the document
-\newcommand{\lilypondCmd}[1]{%
-    \directlua{ly.set_option('program', '#1')}
+% Command to change options during the document
+\newcommand{\lysetoption}[2]{%
+  \directlua{ly.set_option('#1', '#2')}
 }
-% Staff size is calculated in relation to text size if set to 0 (default)
-\newcommand{\lilypondStaffsize}[1]{%
-    \directlua{ly.set_option('staffsize', '#1')}
-}
+
 % Line width is calculated if set to 'default'
-\def\defaultlen{default}
-\catcode`-=11
-\def\calcdimensions{
-  \ifx\lyluatex@line-width\defaultlen
-  \directlua{
-    ly.set_option('line-width', '\the\linewidth')
-  }
-  \else
-  \directlua{
-    ly.set_option('line-width',\lyluatex@line-width)
-  }
-  \fi
-  \ifx\lyluatex@pagewidth\defaultlen
-  \directlua{
-    ly.set_option('pagewidth', '\the\pagewidth')
-  }
-  \else
-  \directlua{
-    ly.set_option('pagewidth',\lyluatex@pagewidth)
-  }
-  \fi
-  \ifx\lyluatex@paperheight\defaultlen
-  \directlua{
-    ly.set_option('paperheight', '\the\paperheight')
-  }
-  \else
-  \directlua{
-    ly.set_option('paperheight',\lyluatex@paperheight)
-  }
-  \fi
-  \directlua{ly.PAGE = \thepage}
-}
-\newcommand{\lilypondLinewidth}[1]{%
-  \edef\lyluatex@line-width{#1}
-  \directlua{ly.set_option('line-width', #1)}
-}
-\newcommand{\lilypondFullpage}[1]{%
-  \directlua{ly.set_option('fullpage', #1)}
-}
-\newcommand{\lilypondFullpageAlign}[1]{%
-  \directlua{ly.set_option('fullpagealign', '#1')}
-}
-\newcommand{\lilypondPassFonts}[1]{%
-  \directlua{ly.set_option('pass-fonts', #1)}
-}
-\newcommand{\lilypondCurrentFontAsMain}[1]{%
-  \directlua{ly.set_option('current-font-as-main', #1)}
-}
-\catcode`-=12
-\newcommand{\lilypondExtraTopMargin}[1]{
-    \directlua{ly.set_option('extra-top-margin', '#1')}
-}
-\newcommand{\lilypondExtraBottomMargin}[1]{
-    \directlua{ly.set_option('extra-bottom-margin', '#1')}
-}
-% Include paths for lilypond documents
-\newcommand{\lilypondIncludePaths}[1]{%
-    \directlua{ly.set_option('includepaths', '#1')}
-}
-\newcommand{\lilypondFullPageStyle}[1]{%
-    \directlua{ly.set_option('fullpagestyle', '#1')}
-}
-\newcommand{\lilypondPrintPageNumber}[1]{%}
-    \directlua{ly.set_option('print-page-number', '#1')}}
+\def\ly@page{\directlua{ly.PAGE = \thepage}}
 
 % Retrieve the three main font families (rm, sf, tt)
 % and store them as options. Additionally store the
 % *current* font for optional use.
-\newcommand{\currentfonts}{%
+\newcommand{\ly@currentfonts}{%
 \begingroup%
     \directlua{ly.set_option('current-font', ly.get_font_family(font.current()))}
     \rmfamily \edef\rmfamilyid{\fontid\font}%
@@ -145,90 +79,41 @@
 
 % Main commands
 % Inclusion of a .ly file
-\newkeycommand*\includely[%
-    current-font-as-main%
-    ,extra-bottom-margin%
-    ,extra-top-margin%
-    ,fullpage%
-    ,fullpagealign%
-    ,fullpagestyle%
-    ,includepaths%
-    ,line-width%
-    ,pass-fonts%
-    ,print-page-number%
-    ,program%
-    ,staffsize%
-    ][other-options][1]{%
-\directlua{ly.process_local_options()}
+\newkeycommand*\includely[][options][1]{%
+\directlua{ly.set_local_options('\commandkey{options}')}
 \directlua{ly.newpage_if_fullpage()}
-\calcdimensions
-\currentfonts
+\ly@page
+\ly@currentfonts
 \directlua{ly.file("\luatexluaescapestring{#1}")}%
 \directlua{ly.reset_local_options()}%
 }
 
 % Base environment to include a LilyPond fragment integrated into
 % the document.
-\NewEnviron{compilely}{%
-\directlua{ly.process_local_options()}
+\NewEnviron{ly@compilely}{%
+\directlua{ly.set_local_options('\commandkey{options}')}
 \directlua{ly.newpage_if_fullpage()}
-\calcdimensions
-\currentfonts
-\directlua{%
-    ly.fragment(
-        "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}"
-    )%
-}%
+\ly@page
+\ly@currentfonts
+\directlua{ly.fragment("\luatexluaescapestring{\unexpanded\expandafter{\BODY}}")}%
 \directlua{ly.reset_local_options()}%
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newkeycommand{\lily}[%
-    current-font-as-main%
-    ,extra-bottom-margin%
-    ,extra-top-margin%
-    ,fullpage%
-    ,fullpagealign%
-    ,fullpagestyle%
-    ,includepaths%
-    ,line-width%
-    ,pass-fonts%
-    ,print-page-number%
-    ,program%
-    ,staffsize%
-    ][other-options][1]{%
-\directlua{ly.process_local_options()}
-\let\ly@oldrepeat\repeat \def\repeat{}% Ugly workaround to a strange bug
-% (https://github.com/jperon/lyluatex/issues/51)
-\begin{compilely}%
+\newkeycommand{\lily}[][options][1]{%
+\let\ly@oldrepeat\repeat \def\repeat{}% Fix #51
+\begin{ly@compilely}%
 {#1}
-\end{compilely}%
+\end{ly@compilely}%
 \let\repeat\ly@oldrepeat%
-\directlua{ly.reset_local_options()}%
 }
 
-\newkeyenvironment{ly}[%
-    current-font-as-main%
-    ,extra-bottom-margin%
-    ,extra-top-margin%
-    ,fullpage%
-    ,fullpagestyle%
-    ,fullpagealign%
-    ,includepaths%
-    ,line-width%
-    ,pass-fonts%
-    ,print-page-number%
-    ,program%
-    ,staffsize%
-    ][other-options]{%
-\directlua{ly.process_local_options()}
-\let\ly@oldrepeat\repeat \def\repeat{}% Ugly workaround to a strange bug
-% (https://github.com/jperon/lyluatex/issues/51)
-\compilely%
+\newkeyenvironment{ly}[][options]{%
+\let\ly@oldrepeat\repeat \def\repeat{}% Fix #51
+\ly@compilely%
 }{%
-\endcompilely%
+\endly@compilely%
 \let\repeat\ly@oldrepeat%
-\directlua{ly.reset_local_options()}%
 }
 
 % Commands for compatibility with lilypond-book
