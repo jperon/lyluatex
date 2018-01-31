@@ -54,7 +54,7 @@
 
 % Command to change options during the document
 \newcommand{\lysetoption}[2]{%
-  \directlua{ly.set_option('#1', '#2')}
+  \directlua{ly.set_property('#1', '#2')}
 }
 
 % Line width is calculated if set to 'default'
@@ -65,14 +65,14 @@
 % *current* font for optional use.
 \newcommand{\ly@currentfonts}{%
 \begingroup%
-    \directlua{ly.set_option('current-font', ly.get_font_family(font.current()))}
+    \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
     \directlua{
-        ly.set_option('rmfamily', ly.get_font_family(\rmfamilyid))
-        ly.set_option('sffamily', ly.get_font_family(\sffamilyid))
-        ly.set_option('ttfamily', ly.get_font_family(\ttfamilyid))
+        ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
+        ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
+        ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
     }%
 \endgroup%
 }
