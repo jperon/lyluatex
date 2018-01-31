@@ -4,6 +4,7 @@ test:
 manual:
 	pandoc --pdf-engine=lualatex \
 		-V fontfamily=libertine \
+		--pdf-engine-opt=-shell-escape \
 		-o lyluatex.pdf \
 		lyluatex.md
 
