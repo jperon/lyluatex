@@ -21,6 +21,15 @@ local OPTIONS = {}
 
 --[[ ========================== Helper functions ========================== ]]
 
+local function contains (table_var, value)
+    for _, v in pairs(table_var) do
+        if v == value then return true
+        elseif v == 'false' and value == false then return true
+        end
+    end
+end
+
+
 local function convert_unit(value)
     return tonumber(value) or tex.sp(value) / tex.sp("1pt")
 end
@@ -301,6 +310,21 @@ function Score:calc_properties()
     self.output = self:output_filename()
 end
 
+function Score:check_properties()
+    for k, _ in pairs(OPTIONS) do
+        if OPTIONS[k][2] and not contains(OPTIONS[k], self[k]) then
+            err(
+                [[Unexpected value "%s" for option %s:
+                authorized values are "%s"
+                ]],
+                self[k],
+                k,
+                table.concat(OPTIONS[k], ', ')
+            )
+        end
+    end
+end
+
 function Score:delete_intermediate_files()
   local i = io.open(self.output..'-systems.count', 'r')
   if i then
@@ -394,6 +418,7 @@ function Score:output_filename()
 end
 
 function Score:process()
+    self:check_properties()
     self:calc_properties()
     local do_compile = not self:is_compiled()
     if do_compile then
@@ -482,9 +507,9 @@ end
 function ly.clean_tmp_dir()
     local hash, file_is_used
     local hash_list = {}
-    for file in lfs.dir(OPTIONS.tmpdir) do
+    for file in lfs.dir(self.tmpdir) do
         if file:sub(-5, -1) == '.list' then
-            local i = io.open(OPTIONS.tmpdir..'/'..file)
+            local i = io.open(self.tmpdir..'/'..file)
             for _, line in ipairs(i:read('*a'):explode('\n')) do
                 hash = line:explode('\t')[1]
                 if hash ~= '' then table.insert(hash_list, hash) end
@@ -492,7 +517,7 @@ function ly.clean_tmp_dir()
             i:close()
         end
     end
-    for file in lfs.dir(OPTIONS.tmpdir) do
+    for file in lfs.dir(self.tmpdir) do
         file_is_used = false
         if file ~= '.' and file ~= '..' and file:sub(-5, -1) ~= '.list' then
             for _, lhash in ipairs(hash_list) do
@@ -502,7 +527,7 @@ function ly.clean_tmp_dir()
                 end
             end
             if not file_is_used then
-                os.remove(OPTIONS.tmpdir..'/'..file)
+                os.remove(self.tmpdir..'/'..file)
             end
         end
     end
@@ -522,11 +547,11 @@ end
 function ly.declare_package_options(options)
     OPTIONS = options
     for k, v in pairs(options) do
-        tex.sprint(string.format([[\DeclareStringOption[%s]{%s}%%]], v, k))
+        tex.sprint(string.format([[\DeclareStringOption[%s]{%s}%%]], v[1], k))
     end
     tex.sprint([[\ProcessKeyvalOptions*]])
-    mkdirs(OPTIONS.tmpdir)
-    FILELIST = OPTIONS.tmpdir..'/'..splitext(status.log_name, 'log')..'.list'
+    mkdirs(options.tmpdir[1])
+    FILELIST = options.tmpdir[1]..'/'..splitext(status.log_name, 'log')..'.list'
     os.remove(FILELIST)
 end
 
