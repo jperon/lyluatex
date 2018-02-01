@@ -21,30 +21,8 @@ local OPTIONS = {}
 
 --[[ ========================== Helper functions ========================== ]]
 
-local CONVERSIONS = {
-    ['pt'] = {
-        ['mm'] = 0.351459804,
-        ['cm'] = 0.0351459804,
-        ['in'] = 0.013837
-    },
-    ['mm'] = {
-        ['pt'] = 2.845275591,
-        ['cm'] = 0.1,
-        ['in'] = 0.039370079
-    },
-    ['cm'] = {
-        ['pt'] = 28,346456693,
-        ['mm'] = 10,
-        ['in'] = 0.393700787
-    },
-    ['in'] = {
-        ['pt'] = 72.27,
-        ['mm'] = 25.4,
-        ['cm'] = 2.54
-    }
-}
 local function convert_unit(value, from, to)
-    return value * CONVERSIONS[from][to]
+    return tex.sp(value .. from) / tex.sp("1"..to)
 end
 
 
