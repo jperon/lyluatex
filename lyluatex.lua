@@ -17,7 +17,6 @@ ly = {}
 
 local FILELIST
 local OPTIONS = {}
-local LOCAL_OPTIONS = {}
 
 
 --[[ ========================== Helper functions ========================== ]]
@@ -591,24 +590,24 @@ function ly.declare_package_options(options)
 end
 
 
-function ly.file(input_file)
+function ly.file(input_file, options)
+    options = ly.set_local_options(options)
     local filename = splitext(input_file, 'ly')
     input_file = ly.CURRFILEDIR..filename..'.ly'
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
     if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
     local i = io.open(input_file, 'r')
-    local score = Score:new(i:read('*a'), LOCAL_OPTIONS)
+    ly.score = Score:new(i:read('*a'), options)
     i:close()
-    score:process_lilypond_code()
-end
+    end
 
 
-function ly.fragment(ly_code)
-    local score = Score:new(
+function ly.fragment(ly_code, options)
+    options = ly.set_local_options(options)
+    ly.score = Score:new(
         ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'),
-        LOCAL_OPTIONS
+        options
     )
-    score:process_lilypond_code()
 end
 
 
@@ -623,17 +622,12 @@ end
 
 
 function ly.newpage_if_fullpage()
-    if LOCAL_OPTIONS.fullpage then tex.sprint([[\newpage]]) end
-end
-
-
-function ly.set_local_option(name, value)
-    if value == 'false' then value = false end
-    LOCAL_OPTIONS[name] = value
+    if ly.score.fullpage then tex.sprint([[\newpage]]) end
 end
 
 
 function ly.set_local_options(opts)
+    local options = {}
     local a, b, c, d
     while true do
         a, b = opts:find('%w[^=]+=', d)
@@ -641,13 +635,9 @@ function ly.set_local_options(opts)
         if not d then break end
         local k, v = opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
         if v == 'false' then v = false end
-        if v ~= '' then LOCAL_OPTIONS[k] = v end
+        if v ~= '' then options[k] = v end
     end
-end
-
-
-function ly.reset_local_options()
-    LOCAL_OPTIONS = {}
+    return options
 end
 
 
@@ -667,7 +657,6 @@ end
 
 function ly.set_property(name, value)
     if value == 'false' then value = false end
-    OPTIONS[name] = value
     Score[name] = value
 end
 

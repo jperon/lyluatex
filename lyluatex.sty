@@ -38,7 +38,6 @@
     ['tmpdir'] = 'tmp_ly'
   })
   ly.set_default_options()
-  ly.reset_local_options()
 }
 \directlua{
   if ly.get_option('cleantmp') == 'true' then
@@ -80,23 +79,28 @@
 % Main commands
 % Inclusion of a .ly file
 \newkeycommand*\includely[][options][1]{%
-\directlua{ly.set_local_options('\commandkey{options}')}
-\directlua{ly.newpage_if_fullpage()}
+\directlua{
+  ly.file("\luatexluaescapestring{#1}", '\commandkey{options}')
+  ly.newpage_if_fullpage()
+}
 \ly@page
 \ly@currentfonts
-\directlua{ly.file("\luatexluaescapestring{#1}")}%
-\directlua{ly.reset_local_options()}%
+\directlua{ly.score:process_lilypond_code()}
 }
 
 % Base environment to include a LilyPond fragment integrated into
 % the document.
 \NewEnviron{ly@compilely}{%
-\directlua{ly.set_local_options('\commandkey{options}')}
-\directlua{ly.newpage_if_fullpage()}
+\directlua{
+  ly.fragment(
+    "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}",
+    '\commandkey{options}'
+  )
+  ly.newpage_if_fullpage()
+}
 \ly@page
 \ly@currentfonts
-\directlua{ly.fragment("\luatexluaescapestring{\unexpanded\expandafter{\BODY}}")}%
-\directlua{ly.reset_local_options()}%
+\directlua{ly.score:process_lilypond_code()}%
 }
 
 % Parametrized command and environment for included LilyPond fragment
