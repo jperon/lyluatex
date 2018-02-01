@@ -21,8 +21,8 @@ local OPTIONS = {}
 
 --[[ ========================== Helper functions ========================== ]]
 
-local function convert_unit(value, from, to)
-    return tex.sp(value .. from) / tex.sp("1"..to)
+local function convert_unit(value)
+    return tonumber(value) or tex.sp(value) / tex.sp("1pt")
 end
 
 
@@ -43,12 +43,6 @@ local function extract_includepaths(includepaths)
         includepaths[i] = path:gsub('^ ', '')
     end
     return includepaths
-end
-
-
-local function extract_unit(input)
-    --[ split a TeX length into number and unit --]
-    return {['n'] = input:match('%d+'), ['u'] = input:match('%a+')}
 end
 
 
@@ -119,9 +113,8 @@ function Score:apply_lilypond_header()
     else
         header = header..
             string.format(
-                [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s %s) (* %s %s))) paper-alist))]],
-                self.paperwidth.n, self.paperwidth.u,
-                self.paperheight.n, self.paperheight.u
+                [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
+                self.paperwidth, self.paperheight
             )
     end
     header = header..
@@ -149,25 +142,23 @@ function Score:apply_lilypond_header()
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
         header = header..string.format(
-        [[#(set-paper-size "lyluatexfmt")
-        print-page-number = ##%s
-        print-first-page-number = ##t
-        first-page-number = %s]],
-        ppn,
-        ly.PAGE)
+            [[#(set-paper-size "lyluatexfmt")
+            print-page-number = ##%s
+            print-first-page-number = ##t
+            first-page-number = %s]],
+            ppn, ly.PAGE
+        )
         lilymargin = self:calc_margins()
     end
     header = header..
         string.format('\n'..
             [[
             two-sided = ##t
-            line-width = %s\%s
+            line-width = %s\pt
             %s%s}
             %%Follows original score
             ]],
-                      self['line-width'].n, self['line-width'].u,
-            lilymargin..'\n',
-            self:define_lilypond_fonts()
+            self['line-width'], lilymargin..'\n', self:define_lilypond_fonts()
         )
     self.ly_code =
         header..'\n'..self.ly_code
@@ -177,55 +168,45 @@ function Score:calc_dimensions()
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     self.staffsize = staffsize
-    local value, n
+    local value
     for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
         value = self[dimension]
         if value == 'default' then
-            if dimension == 'line-width' then n = tex.dimen.linewidth
-            else n = tex.dimen[dimension]
+            if dimension == 'line-width' then value = tex.dimen.linewidth..'sp'
+            else value = tex.dimen[dimension]..'sp'
             end
-            value = {
-                ['u'] = 'pt',
-                ['n'] = n / 65536
-            }
-        else
-            value = extract_unit(value)
         end
-        self[dimension] = value
+        self[dimension] = convert_unit(value)
     end
+    self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
+    self['extra-bottom-margin'] = convert_unit(self['extra-bottom-margin'])
 end
 
 function Score:calc_margins()
-    local tex_top = (
-        tex.sp('1in') +
-        tex.dimen.voffset +
-        tex.dimen.topmargin +
-        tex.dimen.headheight +
-        tex.dimen.headsep
-    )
-    local tex_bottom = (
+    local tex_top = self['extra-top-margin'] + convert_unit((
+        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
+        tex.dimen.headheight + tex.dimen.headsep
+    )..'sp')
+    local tex_bottom = self['extra-bottom-margin'] + convert_unit((
         tex.dimen.paperheight - (tex_top + tex.dimen.textheight)
-    ) / 65536
-    tex_top = (tex_top / 65536) + self['extra-top-margin']
-    tex_bottom = tex_bottom + self['extra-bottom-margin']
-    local inner = (
+    )..'sp')
+    local inner = convert_unit((
         tex.sp('1in') +
         tex.dimen.oddsidemargin +
         tex.dimen.hoffset
-    ) / 65536
+    )..'sp')
     if self.fullpagealign == 'crop' then
         return string.format([[
-        top-margin = %s\pt
-        bottom-margin = %s\pt
-        inner-margin = %s\pt
-        ]],
-            tex_top,
-            tex_bottom,
-            inner
+            top-margin = %s\pt
+            bottom-margin = %s\pt
+            inner-margin = %s\pt
+            ]],
+            tex_top, tex_bottom, inner
         )
     elseif self.fullpagealign == 'staffline' then
       local top_distance = pt_to_staffspaces(tex_top, self.staffsize) + 2
       local bottom_distance = pt_to_staffspaces(tex_bottom, self.staffsize) + 2
+      print(top_distance, bottom_distance)
         return string.format([[
         top-margin = 0\pt
         bottom-margin = 0\pt
@@ -254,7 +235,6 @@ function Score:calc_margins()
         bottom_distance,
         bottom_distance
       )
-
     else
         err(
             [[
@@ -377,7 +357,7 @@ function Score:hash_output_filename()
         '_'..
         self.staffsize..
         '_'..
-        self['line-width'].n..self['line-width'].u..
+        self['line-width']..'pt'..
         evenodd..
         ppn,
         '%.', '_'
@@ -412,24 +392,8 @@ function Score:lilypond_set_roman_font()
     end
 end
 
-function Score:process_extra_margins()
-    local top = tonumber(self['extra-top-margin'])
-    if not top then
-        local margin = extract_unit(self['extra-top-margin'])
-        top = convert_unit(margin.n, margin.u, 'pt')
-    end
-    self['extra-top-margin'] = top
-    local bottom = tonumber(self['extra-bottom-margin'])
-    if not bottom then
-        local margin = extract_unit(self['extra-bottom-margin'])
-        bottom = convert_unit(margin.n, margin.u, 'pt')
-    end
-    self['extra-bottom-margin'] = bottom
-end
-
 function Score:process_lilypond_code()
     self:calc_dimensions()
-    self:process_extra_margins()
     self.output = self:hash_output_filename()
     local do_compile = not self:is_compiled()
     if do_compile then
