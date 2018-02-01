@@ -65,6 +65,37 @@ local function mkdirs(str)
 end
 
 
+local function __genorderedindex( t )
+    local orderedIndex = {}
+    for key in pairs(t) do
+        table.insert( orderedIndex, key )
+    end
+    table.sort( orderedIndex )
+    return orderedIndex
+end
+local function __orderednext(t, state)
+    local key = nil
+    if state == nil then
+        t.__orderedIndex = __genorderedindex( t )
+        key = t.__orderedIndex[1]
+    else
+        for i = 1, #t.__orderedIndex do
+            if t.__orderedIndex[i] == state then
+                key = t.__orderedIndex[i+1]
+            end
+        end
+    end
+    if key then
+        return key, t[key]
+    end
+    t.__orderedIndex = nil
+    return
+end
+local function orderedpairs(t)
+    return __orderednext, t, nil
+end
+
+
 local function pt_to_staffspaces(pt, staffsize)
     local s_sp = staffsize / 4
     return pt / s_sp
@@ -95,15 +126,16 @@ end
 local Score = {}
 -- Score class
 
-function Score:new(ly_code, options)
+function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
     self.__index = self
+    o.input_file = input_file
     o.ly_code = ly_code
     return o
 end
 
-function Score:apply_lilypond_header()
+function Score:apply_header()
     local header = [[
 %%File header
 \version "2.18.2"
@@ -158,28 +190,10 @@ function Score:apply_lilypond_header()
             %s%s}
             %%Follows original score
             ]],
-            self['line-width'], lilymargin..'\n', self:define_lilypond_fonts()
+            self['line-width'], lilymargin..'\n', self:fonts()
         )
     self.ly_code =
         header..'\n'..self.ly_code
-end
-
-function Score:calc_dimensions()
-    local staffsize = tonumber(self.staffsize)
-    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
-    self.staffsize = staffsize
-    local value
-    for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
-        value = self[dimension]
-        if value == 'default' then
-            if dimension == 'line-width' then value = tex.dimen.linewidth..'sp'
-            else value = tex.dimen[dimension]..'sp'
-            end
-        end
-        self[dimension] = convert_unit(value)
-    end
-    self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
-    self['extra-bottom-margin'] = convert_unit(self['extra-bottom-margin'])
 end
 
 function Score:calc_margins()
@@ -187,9 +201,10 @@ function Score:calc_margins()
         tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
         tex.dimen.headheight + tex.dimen.headsep
     )..'sp')
-    local tex_bottom = self['extra-bottom-margin'] + convert_unit((
-        tex.dimen.paperheight - (tex_top + tex.dimen.textheight)
-    )..'sp')
+    local tex_bottom = self['extra-bottom-margin'] + (
+        convert_unit(tex.dimen.paperheight..'sp') -
+        (tex_top + convert_unit(tex.dimen.textheight..'sp'))
+    )
     local inner = convert_unit((
         tex.sp('1in') +
         tex.dimen.oddsidemargin +
@@ -206,7 +221,6 @@ function Score:calc_margins()
     elseif self.fullpagealign == 'staffline' then
       local top_distance = pt_to_staffspaces(tex_top, self.staffsize) + 2
       local bottom_distance = pt_to_staffspaces(tex_bottom, self.staffsize) + 2
-      print(top_distance, bottom_distance)
         return string.format([[
         top-margin = 0\pt
         bottom-margin = 0\pt
@@ -265,21 +279,26 @@ function Score:calc_protrusion()
     return protrusion
 end
 
-function Score:define_lilypond_fonts()
-    if self['pass-fonts'] then
-        return string.format(
-            [[
-        #(define fonts
-          (make-pango-font-tree "%s"
-                                "%s"
-                                "%s"
-                                (/ staff-height pt 20)))
-        ]],
-            self.rmfamily,
-            self.sffamily,
-            self.ttfamily
-        )
-    else return '' end
+function Score:calc_properties()
+    local staffsize = tonumber(self.staffsize)
+    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
+    self.staffsize = staffsize
+    local value
+    for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
+        value = self[dimension]
+        if value == 'default' then
+            if dimension == 'line-width' then value = tex.dimen.linewidth..'sp'
+            else value = tex.dimen[dimension]..'sp'
+            end
+        end
+        self[dimension] = convert_unit(value)
+    end
+    self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
+    self['extra-bottom-margin'] = convert_unit(self['extra-bottom-margin'])
+    if self['current-font-as-main'] then
+        self.rmfamily = self['current-font']
+    end
+    self.output = self:output_filename()
 end
 
 function Score:delete_intermediate_files()
@@ -332,49 +351,25 @@ function Score:flatten_content(ly_code)
     return ly_code
 end
 
-function Score:fontify_output(output)
+function Score:fonts()
     if self['pass-fonts'] then
-        return output..'_'..
-          self:squash_fontname('rmfamily')..'_'..
-          self:squash_fontname('sffamily')..'_'..
-          self:squash_fontname('ttfamily')
-    else return output end
-end
-
-function Score:hash_output_filename()
-    local evenodd = ''
-    local etm = 0
-    local ebm = 0
-    local ppn = ''
-    if self.fullpage then
-        evenodd = '_'..(ly.PAGE % 2)
-        if self['print-page-number'] then ppn = '_ppn' end
-        etm = self['extra-top-margin']
-        ebm = self['extra-bottom-margin']
-    end
-    local filename = string.gsub(
-        md5.sumhexa(self:flatten_content(self.ly_code))..
-        '_'..
-        self.staffsize..
-        '_'..
-        self['line-width']..'pt'..
-        evenodd..
-        ppn,
-        '%.', '_'
-    )
-    if etm ~= 0 then filename = filename..'_etm_'..etm end
-    if ebm ~= 0 then filename = filename..'_ebm_'..ebm end
-    self:lilypond_set_roman_font()
-    filename = self:fontify_output(filename)
-    if self.fullpage then
-        filename = filename..'-fullpage'
-    end
-    self:write_to_filelist(filename)
-    return self.tmpdir..'/'..filename
+        return string.format(
+            [[
+        #(define fonts
+          (make-pango-font-tree "%s"
+                                "%s"
+                                "%s"
+                                (/ staff-height pt 20)))
+        ]],
+            self.rmfamily,
+            self.sffamily,
+            self.ttfamily
+        )
+    else return '' end
 end
 
 function Score:is_compiled()
-    if self.output:find('fullpage') then
+    if self.fullpage then
         return lfs.isfile(self.output..'.pdf')
     else
         local f = io.open(self.output..'-systems.tex')
@@ -386,18 +381,23 @@ function Score:is_compiled()
     end
 end
 
-function Score:lilypond_set_roman_font()
-    if self['current-font-as-main'] then
-        self.rmfamily = self['current-font']
+function Score:output_filename()
+    local properties = ''
+    for k, _ in orderedpairs(OPTIONS) do
+        if self[k] and type(self[k]) ~= 'function' then
+            properties = properties..'_'..k..'_'..self[k]
+        end
     end
+    local filename = md5.sumhexa(self:flatten_content(self.ly_code)..properties)
+    self:write_to_filelist(filename)
+    return self.tmpdir..'/'..filename
 end
 
-function Score:process_lilypond_code()
-    self:calc_dimensions()
-    self.output = self:hash_output_filename()
+function Score:process()
+    self:calc_properties()
     local do_compile = not self:is_compiled()
     if do_compile then
-        self:apply_lilypond_header()
+        self:apply_header()
         self:run_lilypond()
     end
     self:write_tex(do_compile)
@@ -419,8 +419,7 @@ function Score:run_lilypond()
     p:close()
 end
 
-function Score:squash_fontname(fontfamily)
-    return self[fontfamily]:gsub(' ', '')
+function Score:set_roman_font()
 end
 
 function Score:write_tex(do_compile)
@@ -539,7 +538,7 @@ function ly.file(input_file, options)
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
     if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
     local i = io.open(input_file, 'r')
-    ly.score = Score:new(i:read('*a'), options)
+    ly.score = Score:new(i:read('*a'), options, input_file)
     i:close()
     end
 
