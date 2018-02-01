@@ -3,10 +3,10 @@ local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
     greinternalversion = internalversion,
-    date               = "2017/12/05",
+    date               = "2018/02/01",
     description        = "Module lyluatex.",
     author             = "The Gregorio Project  − Jacques Peron <cataclop@hotmail.com>",
-    copyright          = "2008-2017 - The Gregorio Project",
+    copyright          = "2008-2018 - The Gregorio Project",
     license            = "MIT",
 })
 
@@ -617,7 +617,7 @@ end
 
 
 function ly.get_option(opt)
-    return OPTIONS[opt]
+    return Score[opt]
 end
 
 
