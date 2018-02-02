@@ -446,9 +446,6 @@ function Score:run_lilypond()
     p:close()
 end
 
-function Score:set_roman_font()
-end
-
 function Score:write_tex(do_compile)
     if not self:is_compiled() then
       tex.print(
