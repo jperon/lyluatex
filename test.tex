@@ -1,5 +1,5 @@
-\documentclass[a5paper,fontsize=12pt]{scrbook}
-\usepackage[program=lilypond,tmpdir=tmp_ly]{lyluatex}
+\documentclass[a5paper, fontsize=12pt]{scrbook}
+\usepackage[program=lilypond, tmpdir=tmp_ly]{lyluatex}
 \usepackage{multicol}
 
 \title{}
@@ -14,11 +14,11 @@
 Taille de police.
 
 % Import d'une partition externe. La commande \includely est strictement équivalente.
-\lilypondfile[line-width=250\pt]{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
+\lilypondfile[line-width=250\pt, fullpage=false]{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
 
 \begin{multicols}{2}
 % Saisie directe d'un fragment musical.
-\begin{lilypond}[staffsize=12,fragment]
+\begin{lilypond}[staffsize=12, fragment]
 \version "2.16"
 \language "français"
 
@@ -104,6 +104,6 @@ page\footnote{\lilypond[fragment]{a' b' c'}}.
 
 Test pour alignement.
 
-\lilypondfile[fullpage=true,staffsize=16]{ly/Beethoven/opus-18-1.ly}
+\lilypondfile[fullpage=true, staffsize=16]{ly/Beethoven/opus-18-1.ly}
 
 \end{document}
