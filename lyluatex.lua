@@ -558,7 +558,15 @@ end
 function ly.file(input_file, options)
     options = ly.set_local_options(options)
     local filename = splitext(input_file, 'ly')
-    input_file = ly.CURRFILEDIR..filename..'.ly'
+    if not lfs.isfile(input_file) then input_file = ly.CURRFILEDIR..filename..'.ly' end
+    --[[ Here, we only take in account global option includepaths,
+    as it really doesn't mean anything as a local option. ]]
+    if not lfs.isfile(input_file) then
+        for _, d in ipairs(extract_includepaths(Score.includepaths)) do
+            input_file = d..'/'..filename..'.ly'
+            if lfs.isfile(input_file) then break end
+        end
+    end
     if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
     if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
     local i = io.open(input_file, 'r')

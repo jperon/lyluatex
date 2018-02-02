@@ -17,7 +17,6 @@
 \catcode`-=11
 \directlua{
   ly = require(kpse.find_file("lyluatex.lua"))
-  ly.CURRFILEDIR = '\currfiledir'
   ly.declare_package_options({
     ['cleantmp'] = {'false', 'true'},
     ['current-font-as-main'] = {'true', 'false'},
@@ -84,6 +83,7 @@
 % Inclusion of a .ly file
 \newkeycommand*\includely[][options][1]{%
 \directlua{
+  ly.CURRFILEDIR = '\currfiledir'
   ly.file('\luatexluaescapestring{#1}', '\commandkey{options}')
   ly.newpage_if_fullpage()
 }
@@ -96,6 +96,7 @@
 % the document.
 \NewEnviron{ly@compilely}{%
 \directlua{
+  ly.CURRFILEDIR = '\currfiledir'
   ly.fragment(
     '\luatexluaescapestring{\unexpanded\expandafter{\BODY}}',
     '\commandkey{options}'
