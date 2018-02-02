@@ -17,6 +17,7 @@ ly = {}
 
 local FILELIST
 local OPTIONS = {}
+local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
 
 
 --[[ ========================== Helper functions ========================== ]]
@@ -311,16 +312,17 @@ function Score:calc_properties()
 end
 
 function Score:check_properties()
-    for k, _ in pairs(OPTIONS) do
-        if OPTIONS[k][2] and not contains(OPTIONS[k], self[k]) then
-            err(
-                [[Unexpected value "%s" for option %s:
-                authorized values are "%s"
-                ]],
-                self[k],
-                k,
-                table.concat(OPTIONS[k], ', ')
-            )
+    for k, _ in orderedpairs(OPTIONS) do
+        if not contains(OPTIONS[k], self[k]) and OPTIONS[k][2] then
+            if type(OPTIONS[k][2]) == 'function' then OPTIONS[k][2](k, self[k])
+            else
+                err(
+                        [[Unexpected value "%s" for option %s:
+                        authorized values are "%s"
+                        ]],
+                        self[k], k, table.concat(OPTIONS[k], ', ')
+                    )
+            end
         end
     end
 end
@@ -604,6 +606,19 @@ function ly.set_local_options(opts)
         if v ~= '' then options[k] = v end
     end
     return options
+end
+
+
+function ly.is_dim (dim, value)
+    local n, u = value:match('%d*%.?%d*'), value:match('%a+')
+    if tonumber(value) or n and contains(TEX_UNITS, u) then return true
+    else err(
+        [[Unexpected value "%s" for dimension %s:
+        should be either a number (for example "12"), or a number with unit, without space ("12pt")
+        ]],
+        value, dim
+    )
+    end
 end
 
 
