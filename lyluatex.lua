@@ -3,7 +3,7 @@ local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
     greinternalversion = internalversion,
-    date               = "2018/02/01",
+    date               = "2018/02/02",
     description        = "Module lyluatex.",
     author             = "The Gregorio Project  − Jacques Peron <cataclop@hotmail.com>",
     copyright          = "2008-2018 - The Gregorio Project",
@@ -413,7 +413,7 @@ end
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
-        if self[k] and type(self[k]) ~= 'function' then
+        if k ~= 'cleantmp' and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'_'..k..'_'..self[k]
         end
     end
@@ -537,9 +537,10 @@ end
 
 
 function ly.conclusion_text()
-    info(
-        string.format(
-            '\nOutput written on %s.pdf.\nTranscript written on %s.log.',
+    print(
+        string.format('\n'..[[
+            Output written on %s.pdf.
+            Transcript written on %s.log.]],
             tex.jobname, tex.jobname
         )
     )
