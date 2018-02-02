@@ -21,10 +21,113 @@ abstract: >
 
 # Usage
 
-* Basic operation with the three commands/environments
-* Subsection: lilypond-book compatibility chart
+\lyluatex\ is loaded with the command `\usepackage{lyluatex}` which also accepts
+a number of `key=value` options.  Their general use is described in the [Option
+Handling](#option-handling) section below.
 
-## Option Handling
+\lyIssue{Note:} \lyluatex\ can only be used with \LuaLaTeX, and compiling with
+any other \LaTeX\ engine will fail.
+
+\lyIssue{NOTE:} \lyluatex\ requires that \LuaLaTeX\ is started with the
+`--shell-escape` command line option to enable the execution of arbitrary shell
+commands, which is necessary to let LilyPond compile the inserted scores
+on-the-fly.  However, this opens a significant security hole, and only fully
+trusted input files should be compiled.
+
+## Basic Operation
+
+Once \lyluatex\ is loaded it provides commands and environments to include
+musical scores and score fragments which are produced using the GNU LilyPond
+score writer.  They are encoded in LilyPond input language, either directly in
+the `.tex` document or in referenced standalone files.  \lyluatex\ will
+automatically take care of compiling the scores if necessary -- making use of an
+intelligent caching mechansim --, and it will match the score's layout to that
+of the text document.  \lyluatex\ will produce PDF image files which are
+automatically included in their own paragraphs or as full pages, but more
+sophisticated integrations are possible in combination with the `musicexamples`
+package^[[https://github.com/uliska/musicexamples](https://github.com/uliska/musicexamples)]
+(see section [musicexamples](#musicexamples)).
+
+
+ \lyluatex\ aims at being a drop-in replacement for the `lilypond-book`
+ preprocessor shipping with
+ LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
+
+
+\lyMargin{\cmd{lilypond}}
+Very short fragments of LilyPond code can directly be input using the \cmd{lilypond} command:
+
+```lilypond
+\lilypond{ c' d' e' }
+```
+
+\lilypond{ c' d' e' }
+
+Note that the sequence of notes is implicitly wrapped in a LilyPond music expression, but it is also possible to pass a “real” music expression:
+
+```lilypond
+\lilypond{ \relative { c' d e }}
+```
+
+\lilypond{ \relative { c' d e }}
+
+\lyMargin{\texttt{lilypond}}
+More elaborate scores can be enclosed in the `lilypond` environment:
+
+```lilypond
+\begin{lilypond}
+music = \relative {
+  c d e
+}
+
+\score {
+  \new ChoirStaff \with {
+    instrumentName = "2 Fl."
+  } <<
+    \new Staff \transpose c c' \music
+    \new Staff {
+      \clef bass
+      \music
+    }
+    >>
+}
+\end{lilypond}
+```
+
+\begin{lilypond}
+music = \relative {
+  c d e
+}
+
+\score {
+  \new ChoirStaff \with {
+    instrumentName = "2 Fl."
+  } <<
+    \new Staff \transpose c c' \music
+    \new Staff {
+      \clef bass
+      \music
+    }
+    >>
+}
+\end{lilypond}
+
+Note that the automatic wrapping does *not* work in the environment and that the
+content of the environment must represent a compilable LilyPond file.
+
+\lyMargin{\cmd{lilypondfile}}
+Finally external files of arbitrary complexity can be referenced with
+
+```lilypond
+\lilypondfile{path/to/file}
+```
+
+Currently this command only understands relative paths starting from the
+compiled `.tex` file.  LilyPond files can also make use of more sophisticated
+include structures, but this may require adding LilyPond include paths (see
+[LilyPond Include Paths](#include-paths)).
+
+## Option Handling {#option-handling}
 
 The behaviour of \lyluatex\ can be configured in detail.  For most aspects
 (except when it doesn't make sense) there are global and local options, as well
@@ -94,7 +197,7 @@ item gives some information on the number of arguments (usually 1):
 
 ## Miscellaneous Options
 
-### LilyPond Include Paths
+### LilyPond Include Paths [#include-paths]
 
 ### LilyPond Executable
 
@@ -142,3 +245,7 @@ Scores that differ *only* by their fonts are considered different by
 transferred to LilyPond.
 
 \lyCmd{lilypondPassFonts}{1} Change behaviour from here on. Possible values: ‘true’ / ‘false’.
+
+# Cooperations
+
+## `musicexamples`{#musicexamples}
