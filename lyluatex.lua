@@ -48,8 +48,8 @@ end
 
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
-    -- delete initial space (in case someone puts a space after the comma)
     for i, path in ipairs(includepaths) do
+        -- delete initial space (in case someone puts a space after the comma)
         includepaths[i] = path:gsub('^ ', '')
     end
     return includepaths
@@ -63,6 +63,20 @@ local function fontinfo(id)
         return f
     end
     return font.fonts[id]
+end
+
+
+local function locate(file, includepaths)
+    local result = ly.CURRFILEDIR..file
+    if not lfs.isfile(result) then result = file end
+    if not lfs.isfile(result) then
+        for _, d in ipairs(extract_includepaths(includepaths)) do
+            result = d..'/'..file
+            if lfs.isfile(result) then break end
+        end
+    end
+    if not lfs.isfile(result) then result = kpse.find_file(file) end
+    return result
 end
 
 
@@ -353,25 +367,14 @@ function Score:flatten_content(ly_code)
         if not e then break
         else
             ly_file = ly_code:match('\\include%s*"([^"]*)"', b)
-            i = io.open(ly_file, 'r')
-            if i then
-                ly_code = ly_code:gsub(ly_code:sub(b, e), self:flatten_content(i:read('*a')))
-            else
-                if self.input_file then
-                    i = io.open(dirname(self.input_file)..'/'..ly_file, 'r')
-                end
-                if i then
-                    ly_code = ly_code:gsub(ly_code:sub(b, e), self:flatten_content(i:read('*a')))
-                end
-                for _, f in ipairs(extract_includepaths(self.includepaths)) do
-                    i = io.open(f..'/'..ly_file, 'r')
-                    if i then
-                        ly_code = ly_code:gsub(ly_code:sub(b, e), self:flatten_content(i:read('*a')))
-                        break
-                    end
-                end
+            ly_file = locate(ly_file, self.includepaths)
+            if ly_file then
+                i = io.open(ly_file, 'r')
+                ly_code = ly_code:sub(1, b - 1)..
+                    self:flatten_content(i:read('*a'))..
+                    ly_code:sub(e + 1)
+                i:close()
             end
-            if i then i:close() end
         end
     end
     return ly_code
@@ -506,9 +509,9 @@ end
 function ly.clean_tmp_dir()
     local hash, file_is_used
     local hash_list = {}
-    for file in lfs.dir(self.tmpdir) do
+    for file in lfs.dir(Score.tmpdir) do
         if file:sub(-5, -1) == '.list' then
-            local i = io.open(self.tmpdir..'/'..file)
+            local i = io.open(Score.tmpdir..'/'..file)
             for _, line in ipairs(i:read('*a'):explode('\n')) do
                 hash = line:explode('\t')[1]
                 if hash ~= '' then table.insert(hash_list, hash) end
@@ -516,7 +519,7 @@ function ly.clean_tmp_dir()
             i:close()
         end
     end
-    for file in lfs.dir(self.tmpdir) do
+    for file in lfs.dir(Score.tmpdir) do
         file_is_used = false
         if file ~= '.' and file ~= '..' and file:sub(-5, -1) ~= '.list' then
             for _, lhash in ipairs(hash_list) do
@@ -526,7 +529,7 @@ function ly.clean_tmp_dir()
                 end
             end
             if not file_is_used then
-                os.remove(self.tmpdir..'/'..file)
+                os.remove(Score.tmpdir..'/'..file)
             end
         end
     end
@@ -534,7 +537,7 @@ end
 
 
 function ly.conclusion_text()
-    print(
+    info(
         string.format(
             '\nOutput written on %s.pdf.\nTranscript written on %s.log.',
             tex.jobname, tex.jobname
@@ -557,22 +560,15 @@ end
 
 function ly.file(input_file, options)
     options = ly.set_local_options(options)
-    local filename = splitext(input_file, 'ly')
-    if not lfs.isfile(input_file) then input_file = ly.CURRFILEDIR..filename..'.ly' end
+    local file = input_file
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
-    if not lfs.isfile(input_file) then
-        for _, d in ipairs(extract_includepaths(Score.includepaths)) do
-            input_file = d..'/'..filename..'.ly'
-            if lfs.isfile(input_file) then break end
-        end
-    end
-    if not lfs.isfile(input_file) then input_file = kpse.find_file(filename..'.ly') end
-    if not lfs.isfile(input_file) then err("File %s.ly doesn't exist.", filename) end
+    input_file = locate(file, Score.includepaths)
+    if not input_file then err("File %s.ly doesn't exist.", file) end
     local i = io.open(input_file, 'r')
     ly.score = Score:new(i:read('*a'), options, input_file)
     i:close()
-    end
+end
 
 
 function ly.fragment(ly_code, options)
