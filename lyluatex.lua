@@ -520,17 +520,12 @@ function ly.clean_tmp_dir()
         end
     end
     for file in lfs.dir(Score.tmpdir) do
-        file_is_used = false
         if file ~= '.' and file ~= '..' and file:sub(-5, -1) ~= '.list' then
             for _, lhash in ipairs(hash_list) do
-                if file:find(lhash) then
-                    file_is_used = true
-                    break
-                end
+                file_is_used = file:find(lhash)
+                if file_is_used then break end
             end
-            if not file_is_used then
-                os.remove(Score.tmpdir..'/'..file)
-            end
+            if not file_is_used then os.remove(Score.tmpdir..'/'..file) end
         end
     end
 end
