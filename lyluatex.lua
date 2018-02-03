@@ -120,12 +120,6 @@ local function orderedpairs(t)
 end
 
 
-local function pt_to_staffspaces(pt, staffsize)
-    local s_sp = staffsize / 4
-    return pt / s_sp
-end
-
-
 local function set_fullpagestyle(style)
     if style then
         tex.sprint('\\includepdfset{pagecommand=\\thispagestyle{'..style..'}}')
@@ -243,8 +237,8 @@ function Score:calc_margins()
             tex_top, tex_bottom, inner
         )
     elseif self.fullpagealign == 'staffline' then
-      local top_distance = pt_to_staffspaces(tex_top, self.staffsize) + 2
-      local bottom_distance = pt_to_staffspaces(tex_bottom, self.staffsize) + 2
+      local top_distance = 4 * tex_top / self.staffsize + 2
+      local bottom_distance = 4 * tex_bottom / self.staffsize + 2
         return string.format([[
         top-margin = 0\pt
         bottom-margin = 0\pt
@@ -451,7 +445,7 @@ end
 
 function Score:write_tex(do_compile)
     if not self:is_compiled() then
-      tex.print(
+      tex.sprint(
           [[
           \begin{quote}
           \fbox{Score failed to compile}
@@ -478,22 +472,23 @@ function Score:write_tex(do_compile)
     else
         --[[ Fragment, use -systems.tex file]]
         local content = systems_file:read("*all")
+        local texoutput
         systems_file:close()
         if do_compile then
             --[[ new compilation, calculate protrusion
                  and update -systems.tex file]]
             local protrusion = self:calc_protrusion()
-            local texoutput, _ = content:gsub([[\includegraphics{]],
+            texoutput = content:gsub([[\includegraphics{]],
                 [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(self.output))
-            tex.sprint(texoutput:explode('\n'))
             local f = io.open(self.output..'-systems.tex', 'w')
             f:write(texoutput)
             f:close()
             self:delete_intermediate_files()
         else
             -- simply reuse existing -systems.tex file
-            tex.sprint(content:explode('\n'))
+            texoutput = content
         end
+        tex.sprint(texoutput:explode('\n'))
     end
 end
 
