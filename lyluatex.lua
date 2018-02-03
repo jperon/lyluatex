@@ -18,6 +18,28 @@ ly = {}
 local FILELIST
 local OPTIONS = {}
 local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
+local LY_HEAD = [[
+%%File header
+\version "2.18.2"
+
+<<<PREAMBLE>>>
+
+#(define inside-lyluatex #t)
+#(set-global-staff-size <<<STAFFSIZE>>>)
+
+\header {
+    copyright = ""
+    tagline = ##f
+}
+\paper{
+    <<<PAPER>>>
+    two-sided = ##t
+    line-width = <<<LINEWIDTH>>>\pt
+    <<<FONTS>>>
+}
+
+%%Follows original score
+]]
 
 
 --[[ ========================== Helper functions ========================== ]]
@@ -153,150 +175,6 @@ function Score:new(ly_code, options, input_file)
     return o
 end
 
-function Score:apply_header()
-    local header = [[
-%%File header
-\version "2.18.2"
-]]
-    if not self.fullpage then
-        header = header..[[\include "lilypond-book-preamble.ly"]]..'\n'
-    else
-        header = header..
-            string.format(
-                [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
-                self.paperwidth, self.paperheight
-            )
-    end
-    header = header..
-        string.format(
-            [[
-            #(define inside-lyluatex #t)
-
-            #(set-global-staff-size %s)
-
-            %%Score parameters
-
-            \header {
-              copyright = ""
-              tagline = ##f
-            }
-
-            \paper{
-            ]],
-            self.staffsize
-        )
-    local lilymargin = ''
-    if not self.fullpage then
-        header = header..[[indent = 0\mm]]
-    else
-        local ppn = 'f'
-        if self['print-page-number'] then ppn = 't' end
-        header = header..string.format(
-            [[#(set-paper-size "lyluatexfmt")
-            print-page-number = ##%s
-            print-first-page-number = ##t
-            first-page-number = %s]],
-            ppn, ly.PAGE
-        )
-        lilymargin = self:calc_margins()
-    end
-    header = header..
-        string.format('\n'..
-            [[
-            two-sided = ##t
-            line-width = %s\pt
-            %s%s}
-            %%Follows original score
-            ]],
-            self['line-width'], lilymargin..'\n', self:fonts()
-        )
-    self.ly_code =
-        header..'\n'..self.ly_code
-end
-
-function Score:calc_margins()
-    local tex_top = self['extra-top-margin'] + convert_unit((
-        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
-        tex.dimen.headheight + tex.dimen.headsep
-    )..'sp')
-    local tex_bottom = self['extra-bottom-margin'] + (
-        convert_unit(tex.dimen.paperheight..'sp') -
-        (tex_top + convert_unit(tex.dimen.textheight..'sp'))
-    )
-    local inner = convert_unit((
-        tex.sp('1in') +
-        tex.dimen.oddsidemargin +
-        tex.dimen.hoffset
-    )..'sp')
-    if self.fullpagealign == 'crop' then
-        return string.format([[
-            top-margin = %s\pt
-            bottom-margin = %s\pt
-            inner-margin = %s\pt
-            ]],
-            tex_top, tex_bottom, inner
-        )
-    elseif self.fullpagealign == 'staffline' then
-      local top_distance = 4 * tex_top / self.staffsize + 2
-      local bottom_distance = 4 * tex_bottom / self.staffsize + 2
-        return string.format([[
-        top-margin = 0\pt
-        bottom-margin = 0\pt
-        inner-margin = %s\pt
-        top-system-spacing =
-        #'((basic-distance . %s)
-           (minimum-distance . %s)
-           (padding . 0)
-           (stretchability . 0))
-        top-markup-spacing =
-        #'((basic-distance . %s)
-           (minimum-distance . %s)
-           (padding . 0)
-           (stretchability . 0))
-        last-bottom-spacing =
-        #'((basic-distance . %s)
-           (minimum-distance . %s)
-           (padding . 0)
-           (stretchability . 0))
-        ]],
-        inner,
-        top_distance,
-        top_distance,
-        top_distance,
-        top_distance,
-        bottom_distance,
-        bottom_distance
-      )
-    else
-        err(
-            [[
-        Invalid argument for option 'fullpagealign'.
-        Allowed: 'crop', 'staffline'.
-        Given: %s
-        ]],
-            self.fullpagealign
-        )
-    end
-end
-
-function Score:calc_protrusion()
-    --[[
-      Determine the amount of space used to the left of the staff lines
-      and generate a horizontal offset command.
-    --]]
-    local protrusion = ''
-    local f = io.open(self.output..'.eps')
-    --[[ The information we need is in the third line --]]
-    f:read(); f:read()
-    local bb_line = f:read()
-    f:close()
-    local cropped = bb_line:match('%d+')
-    if cropped ~= 0 then
-        protrusion = string.format('\\hspace*{-%spt}', cropped)
-    end
-    return protrusion
-end
-
 function Score:calc_properties()
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
@@ -404,6 +282,122 @@ function Score:is_compiled()
     end
 end
 
+function Score:header()
+    local header = LY_HEAD:gsub(
+	[[<<<STAFFSIZE>>>]], self.staffsize):gsub(
+	[[<<<LINEWIDTH>>>]], self['line-width']):gsub(
+	[[<<<FONTS>>>]], self:fonts())
+    if self.fullpage then
+        local ppn = 'f'
+        if self['print-page-number'] then ppn = 't' end
+        header = header:gsub(
+	    [[<<<PREAMBLE>>>]],
+            string.format(
+                [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
+                self.paperwidth, self.paperheight
+	    )
+	):gsub(
+	    [[<<<PAPER>>>]],
+            string.format(
+		[[#(set-paper-size "lyluatexfmt")
+                print-page-number = ##%s
+                print-first-page-number = ##t
+                first-page-number = %s
+                %s]],
+                ppn, ly.PAGE, self:margins()
+	    )
+        )
+    else
+	header = header:gsub(
+	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
+	    [[<<<PAPER>>>]], [[indent = 0\mm]])
+    end
+    return header
+end
+
+function Score:margins()
+    local tex_top = self['extra-top-margin'] + convert_unit((
+        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
+        tex.dimen.headheight + tex.dimen.headsep
+    )..'sp')
+    local tex_bottom = self['extra-bottom-margin'] + (
+        convert_unit(tex.dimen.paperheight..'sp') -
+        (tex_top + convert_unit(tex.dimen.textheight..'sp'))
+    )
+    local inner = convert_unit((
+        tex.sp('1in') +
+        tex.dimen.oddsidemargin +
+        tex.dimen.hoffset
+    )..'sp')
+    if self.fullpagealign == 'crop' then
+        return string.format([[
+            top-margin = %s\pt
+            bottom-margin = %s\pt
+            inner-margin = %s\pt
+            ]],
+            tex_top, tex_bottom, inner
+        )
+    elseif self.fullpagealign == 'staffline' then
+      local top_distance = 4 * tex_top / self.staffsize + 2
+      local bottom_distance = 4 * tex_bottom / self.staffsize + 2
+        return string.format([[
+        top-margin = 0\pt
+        bottom-margin = 0\pt
+        inner-margin = %s\pt
+        top-system-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        top-markup-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        last-bottom-spacing =
+        #'((basic-distance . %s)
+           (minimum-distance . %s)
+           (padding . 0)
+           (stretchability . 0))
+        ]],
+        inner,
+        top_distance,
+        top_distance,
+        top_distance,
+        top_distance,
+        bottom_distance,
+        bottom_distance
+      )
+    else
+        err(
+            [[
+        Invalid argument for option 'fullpagealign'.
+        Allowed: 'crop', 'staffline'.
+        Given: %s
+        ]],
+            self.fullpagealign
+        )
+    end
+end
+
+function Score:protrusion()
+    --[[
+      Determine the amount of space used to the left of the staff lines
+      and generate a horizontal offset command.
+    --]]
+    local protrusion = ''
+    local f = io.open(self.output..'.eps')
+    --[[ The information we need is in the third line --]]
+    f:read(); f:read()
+    local bb_line = f:read()
+    f:close()
+    local cropped = bb_line:match('%d+')
+    if cropped ~= 0 then
+        protrusion = string.format('\\hspace*{-%spt}', cropped)
+    end
+    return protrusion
+end
+
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
@@ -421,7 +415,7 @@ function Score:process()
     self:calc_properties()
     local do_compile = not self:is_compiled()
     if do_compile then
-        self:apply_header()
+        self.ly_code = self:header()..self.ly_code
         self:run_lilypond()
     end
     self:write_tex(do_compile)
@@ -479,7 +473,7 @@ function Score:write_tex(do_compile)
         if do_compile then
             --[[ new compilation, calculate protrusion
                  and update -systems.tex file]]
-            local protrusion = self:calc_protrusion()
+            local protrusion = self:protrusion()
             texoutput = content:gsub([[\includegraphics{]],
                 [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(self.output))
             local f = io.open(self.output..'-systems.tex', 'w')
