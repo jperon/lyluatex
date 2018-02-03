@@ -465,10 +465,12 @@ function Score:write_tex(do_compile)
         end
     else set_fullpagestyle(self.fullpagestyle)
     end
+    local label = ''
+    if self.label then label = '\\label{'..self.labelprefix..self.label..'}' end
     local systems_file = io.open(self.output..'-systems.tex', 'r')
     if not systems_file then
         --[[ Fullpage score, use \includepdf ]]
-        tex.sprint('\\includepdf[pages=-]{'..self.output..'}')
+        tex.sprint(label..'\\includepdf[pages=-]{'..self.output..'}')
     else
         --[[ Fragment, use -systems.tex file]]
         local content = systems_file:read("*all")
@@ -488,13 +490,14 @@ function Score:write_tex(do_compile)
             -- simply reuse existing -systems.tex file
             texoutput = content
         end
+        texoutput = label..texoutput
         tex.sprint(texoutput:explode('\n'))
     end
 end
 
 function Score:write_to_filelist(filename)
     local f = io.open(FILELIST, 'a')
-    f:write(filename, '\t', self.input_file or '', '\n')
+    f:write(filename, '\t', self.input_file or '', '\t', self.label or '', '\n')
     f:close()
 end
 
