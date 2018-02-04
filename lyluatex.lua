@@ -54,6 +54,13 @@ local function contains (table_var, value)
 end
 
 
+local function contains_key (table_var, key)
+    for k in pairs(table_var) do
+        if k == key then return true end
+    end
+end
+
+
 local function convert_unit(value)
     return tonumber(value) or tex.sp(value) / tex.sp("1pt")
 end
@@ -140,6 +147,20 @@ local function __orderednext(t, state)
 end
 local function orderedpairs(t)
     return __orderednext, t, nil
+end
+
+
+local function process_options(k, v)
+    if v == 'false' then v = false end
+    local _, i = k:find('^no')
+    if i then
+        local n = k:sub(i + 1)
+        if contains_key(OPTIONS, n) then
+            k = n
+            if v ~= nil and v ~= 'default' then v = not v end
+        end
+    end
+    return k, v
 end
 
 
@@ -453,11 +474,7 @@ function Score:protrusion()
 end
 
 function Score:raggedright()
-    if self['ragged-right'] == 'default' then
-        if self['noragged-right'] == 'default' then return ''
-        elseif self['noragged-right'] then return 'ragged-right = ##f'
-        else return 'ragged-right = ##t'
-        end
+    if self['ragged-right'] == 'default' then return ''
     elseif self['ragged-right'] then return 'ragged-right = ##t'
     else return 'ragged-right = ##f'
     end
@@ -637,8 +654,9 @@ function ly.set_local_options(opts)
         a, b = opts:find('%w[^=]+=', d)
         c, d = opts:find('{{{%w*}}}', d)
         if not d then break end
-        local k, v = opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
-        if v == 'false' then v = false end
+        local k, v = process_options(
+            opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
+        )
         options[k] = v
     end
     return options
@@ -660,7 +678,7 @@ end
 
 
 function ly.set_property(name, value)
-    if value == 'false' then value = false end
+    name, value = process_options(name, value)
     Score[name] = value
 end
 
