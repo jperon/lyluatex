@@ -14,7 +14,7 @@
 Taille de police.
 
 % Import d'une partition externe. La commande \includely est strictement équivalente.
-\lilypondfile[line-width=250\pt, fullpage=false, label=test]{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
+\lilypondfile[line-width=250\pt, insert=fullpage, label=test]{ly/AveMariaDeLourdes/AveMariaDeLourdes.ly}
 
 \pageref{ly_test}
 
@@ -106,6 +106,6 @@ page\footnote{\lilypond[fragment]{a' b' c'}}.
 
 Test pour alignement.
 
-\lilypondfile[fullpage=true, staffsize=16]{ly/Beethoven/opus-18-1.ly}
+\lilypondfile[insert=fullpage, staffsize=16]{ly/Beethoven/opus-18-1.ly}
 
 \end{document}
