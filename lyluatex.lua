@@ -439,15 +439,18 @@ end
 
 function Score:write_tex(do_compile)
     if do_compile and not self:is_compiled() then
-      tex.sprint(
-          [[
-          \begin{quote}
-          \fbox{Score failed to compile}
-          \end{quote}
+        if self.showfailed == 'true' then
+            tex.sprint(
+                [[
+                \begin{quote}
+                \fbox{Score failed to compile}
+                \end{quote}
 
-          ]]
-      )
-        err("\nScore failed to compile, please check LilyPond input.\n")
+                ]]
+            )
+        else
+            err("\nScore failed to compile, please check LilyPond input.\n")
+        end
         --[[ ensure the score gets recompiled next time --]]
         os.remove(self.output..'-systems.tex')
     end
