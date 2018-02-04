@@ -34,8 +34,8 @@
 
 }
 
-\newcommand{\lyOption}[3]{%
-\lyMargin{\texttt{}#1} (#2) {\small \textit{#3}}}
+\newcommand{\lyOption}[2]{%
+\lyMargin{\texttt{#1} {\small \emph{(#2)}}}}
 
 \newcommand{\lyCmd}[1]{%
 \lyMargin{\texttt{\textbackslash #1}}}
