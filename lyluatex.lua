@@ -199,7 +199,7 @@ end
 
 function Score:check_failed_compilation()
     if not self:is_compiled() then
-        if self.showfailed == 'true' then
+        if self.showfailed then
             tex.sprint(
                 [[
                 \begin{quote}
