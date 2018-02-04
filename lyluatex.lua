@@ -592,6 +592,19 @@ function ly.get_option(opt)
 end
 
 
+function ly.is_dim (dim, value)
+    local n, u = value:match('%d*%.?%d*'), value:match('%a+')
+    if tonumber(value) or n and contains(TEX_UNITS, u) then return true
+    else err(
+        [[Unexpected value "%s" for dimension %s:
+        should be either a number (for example "12"), or a number with unit, without space ("12pt")
+        ]],
+        value, dim
+    )
+    end
+end
+
+
 function ly.newpage_if_fullpage()
     if ly.score.insert == 'fullpage' then tex.sprint([[\newpage]]) end
 end
@@ -609,19 +622,6 @@ function ly.set_local_options(opts)
         if v ~= '' then options[k] = v end
     end
     return options
-end
-
-
-function ly.is_dim (dim, value)
-    local n, u = value:match('%d*%.?%d*'), value:match('%a+')
-    if tonumber(value) or n and contains(TEX_UNITS, u) then return true
-    else err(
-        [[Unexpected value "%s" for dimension %s:
-        should be either a number (for example "12"), or a number with unit, without space ("12pt")
-        ]],
-        value, dim
-    )
-    end
 end
 
 
