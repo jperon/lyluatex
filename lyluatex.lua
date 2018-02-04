@@ -437,8 +437,8 @@ function Score:run_lilypond()
     p:close()
 end
 
-function Score:write_tex(do_compile)
-    if do_compile and not self:is_compiled() then
+function Score:check_failed_compilation()
+    if not self:is_compiled() then
         if self.showfailed == 'true' then
             tex.sprint(
                 [[
@@ -454,6 +454,10 @@ function Score:write_tex(do_compile)
         --[[ ensure the score gets recompiled next time --]]
         os.remove(self.output..'-systems.tex')
     end
+end
+
+function Score:write_tex(do_compile)
+    if do_compile then self:check_failed_compilation() end
     --[[ Now we know there is a proper score --]]
     if self.fullpagestyle == 'default' then
         if self['print-page-number'] then
