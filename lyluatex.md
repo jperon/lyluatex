@@ -122,10 +122,13 @@ Finally external files of arbitrary complexity can be referenced with
 \lilypondfile{path/to/file}
 ```
 
-Currently this command only understands relative paths starting from the
-compiled `.tex` file.  LilyPond files can also make use of more sophisticated
-include structures, but this may require adding LilyPond include paths (see
-[LilyPond Include Paths](#include-paths)).
+Absolute and relative paths can be given.  Relative paths are searched in the
+following order:
+
+* relative to the current file's directory
+* relative to all given include paths (see [LilyPond Include Paths](#include-paths)))
+* relative to all paths visible to \LaTeX\ (like the package search)
+
 
 ## Option Handling {#option-handling}
 
