@@ -484,7 +484,10 @@ function Score:write_tex(do_compile)
             -- simply reuse existing -systems.tex file
             texoutput = content
         end
-        texoutput = label..texoutput
+        texoutput = label..
+            [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
+            texoutput..
+            [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
         tex.sprint(texoutput:explode('\n'))
     end
 end
