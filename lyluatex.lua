@@ -35,6 +35,7 @@ local LY_HEAD = [[
     <<<PAPER>>>
     two-sided = ##t
     line-width = <<<LINEWIDTH>>>\pt
+    <<<RAGGEDRIGHT>>>
     <<<FONTS>>>
 }
 
@@ -311,9 +312,10 @@ end
 
 function Score:header()
     local header = LY_HEAD:gsub(
-	[[<<<STAFFSIZE>>>]], self.staffsize):gsub(
-	[[<<<LINEWIDTH>>>]], self['line-width']):gsub(
-	[[<<<FONTS>>>]], self:fonts())
+        [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
+        [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
+        [[<<<RAGGEDRIGHT>>>]], self:raggedright()):gsub(
+        [[<<<FONTS>>>]], self:fonts())
     if self.insert == 'fullpage' then
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
@@ -448,6 +450,17 @@ function Score:protrusion()
         protrusion = string.format('\\hspace*{-%spt}', cropped)
     end
     return protrusion
+end
+
+function Score:raggedright()
+    if self['ragged-right'] == 'default' then
+        if self['noragged-right'] == 'default' then return ''
+        elseif self['noragged-right'] then return 'ragged-right = ##f'
+        else return 'ragged-right = ##t'
+        end
+    elseif self['ragged-right'] then return 'ragged-right = ##t'
+    else return 'ragged-right = ##f'
+    end
 end
 
 function Score:run_lilypond()
