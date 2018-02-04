@@ -16,25 +16,33 @@
 % Options
 \catcode`-=11
 \directlua{
-  dofile(kpse.find_file("lyluatex.lua"))
-  declare_package_options( {
-    ['cleantmp'] = false,
-    ['current-font-as-main'] = 'true',
-    ['includepaths'] = './',
-    ['line-width'] = 'default',
-    ['pass-fonts'] = 'true',
-    ['program'] = 'lilypond',
-    ['showfailed'] = 'true',
-    ['staffsize'] = '0',
-    ['tmpdir'] = 'tmp_ly'
-  } )
-  set_default_options()
-  reset_local_options()
+  ly = require(kpse.find_file("lyluatex.lua"))
+  ly.declare_package_options({
+    ['cleantmp'] = {'false', 'true'},
+    ['current-font-as-main'] = {'true', 'false'},
+    ['extra-bottom-margin'] = {'0', ly.is_dim},
+    ['extra-top-margin'] = {'0', ly.is_dim},
+    ['fullpage'] = {'false', 'true'},
+    ['fullpagealign'] = {'staffline', 'crop'},
+    ['fullpagestyle'] = {'default'},
+    ['includepaths'] = {'./'},
+    ['labelprefix'] = {'ly_'},
+    ['line-width'] = {'default', ly.is_dim},
+    ['paperwidth'] = {'default', ly.is_dim},
+    ['paperheight'] = {'default', ly.is_dim},
+    ['pass-fonts'] = {'true', 'false'},
+    ['print-page-number'] = {'false', 'true'},
+    ['program'] = {'lilypond'},
+    ['showfailed'] = {'true', 'false'},
+    ['staffsize'] = {'0', ly.is_dim},
+    ['tmpdir'] = {'tmp_ly'},
+  })
+  ly.set_default_options()
 }
 \directlua{
-  if get_option('cleantmp') == 'true' then
-    luatexbase.add_to_callback('stop_run', clean_tmp_dir, 'lyluatex cleantmp')
-    luatexbase.add_to_callback('stop_run', conclusion_text, 'lyluatex cleantmp')
+  if ly.get_option('cleantmp') == 'true' then
+    luatexbase.add_to_callback('stop_run', ly.clean_tmp_dir, 'lyluatex cleantmp')
+    luatexbase.add_to_callback('stop_run', ly.conclusion_text, 'lyluatex cleantmp')
   end
 }
 \catcode`-=12
@@ -43,156 +51,80 @@
 \newcommand{\mm}{mm}
 \newcommand{\cm}{cm}
 
-% Commands to change options during the document
-\newcommand{\lilypondCmd}[1]{%
-    \directlua{set_option('program', '#1')}
+% Command to change options during the document
+\newcommand{\lysetoption}[2]{%
+  \directlua{ly.set_property('#1', '#2')}
 }
-% Staff size is calculated in relation to text size if set to 0 (default)
-\newcommand{\lilypondStaffsize}[1]{%
-    \directlua{set_option('staffsize', '#1')}
-}
+
 % Line width is calculated if set to 'default'
-\def\defaultwidth{default}
-\catcode`-=11
-\def\calclinewidth{
-  \ifx\lyluatex@line-width\defaultwidth
-  \directlua{
-    set_option('line-width', '\the\linewidth')
-  }
-  \else
-  \directlua{
-    set_option('line-width',\lyluatex@line-width)
-  }
-  \fi
-}
-\newcommand{\lilypondLinewidth}[1]{%
-  \edef\lyluatex@line-width{#1}
-  \directlua{set_option('line-width', #1)}
-}
-\newcommand{\lilypondPassFonts}[1]{%
-  \directlua{set_option('pass-fonts', #1)}
-}
-\newcommand{\lilypondCurrentFontAsMain}[1]{%
-  \directlua{set_option('current-font-as-main', #1)}
-}
-\catcode`-=12
-% Include paths for lilypond documents
-\newcommand{\lilypondIncludePaths}[1]{%
-    \directlua{set_option('includepaths', '#1')}
-}
+\def\ly@page{\directlua{ly.PAGE = \thepage}}
 
 % Retrieve the three main font families (rm, sf, tt)
 % and store them as options. Additionally store the
 % *current* font for optional use.
-\newcommand{\currentfonts}{%
+\newcommand{\ly@currentfonts}{%
 \begingroup%
-    \directlua{set_option('current-font', get_font_family(font.current()))}
+    \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
     \directlua{
-        set_option('rmfamily', get_font_family(\rmfamilyid))
-        set_option('sffamily', get_font_family(\sffamilyid))
-        set_option('ttfamily', get_font_family(\ttfamilyid))
+        ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
+        ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
+        ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
     }%
 \endgroup%
 }
 
 % Main commands
 % Inclusion of a .ly file
-\newkeycommand*\includely[%
-    fullpage=false%
-    ,current-font-as-main%
-    ,includepaths%
-    ,line-width%
-    ,pass-fonts%
-    ,program%
-    ,staffsize%
-    ][other-options][1]{%
-\calclinewidth
-\currentfonts
+\newkeycommand*\includely[][options][1]{%
 \directlua{
-    set_local_options({
-    ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
-    ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
-    ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
-    ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-    ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-    ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
-    })
-    lilypond_file(
-        "\luatexluaescapestring{#1}",
-        "\luatexluaescapestring{\currfiledir}",
-        \commandkey{fullpage}
-    )%
-}%
-\directlua{reset_local_options()}%
+  ly.CURRFILEDIR = '\currfiledir'
+  ly.file('\luatexluaescapestring{#1}', '\commandkey{options}')
+  ly.newpage_if_fullpage()
+}
+\ly@page
+\ly@currentfonts
+\directlua{ly.score:process()}
 }
 
 % Base environment to include a LilyPond fragment integrated into
 % the document.
-\NewEnviron{compilerly}{%
-\calclinewidth
-\currentfonts
-\directlua{%
-    lilypond_fragment(
-        "\luatexluaescapestring{\unexpanded\expandafter{\BODY}}"
-    )%
-}%
+\NewEnviron{ly@compilely}{%
+\directlua{
+  ly.CURRFILEDIR = '\currfiledir'
+  ly.fragment(
+    '\luatexluaescapestring{\unexpanded\expandafter{\BODY}}',
+    '\commandkey{options}'
+  )
+  ly.newpage_if_fullpage()
+}
+\ly@page
+\ly@currentfonts
+\directlua{ly.score:process()}%
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newkeycommand{\lily}[%
-    ,current-font-as-main%
-    ,includepaths%
-    ,line-width%
-    ,pass-fonts%
-    ,program%
-    ,staffsize%
-    ][other-options][1]{%
-\directlua{
-    set_local_options({
-    ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
-    ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
-      ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
-      ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
-    })
-}
-\begin{compilerly}%
+\newkeycommand{\lily}[][options][1]{%
+\let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
+\begin{ly@compilely}%
 {#1}
-\end{compilerly}%
-\directlua{reset_local_options()}%
+\end{ly@compilely}%
+\let\repeat\ly@oldrepeat%
 }
 
-\newkeyenvironment{ly}[%
-    current-font-as-main%
-    ,includepaths%
-    ,line-width%
-    ,pass-fonts%
-    ,program%
-    ,staffsize%
-    ][other-options]{%
-\directlua{
-    set_local_options({
-      ['current-font-as-main'] = '\luatexluaescapestring{\commandkey{current-font-as-main}}',
-      ['includepaths'] = '\luatexluaescapestring{\commandkey{includepaths}}',
-      ['lilypondcmd'] = '\luatexluaescapestring{\commandkey{program}}',
-      ['line-width'] = '\luatexluaescapestring{\commandkey{line-width}}',
-      ['pass-fonts'] = '\luatexluaescapestring{\commandkey{pass-fonts}}',
-      ['staffsize'] = '\luatexluaescapestring{\commandkey{staffsize}}'
-    })
-}
-\compilerly%
+\newkeyenvironment{ly}[][options]{%
+\let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
+\ly@compilely%
 }{%
-\endcompilerly%
-\directlua{reset_local_options()}%
+\endly@compilely%
+\let\repeat\ly@oldrepeat%
 }
 
 % Commands for compatibility with lilypond-book
-\let\lilypondfile\includely
+\let\lilypondfile\includely%
 \protected\def\lilypond{\def\reserved@a{lilypond}%
-  \ifx\reserved@a\@currenvir \expandafter \ly
-  \else \expandafter\lily \fi}
+  \ifx\reserved@a\@currenvir\expandafter\ly%
+  \else\expandafter\lily\fi}
 \let\endlilypond\endly

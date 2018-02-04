@@ -1,12 +1,14 @@
-\version "2.19.20"
+\version "2.18"
 
-\include "lilypond-book-preamble.ly"
+%\include "lilypond-book-preamble.ly"
 
 \paper {
   ragged-last = ##f
+  max-systems-per-page = 3
 }
 
 \header {
+  title=Beethoven
   % Remove default LilyPond tagline
   tagline = ##f
 }
