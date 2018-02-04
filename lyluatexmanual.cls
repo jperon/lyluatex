@@ -16,6 +16,8 @@
 
 \usepackage{lyluatex}
 
+\usepackage{makeidx}
+\makeindex
 \usepackage[colorlinks=true]{hyperref}
 
 \newcommand{\cmd}[1]{%
@@ -35,10 +37,10 @@
 }
 
 \newcommand{\lyOption}[2]{%
-\lyMargin{\texttt{#1} {\small \emph{(#2)}}}}
+\lyMargin{\texttt{#1} {\small \emph{(#2)}}\index{#1}}}
 
 \newcommand{\lyCmd}[1]{%
-\lyMargin{\texttt{\textbackslash #1}}}
+\lyMargin{\texttt{\textbackslash #1}\index{\textbackslash #1}}}
 
 \newcommand{\lyIssue}[1]{%
 \lyMargin{\textbf{\textcolor{red}{#1}}}}

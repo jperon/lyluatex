@@ -54,7 +54,7 @@ package^[[https://github.com/uliska/musicexamples](https://github.com/uliska/mus
  LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
 
 
-\lyMargin{\cmd{lilypond}}
+\lyCmd{lilypond}
 Very short fragments of LilyPond code can directly be input using the \cmd{lilypond} command:
 
 ```lilypond
@@ -71,7 +71,7 @@ Note that the sequence of notes is implicitly wrapped in a LilyPond music expres
 
 \lilypond{ \relative { c' d e }}
 
-\lyMargin{\texttt{lilypond}}
+\lyMargin{lilypond\index{lilypond}}
 More elaborate scores can be enclosed in the `lilypond` environment:
 
 ```lilypond
@@ -115,7 +115,7 @@ music = \relative {
 Note that the automatic wrapping does *not* work in the environment and that the
 content of the environment must represent a compilable LilyPond file.
 
-\lyMargin{\cmd{lilypondfile}}
+\lyCmd{lilypondfile}
 Finally external files of arbitrary complexity can be referenced with
 
 ```lilypond
@@ -147,14 +147,14 @@ are documented with each option.
 
 
 
-\lyMargin{Package Options}
+\lyMargin{Package Options\index{Package Options}}
 Options can be set globally through package options, which are used with
 
 ```tex
 \usepackage[key1=value1,key2=value2]{lyluatex}
 ```
 
-\lyMargin{Local Options}
+\lyMargin{Local Options\index{Local Options}}
 
 Options can also be applied on a per-score basis through optional arguments to
 the individual command or environments:
@@ -253,3 +253,7 @@ Scores that differ *only* by their fonts are considered different by
 # Cooperations
 
 ## `musicexamples`{#musicexamples}
+
+# Appendix
+
+\printindex

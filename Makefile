@@ -2,11 +2,13 @@ test:
 	lualatex -interaction=nonstopmode -shell-escape test.tex
 
 manual:
-	pandoc --pdf-engine=lualatex \
-		-V fontfamily=libertine \
-		--pdf-engine-opt=-shell-escape \
-		-o lyluatex.pdf \
-		lyluatex.md
+	pandoc -s -V fontfamily=libertine \
+		-o lyluatex.tex \
+		lyluatex.md && \
+		lualatex --shell-escape lyluatex.tex && \
+		makeindex lyluatex && \
+		lualatex --shell-escape lyluatex.tex
+
 
 ctan:
 	mkdir -p ./ctan/lyluatex
