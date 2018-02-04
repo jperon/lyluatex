@@ -409,6 +409,36 @@ function Score:margins()
     end
 end
 
+function Score:optimize_pdf()
+    if self['optimize-pdf'] then
+        local pdf2ps, ps2pdf, pdf2pdf, path
+        for file in lfs.dir(self.tmpdir) do
+            path = self.tmpdir..'/'..file
+            if path:match(self.output) and path:sub(-4) == '.pdf' then
+                pdf2ps = io.popen(
+                    'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE '..path..' -c quit',
+                    'r'
+                )
+                ps2pdf = io.popen(
+                    'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile='..
+                    path..'-gs -',
+                    'w'
+                )
+                if pdf2ps then
+                    ps2pdf:write(pdf2ps:read('*a'))
+                    pdf2ps:close()
+                    ps2pdf:close()
+                    os.rename(path..'-gs', path)
+                else
+                    warn(
+                        [[You have asked for pdf optimization, but gs wasn't found.]]
+                    )
+                end
+            end
+        end
+    end
+end
+
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
@@ -428,6 +458,7 @@ function Score:process()
     if do_compile then
         self.ly_code = self:header()..self.ly_code
         self:run_lilypond()
+        self:optimize_pdf()
     end
     self:write_tex(do_compile)
 end
