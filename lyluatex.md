@@ -132,61 +132,59 @@ following order:
 
 ## Option Handling {#option-handling}
 
-The behaviour of \lyluatex\ can be configured in detail.  For most aspects
-(except when it doesn't make sense) there are global and local options, as well
-as commands to change the behaviour along the way.  Currently \lyluatex\ only supports explicit boolean arguments:
+All aspects of \lyluatex's behaviour can be configured in detail through
+*options*.  Through a unified interface all options can be set as *package
+options* or as *local options*, and they can be changed anywhere in the
+document.  Note that not each approach is suitable for every option: the option
+to clean the temporary directory only makes sense as a package option for
+example, or you can't reasonably apply a label other than locally to a single
+score.
 
-```tex
-% Correct:
-[key1=true,key2=false]
-
-% Incorrect:
-[key1] % as meaning the same as above
-```
+All options are `key==value` options, and there is no support for empty options
+where the presence of the keyword is equivalent to setting the option to `true`.
+Options that are *not* set explicitly will be set to their default values, which
+are documented with each option.
 
 
-#### Package Options
+
+\lyMargin{Package Options}
 Options can be set globally through package options, which are used with
 
 ```tex
 \usepackage[key1=value1,key2=value2]{lyluatex}
 ```
 
-#### Local Options
+\lyMargin{Local Options}
 
 Options can also be applied on a per-score basis through optional arguments to
 the individual command or environments:
 
 ```tex
-\includely[key1=value1]{path/to/file.ly}
-\lily[key1=value1]{ c' d' e' }
-\begin{ly}[key1=value1]
+\lilypondfile[key1=value1]{path/to/file.ly}
+
+\lilypond[key1=value1]{ c' d' e' }
+
+\begin{lilypond}[key1=value1]
 {
   c' d' e'
 }
-\end{ly}
+\end{lilypond}
 ```
 
-#### Switching Commands
+\lyCmd{lysetoption}
+At any place in the document the value of an option can be changed using
 
-Most options can be changed within the document to apply to all subsequent
-scores instead of only the current one.  These commands generally expect one
-argument, but details are described below.
+```tex
+\lysetoption{key}{new-value}
+```
 
-#### Convention in this Manual
+The option will take effect from now on as a package option until it is changed
+again.  Note that this may or may not make sense with a given option.  For
+example the \option{tmpdir} option should only be modified in very special and
+sophisticated set-ups.
 
-*Options* are printed with some negative indent. The option name is printed in
-bold face, followed by a parenthesized default value. At the end of the line is
-an indicator showing whether the option can be applied as package and/or as
-local option:
+Local options will override this value as with package options.
 
-\lyOption{option-name}{default}{pkg/local}
-followed by a description.
-
-*Commands* look very much the same but (of course) have a leading backslash. The
-item gives some information on the number of arguments (usually 1):
-
-\lyCmd{commandName}{1}
 
 ## Score Layout
 
@@ -247,7 +245,7 @@ Scores that differ *only* by their fonts are considered different by
 \lyOption{pass-fonts}{true}{pkg/local} When set to `false` text fonts are *not*
 transferred to LilyPond.
 
-\lyCmd{lilypondPassFonts}{1} Change behaviour from here on. Possible values: ‘true’ / ‘false’.
+\lyCmd{lilypondPassFonts} Change behaviour from here on. Possible values: ‘true’ / ‘false’.
 
 # Cooperations
 

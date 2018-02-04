@@ -19,7 +19,11 @@
 \usepackage[colorlinks=true]{hyperref}
 
 \newcommand{\cmd}[1]{%
-\textbackslash \texttt{#1}}
+\textcolor{blue}{\textbackslash \texttt{#1}}}
+
+\newcommand{\option}[1]{%
+\textcolor{blue}{\texttt{#1}}%
+}
 
 \newcommand{\lyMargin}[1]{%
 
@@ -33,8 +37,8 @@
 \newcommand{\lyOption}[3]{%
 \lyMargin{\texttt{}#1} (#2) {\small \textit{#3}}}
 
-\newcommand{\lyCmd}[2]{%
-\lyMargin{\texttt{\textbackslash #1} (#2 args)}}
+\newcommand{\lyCmd}[1]{%
+\lyMargin{\texttt{\textbackslash #1}}}
 
 \newcommand{\lyIssue}[1]{%
 \lyMargin{\textbf{\textcolor{red}{#1}}}}
