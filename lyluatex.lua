@@ -411,7 +411,7 @@ end
 
 function Score:optimize_pdf()
     if self['optimize-pdf'] then
-        local pdf2ps, ps2pdf, pdf2pdf, path
+        local pdf2ps, ps2pdf, path
         for file in lfs.dir(self.tmpdir) do
             path = self.tmpdir..'/'..file
             if path:match(self.output) and path:sub(-4) == '.pdf' then
