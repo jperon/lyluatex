@@ -438,7 +438,7 @@ function Score:run_lilypond()
 end
 
 function Score:write_tex(do_compile)
-    if not self:is_compiled() then
+    if do_compile and not self:is_compiled() then
       tex.sprint(
           [[
           \begin{quote}
