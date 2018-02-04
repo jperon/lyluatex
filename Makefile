@@ -3,6 +3,7 @@ test:
 
 manual:
 	pandoc -s -V fontfamily=libertine \
+		--toc-depth=4 \
 		-o lyluatex.tex \
 		lyluatex.md && \
 		lualatex --shell-escape lyluatex.tex && \

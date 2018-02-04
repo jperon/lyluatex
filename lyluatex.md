@@ -188,17 +188,88 @@ Local options will override this value as with package options.
 
 ## Score Layout
 
+### System-by-System, Fullpage, and Inline Scores
+
+\lyOption{insert}{systems}
+Scores can be included in documents in three basic modes: system-by-system,
+fullpage, and inline.  The system-by-system mode is the default and includes a
+score as a sequence of images, one for each system.  This allows \LaTeX\ to have
+the systems flow over page breaks and to adjust the space between systems to
+vertically justify the systems on the page.
+
+Insertion mode can be controlled with the \option{insert} option, whose three
+valid values are \option{systems} (default), \option{fullpage}, and
+\option{inline}.
+
+#### System-by-System
+
+\lyMargin{\texttt{insert=systems}}
+With this default option each score is compiled as a sequence of PDF files
+representing one system each. By default the systems are separated by a
+`\linebreak` and form one paragraph together.
+
+\lyCmd{betweenLilyPondSystem}
+However, if a macro \cmd{betweenLilyPondSystem} is defined it will be expanded
+between each system. This macro must accept one argument, which will be the
+number of systems already printed in the score (‘1’ after the first system).
+With this information it is possible to resond individually to systems (e.\,g.
+“print a horizontal rule after each third system”).  But a more typical use case
+is to insert some vertical glue space between the systems, ignoring the system
+count:
+
+```tex
+\newcommand{\betweenLilyPondSystem}[1]{%
+
+\medskip
+}
+```
+
+\lyCmd{preLilyPondExample, \cmd{postLilyPondExample}}
+If either of these macros is defined it will be expanded immediately before or
+after the score.  This may for example be used to wrap the example in
+environments, but usually it will make more sense to use the
+\option{musicexamples} integration (see [musicexamples](#musicexamples)).
+
+#### Fullpage
+
+\lyMargin{\texttt{insert=fullpage}}
+With \option{insert} set to `fullpage` the score is compiled to a single PDF
+file that is included through \cmd{includepdf}.  The layout of such scores can
+be configured through a number of [alignment options](#alignment).
+
+\lyOption{fullpagestyle}{}
+
+\lyOption{print-page-number}{false}
+
+These two options work together basically deciding who is responsible for
+printing headers and footers, LilyPond or \LaTeX.  \option{fullpagestyle} is
+equivalent to \LaTeX's \cmd{pagestyle} and accepts anything that the current
+pagestyle can be set to. By default the current pagestyle will be continued
+throughout the score. *NOTE:* This is different from the usual behaviour of
+\cmd{includepdf} which sets the pagestyle to `empty`. So by default \LaTeX\ will
+continue to print headers and footers, including page numbers.
+
+\option{print-page-number} decides whether LilyPond prints page numbers in the
+score.  By default this is set to `false`, so the default setting of these two
+options means that LilyPond does *not* print page numbers while
+\LaTeX\ continues to print headers and footers.
+
+#### Inline
+
+\lyMargin{\texttt{insert=inline}}
+This option, which is intended to insert musical notation inline in the
+continuous text, has not been implemented yet.
+
+
 ### `line-width`
 
 ### `staffsize`
 
-### Full Page Scores and Fragments
-
-### Alignment
+### Alignment {#alignment}
 
 ## Miscellaneous Options
 
-### LilyPond Include Paths [#include-paths]
+### LilyPond Include Paths {#include-paths}
 
 ### LilyPond Executable
 
