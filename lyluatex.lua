@@ -182,7 +182,7 @@ function Score:calc_properties()
     local value
     for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
         value = self[dimension]
-        if value == 'default' then
+        if value == '' then
             if dimension == 'line-width' then value = tex.dimen.linewidth..'sp'
             else value = tex.dimen[dimension]..'sp'
             end
@@ -217,17 +217,23 @@ function Score:check_failed_compilation()
 end
 
 function Score:check_properties()
+    local unexpected = false
     for k, _ in orderedpairs(OPTIONS) do
+        if self[k] == 'default' then
+            self[k] = OPTIONS[k][1] or nil
+            unexpected = not self[k]
+        end
         if not contains(OPTIONS[k], self[k]) and OPTIONS[k][2] then
             if type(OPTIONS[k][2]) == 'function' then OPTIONS[k][2](k, self[k])
-            else
-                err(
-                        [[Unexpected value "%s" for option %s:
-                        authorized values are "%s"
-                        ]],
-                        self[k], k, table.concat(OPTIONS[k], ', ')
-                    )
+            else unexpected = true
             end
+        end
+        if unexpected then
+            err(
+                'Unexpected value "%s" for option %s:\n'..
+                'authorized values are "%s"',
+                self[k], k, table.concat(OPTIONS[k], ', ')
+            )
         end
     end
 end
@@ -403,24 +409,6 @@ function Score:margins()
     end
 end
 
-function Score:protrusion()
-    --[[
-      Determine the amount of space used to the left of the staff lines
-      and generate a horizontal offset command.
-    --]]
-    local protrusion = ''
-    local f = io.open(self.output..'.eps')
-    --[[ The information we need is in the third line --]]
-    f:read(); f:read()
-    local bb_line = f:read()
-    f:close()
-    local cropped = bb_line:match('%d+')
-    if cropped ~= 0 then
-        protrusion = string.format('\\hspace*{-%spt}', cropped)
-    end
-    return protrusion
-end
-
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
@@ -444,6 +432,24 @@ function Score:process()
     self:write_tex(do_compile)
 end
 
+function Score:protrusion()
+    --[[
+      Determine the amount of space used to the left of the staff lines
+      and generate a horizontal offset command.
+    --]]
+    local protrusion = ''
+    local f = io.open(self.output..'.eps')
+    --[[ The information we need is in the third line --]]
+    f:read(); f:read()
+    local bb_line = f:read()
+    f:close()
+    local cropped = bb_line:match('%d+')
+    if cropped ~= 0 then
+        protrusion = string.format('\\hspace*{-%spt}', cropped)
+    end
+    return protrusion
+end
+
 function Score:run_lilypond()
     mkdirs(dirname(self.output))
     local cmd = self.program.." "..
@@ -463,7 +469,7 @@ end
 function Score:write_tex(do_compile)
     if do_compile then self:check_failed_compilation() end
     --[[ Now we know there is a proper score --]]
-    if self.fullpagestyle == 'default' then
+    if self.fullpagestyle == '' then
         if self['print-page-number'] then
             set_fullpagestyle('empty')
         else set_fullpagestyle(nil)
@@ -593,6 +599,7 @@ end
 
 
 function ly.is_dim (dim, value)
+    if value == '' then return true end
     local n, u = value:match('%d*%.?%d*'), value:match('%a+')
     if tonumber(value) or n and contains(TEX_UNITS, u) then return true
     else err(
@@ -619,7 +626,7 @@ function ly.set_local_options(opts)
         if not d then break end
         local k, v = opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
         if v == 'false' then v = false end
-        if v ~= '' then options[k] = v end
+        options[k] = v
     end
     return options
 end
