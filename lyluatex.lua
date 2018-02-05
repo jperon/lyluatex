@@ -678,11 +678,11 @@ end
 
 
 function ly.file(input_file, options)
-    options = ly.set_local_options(options)
-    local file = input_file
+    if input_file:sub(-3) ~= '.ly' then input_file = input_file..'.ly' end
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
-    input_file = locate(file, Score.includepaths)
+    input_file = locate(input_file, Score.includepaths)
+    options = ly.set_local_options(options)
     if not input_file then err("File %s.ly doesn't exist.", file) end
     local i = io.open(input_file, 'r')
     ly.score = Score:new(i:read('*a'), options, input_file)
