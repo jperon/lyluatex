@@ -239,9 +239,6 @@ function Score:check_properties()
 end
 
 function Score:debug_lilypond()
-    local f = io.open(self.output..'.ly', 'w')
-    f:write(self.ly_code)
-    f:close()
 end
 
 function Score:delete_intermediate_files()
@@ -256,9 +253,10 @@ function Score:delete_intermediate_files()
       os.remove(self.output..'-systems.texi')
       os.remove(self.output..'.eps')
       os.remove(self.output..'.pdf')
-      if not self['debug-lilypond'] then
-          os.remove(self.output..'.log')
-          os.remove(self.output..'.ly')
+      if self.lilypond_error then
+          -- ensure score gets recompiled next time
+          os.remove(self.output..'-systems.tex')
+          os.remove(self.output..'.pdf')
       end
   end
 end
@@ -354,6 +352,29 @@ function Score:header()
     return header
 end
 
+function Score:lilypond_cmd()
+    local input, mode
+    if self.debug then
+        local f = io.open(self.output..'.ly', 'w')
+        f:write(self.ly_code)
+        f:close()
+        input = self.output..".ly 2>&1"
+        mode = 'r'
+    else
+        input = '-s -'
+        mode = 'w'
+    end
+    local cmd = self.program.." "..
+        "-dno-point-and-click "..
+        "-djob-count=2 "..
+        "-dno-delete-intermediate-files "
+    if self.input_file then cmd = cmd.."-I "..lfs.currentdir()..'/'..self.input_file.." " end
+    for _, dir in ipairs(extract_includepaths(self.includepaths)) do
+        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
+    end
+    return cmd.."-o "..self.output.." "..input, mode
+end
+
 function Score:margins()
     local tex_top = self['extra-top-margin'] + convert_unit((
         tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
@@ -437,7 +458,6 @@ function Score:process()
     local do_compile = not self:is_compiled()
     if do_compile then
         self.ly_code = self:header()..self.ly_code
-        self:debug_lilypond()
         self:run_lilypond()
     end
     self:write_tex(do_compile)
@@ -463,36 +483,44 @@ end
 
 function Score:run_lilypond()
     mkdirs(dirname(self.output))
-    local cmd = self.program.." "..
-        "-dno-point-and-click "..
-        "-djob-count=2 "..
-        "-dno-delete-intermediate-files "
-    if self.input_file then cmd = cmd.."-I "..lfs.currentdir()..'/'..self.input_file.." " end
-    for _, dir in ipairs(extract_includepaths(self.includepaths)) do
-        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
-    end
-    cmd = cmd.."-o "..self.output.." "..self.output..".ly"
     print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
-    local exit = os.execute(cmd.." > "..self.output..".log 2>&1")
-    if not exit then
+    local p = io.popen(self:lilypond_cmd())
+    if not p then
         err([[
         LilyPond could not be started.
         Please check that LuaLaTeX is
         started with the --shell-escape option.
         ]])
-    elseif exit ~= 0 then
-        warn([[
-        LilyPond reported a failed compilation,
-        but this does not necessarily mean that
-        no score has been produced.
-        Please check the log file
-        %s
-        and the generated LilyPond code
-        %s
-        ]],
-        self.output..'.log',
-        self.output..'.ly')
-        self['debug-lilypond'] = true
+    end
+    if self.debug then
+        local f = io.open(self.output..".log", 'w')
+        f:write(p:read('*a'))
+        f:close()
+        self.lilypond_error = not p:close()
+        if self.lilypond_error then
+            warn([[
+            LilyPond reported a failed compilation,
+            but this does not necessarily mean that
+            no score has been produced.
+            Please check the log file
+            %s
+            and the generated LilyPond code
+            %s
+            ]],
+            self.output..'.log',
+            self.output..'.ly')
+        end
+    else
+        p:write(self.ly_code)
+        self.lilypond_error = not p:close()
+        if self.lilypond_error then
+            warn([[
+            LilyPond reported a failed compilation;
+            if you need more information
+            than the above message,
+            please retry with option debug=true.
+            ]])
+        end
     end
 end
 
