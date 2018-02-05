@@ -686,10 +686,18 @@ end
 
 function ly.declare_package_options(options)
     OPTIONS = options
+    local exopt = ''
     for k, v in pairs(options) do
-        tex.sprint(string.format([[\DeclareStringOption[%s]{%s}%%]], v[1], k))
+        tex.sprint(string.format(
+            [[\DeclareOptionX{%s}{\directlua{
+                ly.set_property('%s', '\luatexluaescapestring{#1}')
+                }}%%
+            ]],
+            k, k))
+            exopt = exopt..k..'='..v[1]..','
     end
-    tex.sprint([[\ProcessKeyvalOptions*]])
+    tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]])
+    tex.sprint([[\ProcessOptionsX]])
     mkdirs(options.tmpdir[1])
     FILELIST = options.tmpdir[1]..'/'..splitext(status.log_name, 'log')..'.list'
     os.remove(FILELIST)
@@ -702,7 +710,7 @@ function ly.file(input_file, options)
     as it really doesn't mean anything as a local option. ]]
     input_file = locate(input_file, Score.includepaths)
     options = ly.set_local_options(options)
-    if not input_file then err("File %s.ly doesn't exist.", file) end
+    if not input_file then err("File %s.ly doesn't exist.", input_file) end
     local i = io.open(input_file, 'r')
     ly.score = Score:new(i:read('*a'), options, input_file)
     i:close()
@@ -760,20 +768,6 @@ function ly.set_local_options(opts)
         if k then options[k] = v end
     end
     return options
-end
-
-
-function ly.set_default_options()
-    for k, _ in pairs(OPTIONS) do
-        tex.sprint(
-            string.format(
-                [[
-                \directlua{
-                  ly.set_property('%s', '\luatexluaescapestring{\lyluatex@%s}')
-                }]], k, k
-            )
-        )
-    end
 end
 
 

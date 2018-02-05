@@ -3,7 +3,7 @@
 % Dependencies
 \RequirePackage{luatexbase}
 \RequirePackage{luaotfload}
-\RequirePackage{kvoptions}
+\RequirePackage{xkeyval}
 \RequirePackage{graphicx}
 \RequirePackage{minibox}
 \RequirePackage{keycommand}
@@ -41,10 +41,9 @@
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
   })
-  ly.set_default_options()
 }
 \directlua{
-  if ly.get_option('cleantmp') == 'true' then
+  if ly.get_option('cleantmp') then
     luatexbase.add_to_callback('stop_run', ly.clean_tmp_dir, 'lyluatex cleantmp')
     luatexbase.add_to_callback('stop_run', ly.conclusion_text, 'lyluatex cleantmp')
   end
