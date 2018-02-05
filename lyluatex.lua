@@ -156,8 +156,12 @@ local function process_options(k, v)
     if i then
         local n = k:sub(i + 1)
         if contains_key(OPTIONS, n) then
-            k = n
-            if v ~= nil and v ~= 'default' then v = not v end
+            if v ~= nil and v ~= 'default' then
+                k = n
+                v = not v
+            else
+                return
+            end
         end
     end
     return k, v
@@ -657,7 +661,7 @@ function ly.set_local_options(opts)
         local k, v = process_options(
             opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
         )
-        options[k] = v
+        if k then options[k] = v end
     end
     return options
 end
@@ -677,9 +681,9 @@ function ly.set_default_options()
 end
 
 
-function ly.set_property(name, value)
-    name, value = process_options(name, value)
-    Score[name] = value
+function ly.set_property(k, v)
+    k, v = process_options(k, v)
+    if k then Score[k] = v end
 end
 
 
