@@ -186,9 +186,7 @@ sophisticated set-ups.
 Local options will override this value as with package options.
 
 
-## Score Layout
-
-### System-by-System, Fullpage, and Inline Scores
+## System-by-System, Fullpage, and Inline Scores
 
 \lyOption{insert}{systems}
 Scores can be included in documents in three basic modes: system-by-system,
@@ -201,7 +199,7 @@ Insertion mode can be controlled with the \option{insert} option, whose three
 valid values are \option{systems} (default), \option{fullpage}, and
 \option{inline}.
 
-#### System-by-System
+### System-by-System
 
 \lyMargin{\texttt{insert=systems}}
 With this default option each score is compiled as a sequence of PDF files
@@ -230,7 +228,7 @@ after the score.  This may for example be used to wrap the example in
 environments, but usually it will make more sense to use the
 \option{musicexamples} integration (see [musicexamples](#musicexamples)).
 
-#### Fullpage
+### Fullpage
 
 \lyMargin{\texttt{insert=fullpage}}
 With \option{insert} set to `fullpage` the score is compiled to a single PDF
@@ -254,12 +252,14 @@ score.  By default this is set to `false`, so the default setting of these two
 options means that LilyPond does *not* print page numbers while
 \LaTeX\ continues to print headers and footers.
 
-#### Inline
+### Inline
 
 \lyMargin{\texttt{insert=inline}}
 This option, which is intended to insert musical notation inline in the
 continuous text, has not been implemented yet.
 
+
+## Score Layout
 
 ### `line-width`
 
