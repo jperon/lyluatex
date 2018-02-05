@@ -106,6 +106,7 @@ local function locate(file, includepaths)
         end
     end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
+    if not result and file:sub(-3) ~= '.ly' then return locate(file..'.ly') end
     return result
 end
 
@@ -705,7 +706,6 @@ end
 
 
 function ly.file(input_file, options)
-    if input_file:sub(-3) ~= '.ly' then input_file = input_file..'.ly' end
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
     input_file = locate(input_file, Score.includepaths)
