@@ -225,20 +225,24 @@ end
 
 function Score:check_failed_compilation()
     if not self:is_compiled() then
+        --[[ ensure the score gets recompiled next time --]]
+        self:delete_intermediate_files()
         if self.showfailed then
             tex.sprint(
                 [[
                 \begin{quote}
-                \fbox{Score failed to compile}
+                \fbox{Score failed to compile.
+                Re-run with 'debug' option to investigate.}
                 \end{quote}
 
                 ]]
             )
+            return false
         else
             err("\nScore failed to compile, please check LilyPond input.\n")
         end
-        --[[ ensure the score gets recompiled next time --]]
-        os.remove(self.output..'-systems.tex')
+    else
+        return true
     end
 end
 
@@ -572,7 +576,9 @@ function Score:run_lilypond()
 end
 
 function Score:write_tex(do_compile)
-    if do_compile then self:check_failed_compilation() end
+    if do_compile then
+        if not self:check_failed_compilation() then return end
+    end
     --[[ Now we know there is a proper score --]]
     if self.fullpagestyle == '' then
         if self['print-page-number'] then
