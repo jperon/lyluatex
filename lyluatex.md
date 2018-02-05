@@ -271,6 +271,28 @@ continuous text, has not been implemented yet.
 
 ### LilyPond Include Paths {#include-paths}
 
+The default reference point for \lyluatex's operations is the current `.tex`
+file.  It will look in its directory for referenced LilyPond input files, and
+include directives in LilyPond code will initially search there too.  As a
+specialty \lyluatex\ also finds all files that \LaTeX\ can see, i.\\,e. all files
+in the `\textsc{texmf}` tree.
+
+\lyOption{includepaths}{./}
+
+The \option{includepaths} option accepts a comma-separated list of paths that
+will serve as paths for both \lyluatex\ and LilyPond.  The given paths are
+passed along to LilyPond's include path so any \cmd{include} in a LilyPond file
+will start its relative searches on any of its paths.
+
+\lyluatex\ will use these paths when searching for external LilyPond files
+referenced by \cmd{lilypondfile}.  Absolute paths can of course be used, and
+relative pahts are interpreted in the following order:
+
+* relative to the current `.tex` file
+* relative
+
+**TODO:** What actually happens when an include path is given as relative? Will all lookups go through all the variants? Or is the assignment of a relative "inlcudepath" really clear?
+
 ### LilyPond Executable
 
 ### Temp Directory for scores
