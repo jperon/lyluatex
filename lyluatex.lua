@@ -474,7 +474,13 @@ function Score:run_lilypond()
     cmd = cmd.."-o "..self.output.." "..self.output..".ly"
     print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
     local exit = os.execute(cmd.." > "..self.output..".log 2>&1")
-    if exit ~= 0 then
+    if not exit then
+        err([[
+        LilyPond could not be started.
+        Please check that LuaLaTeX is
+        started with the --shell-escape option.
+        ]])
+    elseif exit ~= 0 then
         warn([[
         LilyPond reported a failed compilation,
         but this does not necessarily mean that
