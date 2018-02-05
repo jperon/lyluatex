@@ -238,9 +238,6 @@ function Score:check_properties()
     end
 end
 
-function Score:debug_lilypond()
-end
-
 function Score:delete_intermediate_files()
   local i = io.open(self.output..'-systems.count', 'r')
   if i then
