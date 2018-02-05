@@ -224,29 +224,33 @@ function Score:calc_properties()
 end
 
 function Score:check_failed_compilation()
-    local debug_msg
+    local debug_msg, doc_debug_msg
     if self.debug then
         debug_msg = string.format([[
-        Please check the log file
-        %s
-        and the generated LilyPond code
-        %s
+Please check the log file
+and the generated LilyPond code in
+%s
+%s
         ]],
         self.output..'.log',
         self.output..'.ly')
+        doc_debug_msg = [[
+A log file and a LilyPond file have been written.\\
+See log for details.]]
     else
         debug_msg = [[
-        If you need more information
-        than the above message,
-        please retry with option debug=true.
+If you need more information
+than the above message,
+please retry with option debug=true.
         ]]
+        doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
     end
     if self:is_compiled() then
         if self.lilypond_error then
             warn([[
-            LilyPond reported a failed compilation
-            but produced a score.
-            %s
+
+LilyPond reported a failed compilation but
+produced a score. %s
             ]],
             debug_msg
             )
@@ -256,24 +260,25 @@ function Score:check_failed_compilation()
         --[[ ensure the score gets recompiled next time --]]
         self:delete_intermediate_files()
         if self.showfailed then
-            tex.sprint(
-                [[
+            tex.sprint(string.format([[
                 \begin{quote}
-                \fbox{Score failed to compile.
-                Re-run with 'debug' option to investigate.}
+                \minibox[frame]{LilyPond failed to compile a score.\\
+                %s}
                 \end{quote}
 
-                ]]
-            )
+                ]],
+                doc_debug_msg))
             warn([[
-        LilyPond failed to compile the score.
+
+LilyPond failed to compile the score.
 %s
             ]],
             debug_msg)
             return false
         else
             err([[
-        Score failed to compile the score.
+
+LilyPond failed to compile the score.
 %s
             ]],
           debug_msg)
