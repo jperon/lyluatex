@@ -35,6 +35,7 @@ local LY_HEAD = [[
     <<<PAPER>>>
     two-sided = ##t
     line-width = <<<LINEWIDTH>>>\pt
+    <<<RAGGEDRIGHT>>>
     <<<FONTS>>>
 }
 
@@ -49,6 +50,13 @@ local function contains (table_var, value)
         if v == value then return true
         elseif v == 'false' and value == false then return true
         end
+    end
+end
+
+
+local function contains_key (table_var, key)
+    for k in pairs(table_var) do
+        if k == key then return true end
     end
 end
 
@@ -142,6 +150,24 @@ local function orderedpairs(t)
 end
 
 
+local function process_options(k, v)
+    if v == 'false' then v = false end
+    local _, i = k:find('^no')
+    if i then
+        local n = k:sub(i + 1)
+        if contains_key(OPTIONS, n) then
+            if v ~= nil and v ~= 'default' then
+                k = n
+                v = not v
+            else
+                return
+            end
+        end
+    end
+    return k, v
+end
+
+
 local function set_fullpagestyle(style)
     if style then
         tex.sprint('\\includepdfset{pagecommand=\\thispagestyle{'..style..'}}')
@@ -182,7 +208,7 @@ function Score:calc_properties()
     local value
     for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
         value = self[dimension]
-        if value == 'default' then
+        if value == '' then
             if dimension == 'line-width' then value = tex.dimen.linewidth..'sp'
             else value = tex.dimen[dimension]..'sp'
             end
@@ -197,18 +223,87 @@ function Score:calc_properties()
     self.output = self:output_filename()
 end
 
+function Score:check_failed_compilation()
+    local debug_msg, doc_debug_msg
+    if self.debug then
+        debug_msg = string.format([[
+Please check the log file
+and the generated LilyPond code in
+%s
+%s
+        ]],
+        self.output..'.log',
+        self.output..'.ly')
+        doc_debug_msg = [[
+A log file and a LilyPond file have been written.\\
+See log for details.]]
+    else
+        debug_msg = [[
+If you need more information
+than the above message,
+please retry with option debug=true.
+        ]]
+        doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
+    end
+    if self:is_compiled() then
+        if self.lilypond_error then
+            warn([[
+
+LilyPond reported a failed compilation but
+produced a score. %s
+            ]],
+            debug_msg
+            )
+        end
+        return true
+    else
+        --[[ ensure the score gets recompiled next time --]]
+        self:delete_intermediate_files()
+        if self.showfailed then
+            tex.sprint(string.format([[
+                \begin{quote}
+                \minibox[frame]{LilyPond failed to compile a score.\\
+                %s}
+                \end{quote}
+
+                ]],
+                doc_debug_msg))
+            warn([[
+
+LilyPond failed to compile the score.
+%s
+            ]],
+            debug_msg)
+            return false
+        else
+            err([[
+
+LilyPond failed to compile the score.
+%s
+            ]],
+          debug_msg)
+        end
+    end
+end
+
 function Score:check_properties()
+    local unexpected = false
     for k, _ in orderedpairs(OPTIONS) do
+        if self[k] == 'default' then
+            self[k] = OPTIONS[k][1] or nil
+            unexpected = not self[k]
+        end
         if not contains(OPTIONS[k], self[k]) and OPTIONS[k][2] then
             if type(OPTIONS[k][2]) == 'function' then OPTIONS[k][2](k, self[k])
-            else
-                err(
-                        [[Unexpected value "%s" for option %s:
-                        authorized values are "%s"
-                        ]],
-                        self[k], k, table.concat(OPTIONS[k], ', ')
-                    )
+            else unexpected = true
             end
+        end
+        if unexpected then
+            err(
+                'Unexpected value "%s" for option %s:\n'..
+                'authorized values are "%s"',
+                self[k], k, table.concat(OPTIONS[k], ', ')
+            )
         end
     end
 end
@@ -225,6 +320,11 @@ function Score:delete_intermediate_files()
       os.remove(self.output..'-systems.texi')
       os.remove(self.output..'.eps')
       os.remove(self.output..'.pdf')
+      if self.lilypond_error then
+          -- ensure score gets recompiled next time
+          os.remove(self.output..'-systems.tex')
+          os.remove(self.output..'.pdf')
+      end
   end
 end
 
@@ -270,24 +370,27 @@ function Score:fonts()
 end
 
 function Score:is_compiled()
-    if self.fullpage then
+    if self.insert == 'fullpage' then
         return lfs.isfile(self.output..'.pdf')
-    else
+    elseif self.insert == 'systems' then
         local f = io.open(self.output..'-systems.tex')
         if f then
             local head = f:read("*line")
             return not (head == "% eof")
         else return false
         end
+    else
+        err('"inline" insertion mode not implemented yet')
     end
 end
 
 function Score:header()
     local header = LY_HEAD:gsub(
-	[[<<<STAFFSIZE>>>]], self.staffsize):gsub(
-	[[<<<LINEWIDTH>>>]], self['line-width']):gsub(
-	[[<<<FONTS>>>]], self:fonts())
-    if self.fullpage then
+        [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
+        [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
+        [[<<<RAGGEDRIGHT>>>]], self:raggedright()):gsub(
+        [[<<<FONTS>>>]], self:fonts())
+    if self.insert == 'fullpage' then
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
         header = header:gsub(
@@ -307,12 +410,60 @@ function Score:header()
                 ppn, ly.PAGE, self:margins()
 	    )
         )
-    else
+    elseif self.insert == 'systems' then
 	header = header:gsub(
 	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
 	    [[<<<PAPER>>>]], [[indent = 0\mm]])
+    else
+        err('"inline" insertion mode not implemented yet')
     end
     return header
+end
+
+function Score:lilypond_cmd()
+    local input, mode
+    if self.debug then
+        local f = io.open(self.output..'.ly', 'w')
+        f:write(self.ly_code)
+        f:close()
+        input = self.output..".ly 2>&1"
+        mode = 'r'
+    else
+        input = '-s -'
+        mode = 'w'
+    end
+    local cmd = self.program.." "..
+        "-dno-point-and-click "..
+        "-djob-count=2 "..
+        "-dno-delete-intermediate-files "
+    if self.input_file then cmd = cmd.."-I "..lfs.currentdir()..'/'..self.input_file.." " end
+    for _, dir in ipairs(extract_includepaths(self.includepaths)) do
+        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
+    end
+    return cmd.."-o "..self.output.." "..input, mode
+end
+
+function Score:lilypond_version()
+    print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
+    local p = io.popen(self.program..' --version', 'r')
+    if not p then
+      err([[
+      LilyPond could not be started.
+      Please check that LuaLaTeX is
+      started with the --shell-escape option.
+      ]])
+    end
+    local result = p:read()
+    p:close()
+    if result and result:match('GNU LilyPond') then
+        print(result)
+    else
+        err([[
+        LilyPond could not be started.
+        Please check that 'program' points
+        to a valid LilyPond executable
+        ]])
+    end
 end
 
 function Score:margins()
@@ -380,24 +531,6 @@ function Score:margins()
     end
 end
 
-function Score:protrusion()
-    --[[
-      Determine the amount of space used to the left of the staff lines
-      and generate a horizontal offset command.
-    --]]
-    local protrusion = ''
-    local f = io.open(self.output..'.eps')
-    --[[ The information we need is in the third line --]]
-    f:read(); f:read()
-    local bb_line = f:read()
-    f:close()
-    local cropped = bb_line:match('%d+')
-    if cropped ~= 0 then
-        protrusion = string.format('\\hspace*{-%spt}', cropped)
-    end
-    return protrusion
-end
-
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
@@ -421,38 +554,52 @@ function Score:process()
     self:write_tex(do_compile)
 end
 
+function Score:protrusion()
+    --[[
+      Determine the amount of space used to the left of the staff lines
+      and generate a horizontal offset command.
+    --]]
+    local protrusion = ''
+    local f = io.open(self.output..'.eps')
+    --[[ The information we need is in the third line --]]
+    f:read(); f:read()
+    local bb_line = f:read()
+    f:close()
+    local cropped = bb_line:match('%d+')
+    if cropped ~= 0 then
+        protrusion = string.format('\\hspace*{-%spt}', cropped)
+    end
+    return protrusion
+end
+
+function Score:raggedright()
+    if self['ragged-right'] == 'default' then return ''
+    elseif self['ragged-right'] then return 'ragged-right = ##t'
+    else return 'ragged-right = ##f'
+    end
+end
+
 function Score:run_lilypond()
     mkdirs(dirname(self.output))
-    local cmd = self.program.." "..
-        "-dno-point-and-click "..
-        "-djob-count=2 "..
-        "-dno-delete-intermediate-files "
-    if self.input_file then cmd = cmd.."-I "..lfs.currentdir()..'/'..self.input_file.." " end
-    for _, dir in ipairs(extract_includepaths(self.includepaths)) do
-        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
+    self:lilypond_version()
+    local p = io.popen(self:lilypond_cmd())
+    local debug_msg
+    if self.debug then
+        local f = io.open(self.output..".log", 'w')
+        f:write(p:read('*a'))
+        f:close()
+    else
+        p:write(self.ly_code)
     end
-    cmd = cmd.."-o "..self.output.." -"
-    local p = io.popen(cmd, 'w')
-    p:write(self.ly_code)
-    p:close()
+    self.lilypond_error = not p:close()
 end
 
 function Score:write_tex(do_compile)
-    if not self:is_compiled() then
-      tex.sprint(
-          [[
-          \begin{quote}
-          \fbox{Score failed to compile}
-          \end{quote}
-
-          ]]
-      )
-        err("\nScore failed to compile, please check LilyPond input.\n")
-        --[[ ensure the score gets recompiled next time --]]
-        os.remove(self.output..'-systems.tex')
+    if do_compile then
+        if not self:check_failed_compilation() then return end
     end
     --[[ Now we know there is a proper score --]]
-    if self.fullpagestyle == 'default' then
+    if self.fullpagestyle == '' then
         if self['print-page-number'] then
             set_fullpagestyle('empty')
         else set_fullpagestyle(nil)
@@ -550,11 +697,11 @@ end
 
 
 function ly.file(input_file, options)
-    options = ly.set_local_options(options)
-    local file = input_file
+    if input_file:sub(-3) ~= '.ly' then input_file = input_file..'.ly' end
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
-    input_file = locate(file, Score.includepaths)
+    input_file = locate(input_file, Score.includepaths)
+    options = ly.set_local_options(options)
     if not input_file then err("File %s.ly doesn't exist.", file) end
     local i = io.open(input_file, 'r')
     ly.score = Score:new(i:read('*a'), options, input_file)
@@ -581,8 +728,22 @@ function ly.get_option(opt)
 end
 
 
+function ly.is_dim (dim, value)
+    if value == '' then return true end
+    local n, u = value:match('%d*%.?%d*'), value:match('%a+')
+    if tonumber(value) or n and contains(TEX_UNITS, u) then return true
+    else err(
+        [[Unexpected value "%s" for dimension %s:
+        should be either a number (for example "12"), or a number with unit, without space ("12pt")
+        ]],
+        value, dim
+    )
+    end
+end
+
+
 function ly.newpage_if_fullpage()
-    if ly.score.fullpage then tex.sprint([[\newpage]]) end
+    if ly.score.insert == 'fullpage' then tex.sprint([[\newpage]]) end
 end
 
 
@@ -593,24 +754,12 @@ function ly.set_local_options(opts)
         a, b = opts:find('%w[^=]+=', d)
         c, d = opts:find('{{{%w*}}}', d)
         if not d then break end
-        local k, v = opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
-        if v == 'false' then v = false end
-        if v ~= '' then options[k] = v end
+        local k, v = process_options(
+            opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
+        )
+        if k then options[k] = v end
     end
     return options
-end
-
-
-function ly.is_dim (dim, value)
-    local n, u = value:match('%d*%.?%d*'), value:match('%a+')
-    if tonumber(value) or n and contains(TEX_UNITS, u) then return true
-    else err(
-        [[Unexpected value "%s" for dimension %s:
-        should be either a number (for example "12"), or a number with unit, without space ("12pt")
-        ]],
-        value, dim
-    )
-    end
 end
 
 
@@ -628,9 +777,9 @@ function ly.set_default_options()
 end
 
 
-function ly.set_property(name, value)
-    if value == 'false' then value = false end
-    Score[name] = value
+function ly.set_property(k, v)
+    k, v = process_options(k, v)
+    if k then Score[k] = v end
 end
 
 

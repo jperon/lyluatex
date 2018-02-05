@@ -1,0 +1,17 @@
+\documentclass{scrartcl}
+% Example file producing LilyPond code that doesn't produce a score
+% Try setting debug to false and true
+\usepackage[%
+debug=true,%
+showfailed=true]{lyluatex}
+
+\begin{document}
+
+The following block of LilyPond code will cause LilyPond to error out and
+produce no score file.  Setting the \texttt{debug} and \texttt{showfailed}
+options controls the behaviour.
+
+\begin{lilypond}
+  some meaningless words
+\end{lilypond}
+\end{document}

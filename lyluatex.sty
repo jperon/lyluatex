@@ -5,6 +5,7 @@
 \RequirePackage{luaotfload}
 \RequirePackage{kvoptions}
 \RequirePackage{graphicx}
+\RequirePackage{minibox}
 \RequirePackage{keycommand}
 \RequirePackage{environ}
 \RequirePackage{currfile}
@@ -18,22 +19,25 @@
 \directlua{
   ly = require(kpse.find_file("lyluatex.lua"))
   ly.declare_package_options({
-    ['cleantmp'] = {'false', 'true'},
-    ['current-font-as-main'] = {'true', 'false'},
+    ['cleantmp'] = {'false', 'true', ''},
+    ['current-font-as-main'] = {'true', 'false', ''},
+    ['debug'] = {'false', 'true', ''},
     ['extra-bottom-margin'] = {'0', ly.is_dim},
     ['extra-top-margin'] = {'0', ly.is_dim},
-    ['fullpage'] = {'false', 'true'},
     ['fullpagealign'] = {'staffline', 'crop'},
-    ['fullpagestyle'] = {'default'},
+    ['fullpagestyle'] = {''},
     ['includepaths'] = {'./'},
+    ['insert'] = {'systems', 'fullpage', 'inline'},
     ['labelprefix'] = {'ly_'},
-    ['line-width'] = {'default', ly.is_dim},
-    ['paperwidth'] = {'default', ly.is_dim},
-    ['paperheight'] = {'default', ly.is_dim},
-    ['pass-fonts'] = {'true', 'false'},
-    ['print-page-number'] = {'false', 'true'},
+    ['line-width'] = {'', ly.is_dim},
+    ['paperwidth'] = {'', ly.is_dim},
+    ['paperheight'] = {'', ly.is_dim},
+    ['pass-fonts'] = {'true', 'false', ''},
+    ['print-page-number'] = {'false', 'true', ''},
     ['program'] = {'lilypond'},
-    ['showfailed'] = {'true', 'false'},
+    ['ragged-right'] = {'default', 'true', 'false', ''},
+    ['noragged-right'] = {'default'},
+    ['showfailed'] = {'false', 'true' ,''},
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
   })
