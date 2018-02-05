@@ -276,6 +276,11 @@ function Score:delete_intermediate_files()
       os.remove(self.output..'-systems.texi')
       os.remove(self.output..'.eps')
       os.remove(self.output..'.pdf')
+      if self.lilypond_error then
+          -- ensure score gets recompiled next time
+          os.remove(self.output..'-systems.tex')
+          os.remove(self.output..'.pdf')
+      end
   end
 end
 
@@ -369,6 +374,52 @@ function Score:header()
         err('"inline" insertion mode not implemented yet')
     end
     return header
+end
+
+function Score:lilypond_cmd()
+    local input, mode
+    if self.debug then
+        local f = io.open(self.output..'.ly', 'w')
+        f:write(self.ly_code)
+        f:close()
+        input = self.output..".ly 2>&1"
+        mode = 'r'
+    else
+        input = '-s -'
+        mode = 'w'
+    end
+    local cmd = self.program.." "..
+        "-dno-point-and-click "..
+        "-djob-count=2 "..
+        "-dno-delete-intermediate-files "
+    if self.input_file then cmd = cmd.."-I "..lfs.currentdir()..'/'..self.input_file.." " end
+    for _, dir in ipairs(extract_includepaths(self.includepaths)) do
+        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
+    end
+    return cmd.."-o "..self.output.." "..input, mode
+end
+
+function Score:lilypond_version()
+    print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
+    local p = io.popen(self.program..' --version', 'r')
+    if not p then
+      err([[
+      LilyPond could not be started.
+      Please check that LuaLaTeX is
+      started with the --shell-escape option.
+      ]])
+    end
+    local result = p:read()
+    p:close()
+    if result and result:match('GNU LilyPond') then
+        print(result)
+    else
+        err([[
+        LilyPond could not be started.
+        Please check that 'program' points
+        to a valid LilyPond executable
+        ]])
+    end
 end
 
 function Score:margins()
@@ -486,18 +537,38 @@ end
 
 function Score:run_lilypond()
     mkdirs(dirname(self.output))
-    local cmd = self.program.." "..
-        "-dno-point-and-click "..
-        "-djob-count=2 "..
-        "-dno-delete-intermediate-files "
-    if self.input_file then cmd = cmd.."-I "..lfs.currentdir()..'/'..self.input_file.." " end
-    for _, dir in ipairs(extract_includepaths(self.includepaths)) do
-        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
+    self:lilypond_version()
+    local p = io.popen(self:lilypond_cmd())
+    if self.debug then
+        local f = io.open(self.output..".log", 'w')
+        f:write(p:read('*a'))
+        f:close()
+        self.lilypond_error = not p:close()
+        if self.lilypond_error then
+            warn([[
+            LilyPond reported a failed compilation,
+            but this does not necessarily mean that
+            no score has been produced.
+            Please check the log file
+            %s
+            and the generated LilyPond code
+            %s
+            ]],
+            self.output..'.log',
+            self.output..'.ly')
+        end
+    else
+        p:write(self.ly_code)
+        self.lilypond_error = not p:close()
+        if self.lilypond_error then
+            warn([[
+            LilyPond reported a failed compilation;
+            if you need more information
+            than the above message,
+            please retry with option debug=true.
+            ]])
+        end
     end
-    cmd = cmd.."-o "..self.output.." -"
-    local p = io.popen(cmd, 'w')
-    p:write(self.ly_code)
-    p:close()
 end
 
 function Score:write_tex(do_compile)
