@@ -238,6 +238,15 @@ function Score:check_properties()
     end
 end
 
+function Score:debug_lilypond()
+    if self['debug-lilypond'] then
+        local name = self.output..'.ly'
+        local f = io.open(self.output..'.ly', 'w')
+        f:write(self.ly_code)
+        f:close()
+    end
+end
+
 function Score:delete_intermediate_files()
   local i = io.open(self.output..'-systems.count', 'r')
   if i then
@@ -250,6 +259,9 @@ function Score:delete_intermediate_files()
       os.remove(self.output..'-systems.texi')
       os.remove(self.output..'.eps')
       os.remove(self.output..'.pdf')
+      if not self['debug-lilypond'] then
+          os.remove(self.output..'.ly')
+      end
   end
 end
 
@@ -427,6 +439,7 @@ function Score:process()
     local do_compile = not self:is_compiled()
     if do_compile then
         self.ly_code = self:header()..self.ly_code
+        self:debug_lilypond()
         self:run_lilypond()
     end
     self:write_tex(do_compile)
