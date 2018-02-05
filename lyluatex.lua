@@ -372,6 +372,29 @@ function Score:lilypond_cmd()
     return cmd.."-o "..self.output.." "..input, mode
 end
 
+function Score:lilypond_version()
+    print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
+    local p = io.popen(self.program..' --version', 'r')
+    if not p then
+      err([[
+      LilyPond could not be started.
+      Please check that LuaLaTeX is
+      started with the --shell-escape option.
+      ]])
+    end
+    local result = p:read()
+    p:close()
+    if result and result:match('GNU LilyPond') then
+        print(result)
+    else
+        err([[
+        LilyPond could not be started.
+        Please check that 'program' points
+        to a valid LilyPond executable
+        ]])
+    end
+end
+
 function Score:margins()
     local tex_top = self['extra-top-margin'] + convert_unit((
         tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
@@ -480,15 +503,8 @@ end
 
 function Score:run_lilypond()
     mkdirs(dirname(self.output))
-    print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
+    self:lilypond_version()
     local p = io.popen(self:lilypond_cmd())
-    if not p then
-        err([[
-        LilyPond could not be started.
-        Please check that LuaLaTeX is
-        started with the --shell-escape option.
-        ]])
-    end
     if self.debug then
         local f = io.open(self.output..".log", 'w')
         f:write(p:read('*a'))
