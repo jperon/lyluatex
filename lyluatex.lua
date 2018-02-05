@@ -239,12 +239,9 @@ function Score:check_properties()
 end
 
 function Score:debug_lilypond()
-    if self['debug-lilypond'] then
-        local name = self.output..'.ly'
-        local f = io.open(self.output..'.ly', 'w')
-        f:write(self.ly_code)
-        f:close()
-    end
+    local f = io.open(self.output..'.ly', 'w')
+    f:write(self.ly_code)
+    f:close()
 end
 
 function Score:delete_intermediate_files()
@@ -260,6 +257,7 @@ function Score:delete_intermediate_files()
       os.remove(self.output..'.eps')
       os.remove(self.output..'.pdf')
       if not self['debug-lilypond'] then
+          os.remove(self.output..'.log')
           os.remove(self.output..'.ly')
       end
   end
@@ -473,10 +471,23 @@ function Score:run_lilypond()
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
         cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
     end
-    cmd = cmd.."-o "..self.output.." -"
-    local p = io.popen(cmd, 'w')
-    p:write(self.ly_code)
-    p:close()
+    cmd = cmd.."-o "..self.output.." "..self.output..".ly"
+    print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
+    local exit = os.execute(cmd.." > "..self.output..".log 2>&1")
+    if exit ~= 0 then
+        warn([[
+        LilyPond reported a failed compilation,
+        but this does not necessarily mean that
+        no score has been produced.
+        Please check the log file
+        %s
+        and the generated LilyPond code
+        %s
+        ]],
+        self.output..'.log',
+        self.output..'.ly')
+        self['debug-lilypond'] = true
+    end
 end
 
 function Score:write_tex(do_compile)
