@@ -278,8 +278,34 @@ continuous text, has not been implemented yet.
 * tmpdir
 * cleantmp
 
-### Handling Failed LilyPond Compilations
+### Handling LilyPond Failures{#lilypond-failures}
 
+Compiling a score with LilyPond can produce several types of problems which will
+be detected and handled (if possible) by \lyluatex.  The most basic problem is
+when LilyPond can't be started at all.  \lyluatex\ will correctly determine and
+report an error if \LuaLaTeX\ has been started without the
+\option{--shell-escape} option or if the \option{program} option doesn't point
+to a valid LilyPond executable.
+
+Two other situations that are correctly recognized are when LilyPond *reports* a
+compilation failure but still produces a (potentially useful) score, and when
+LilyPond actually fails to engrave a score. How this is handled is controlled by
+the \option{debug} and \option{showfailed} options.
+
+\lyOption{debug}{false}
+If LilyPond reports an error and \option{debug} is set to `true` then
+\lyluatex\ will save both the generated LilyPond code and the complete log
+output to a `.ly` and a `.log` file in the temporary directory. The file names
+are printed to the console for easy reference.  Otherwise only a general warning
+will be issued.  This will happen regardless of whether a score file is produced
+or not.
+
+\lyOption{showfailed}{false}
+
+If LilyPond failed to produce a score and \option{showfailed} is set to `false`
+then the \LaTeX\ compilation will stop with an error.  If on the other hand
+\option{showfailed} is set to `true` only a warning is issued and a box with an
+informative text is typeset into the resulting document.
 
 ## Font Handling
 
