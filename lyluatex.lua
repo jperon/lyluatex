@@ -35,6 +35,7 @@ local LY_HEAD = [[
     <<<PAPER>>>
     two-sided = ##t
     line-width = <<<LINEWIDTH>>>\pt
+    <<<RAGGEDRIGHT>>>
     <<<FONTS>>>
 }
 
@@ -49,6 +50,13 @@ local function contains (table_var, value)
         if v == value then return true
         elseif v == 'false' and value == false then return true
         end
+    end
+end
+
+
+local function contains_key (table_var, key)
+    for k in pairs(table_var) do
+        if k == key then return true end
     end
 end
 
@@ -139,6 +147,24 @@ local function __orderednext(t, state)
 end
 local function orderedpairs(t)
     return __orderednext, t, nil
+end
+
+
+local function process_options(k, v)
+    if v == 'false' then v = false end
+    local _, i = k:find('^no')
+    if i then
+        local n = k:sub(i + 1)
+        if contains_key(OPTIONS, n) then
+            if v ~= nil and v ~= 'default' then
+                k = n
+                v = not v
+            else
+                return
+            end
+        end
+    end
+    return k, v
 end
 
 
@@ -311,9 +337,10 @@ end
 
 function Score:header()
     local header = LY_HEAD:gsub(
-	[[<<<STAFFSIZE>>>]], self.staffsize):gsub(
-	[[<<<LINEWIDTH>>>]], self['line-width']):gsub(
-	[[<<<FONTS>>>]], self:fonts())
+        [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
+        [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
+        [[<<<RAGGEDRIGHT>>>]], self:raggedright()):gsub(
+        [[<<<FONTS>>>]], self:fonts())
     if self.insert == 'fullpage' then
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
@@ -448,6 +475,13 @@ function Score:protrusion()
         protrusion = string.format('\\hspace*{-%spt}', cropped)
     end
     return protrusion
+end
+
+function Score:raggedright()
+    if self['ragged-right'] == 'default' then return ''
+    elseif self['ragged-right'] then return 'ragged-right = ##t'
+    else return 'ragged-right = ##f'
+    end
 end
 
 function Score:run_lilypond()
@@ -624,9 +658,10 @@ function ly.set_local_options(opts)
         a, b = opts:find('%w[^=]+=', d)
         c, d = opts:find('{{{%w*}}}', d)
         if not d then break end
-        local k, v = opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
-        if v == 'false' then v = false end
-        options[k] = v
+        local k, v = process_options(
+            opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
+        )
+        if k then options[k] = v end
     end
     return options
 end
@@ -646,9 +681,9 @@ function ly.set_default_options()
 end
 
 
-function ly.set_property(name, value)
-    if value == 'false' then value = false end
-    Score[name] = value
+function ly.set_property(k, v)
+    k, v = process_options(k, v)
+    if k then Score[k] = v end
 end
 
 
