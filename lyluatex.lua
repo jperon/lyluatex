@@ -34,6 +34,7 @@ local LY_HEAD = [[
     <<<PAPER>>>
     two-sided = ##t
     line-width = <<<LINEWIDTH>>>\pt
+    <<<INDENT>>>
     <<<RAGGEDRIGHT>>>
     <<<FONTS>>>
 }
@@ -75,6 +76,7 @@ end
 
 
 local function convert_unit(value)
+    if not value then return 0 end
     value = value:gsub([[\]], '')
     return tonumber(value) or tex.sp(value) / tex.sp("1pt")
 end
@@ -167,16 +169,12 @@ end
 
 local function process_options(k, v)
     if v == 'false' then v = false end
-    local _, i = k:find('^no')
-    if i then
-        local n = k:sub(i + 1)
-        if contains_key(OPTIONS, n) then
-            if v ~= nil and v ~= 'default' then
-                k = n
-                v = not v
-            else
-                return
-            end
+    if ly.is_neg(k) then
+        if v ~= nil and v ~= 'default' then
+            k = k:gsub('^no(.*)', '%1')
+            v = not v
+        else
+            return
         end
     end
     return k, v
@@ -473,7 +471,8 @@ function Score:header()
     local header = LY_HEAD:gsub(
         [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
-        [[<<<RAGGEDRIGHT>>>]], self:raggedright()):gsub(
+        [[<<<INDENT>>>]], self:ly_indent()):gsub(
+        [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
         [[<<<FONTS>>>]], self:fonts()):gsub(
         [[<<<STAFFPROPS>>>]], self.staff_props)
     if self.insert == 'fullpage' then
@@ -556,6 +555,20 @@ function Score:lilypond_version()
         Please check that 'program' points
         to a valid LilyPond executable
         ]])
+    end
+end
+
+function Score:ly_indent()
+    if self.indent == '' then return ''
+    else
+        return [[indent = ]]..convert_unit(self.indent)..[[\pt]]
+    end
+end
+
+function Score:ly_raggedright()
+    if self['ragged-right'] == 'default' then return ''
+    elseif self['ragged-right'] then return 'ragged-right = ##t'
+    else return 'ragged-right = ##f'
     end
 end
 
@@ -663,13 +676,6 @@ function Score:protrusion()
         protrusion = string.format('\\hspace*{-%spt}', cropped)
     end
     return protrusion
-end
-
-function Score:raggedright()
-    if self['ragged-right'] == 'default' then return ''
-    elseif self['ragged-right'] then return 'ragged-right = ##t'
-    else return 'ragged-right = ##f'
-    end
 end
 
 function Score:run_lilypond()
@@ -827,16 +833,21 @@ end
 
 
 function ly.is_dim (k, v)
-    if v == '' then return true end
+    if v == '' or v == false then return true end
     local n, u = v:match('%d*%.?%d*'), v:match('%a+')
-    if tonumber(v) or n and contains(TEX_UNITS, u) then return true
-    else err(
+    if tonumber(v) or n and contains(TEX_UNITS, u) then return true end
+    err(
         [[Unexpected value "%s" for dimension %s:
         should be either a number (for example "12"), or a number with unit, without space ("12pt")
         ]],
         v, k
     )
-    end
+end
+
+
+function ly.is_neg(k, _)
+    local _, i = k:find('^no')
+    return i and contains_key(OPTIONS, k:sub(i + 1))
 end
 
 
