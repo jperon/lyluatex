@@ -329,11 +329,12 @@ informative text is typeset into the resulting document.
 
 ## Font Handling
 
-\lyOption{pass-fonts}{true}
-User the text document's fonts in the LilyPond score.
+\lyOption{pass-fonts}{false}
+Use the text document's fonts in the LilyPond score.
 
 \lyOption{current-font-as-main}{true}
-Use the font family *currently* used for typesetting as LilyPond's main font.
+Use the font family *currently* used for typesetting as LilyPond's main font
+if \option{pass-fonts=false}.
 
 The choice of fonts is arguably the most obvious factor in the appearance of any
 document, be it text or music.  In text documents with interspersed scores the
@@ -342,6 +343,7 @@ handle this automatically by passing the used text fonts to LilyPond, so the
 user doesn't have to worry about keeping the scores' fonts in sync with the text
 document.
 
+The following steps are taken when \option{pass-fonts} is `true`:
 Before generating any score \lyluatex\ retrieves the currently defined fonts for
 \cmd{rmfamily}, \cmd{sffamily}, and \cmd{ttfamily}, as well as the font that is
 currently in use for typesetting.  By default the *current* font is used as the
@@ -361,11 +363,8 @@ input this takes precedence over the automatically transferred fonts.
 \lyIssue{Note:} LilyPond handles font selection differently from \LuaTeX and can
 only look up fonts that are installed as system fonts. For any font that is
 installed in the `texmf` tree LilyPond will use an arbitrary fallback font.
-However, it doesn't matter whether the fonts are selected by their family or
-file names.
-
-Scores that differ *only* by their fonts are considered different by
-\lyluatex\ and therefore recompiled correctly.
+Therefore \option{pass-fonts} defaults to `false`. However, it doesn't matter
+whether the fonts are selected by their family or file names.
 
 # Cooperations
 
