@@ -1,8 +1,7 @@
--- luacheck: ignore ly self warn info log luatexbase internalversion font fonts tex kpse status
+-- luacheck: ignore ly log self luatexbase internalversion font fonts tex kpse status
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
-    greinternalversion = internalversion,
     date               = "2018/02/02",
     description        = "Module lyluatex.",
     author             = "The Gregorio Project  − Jacques Peron <cataclop@hotmail.com>",
@@ -44,9 +43,20 @@ local LY_HEAD = [[
 
 %%Follows original score
 ]]
+local Score = {}
 
 
 --[[ ========================== Helper functions ========================== ]]
+-- dirty fix as info doesn't work as expected
+local oldinfo = info
+function info(...)
+    print('\n(lyluatex)', string.format(...))
+    oldinfo(...)
+end
+-- debug acts as info if [debug] is specified
+local function debug(...)
+    if Score.debug then info(...) end
+end
 
 local function contains (table_var, value)
     for _, v in pairs(table_var) do
@@ -65,6 +75,7 @@ end
 
 
 local function convert_unit(value)
+    value = value:gsub([[\]], '')
     return tonumber(value) or tex.sp(value) / tex.sp("1pt")
 end
 
@@ -193,9 +204,7 @@ end
 
 --[[ =============================== Classes =============================== ]]
 
-local Score = {}
 -- Score class
-
 function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
@@ -254,14 +263,12 @@ function Score:calc_properties()
     self.l_timesig,
     self.l_staff
     )
-
     -- relative
     if self.relative == '' then
         self.relative = 1
     else
         self.relative = tonumber(self.relative)
     end
-
     -- staffsize
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
@@ -519,14 +526,12 @@ function Score:lilypond_cmd()
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
         cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
     end
-    print("")
-    print("Generated command")
-    print(cmd)
-    return cmd.."-o "..self.output.." "..input, mode
+    cmd = cmd.."-o "..self.output.." "..input
+    debug("Command:\n"..cmd)
+    return cmd, mode
 end
 
 function Score:lilypond_version()
-    print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
     local p = io.popen(self.program..' --version', 'r')
     if not p then
       err([[
@@ -538,7 +543,11 @@ function Score:lilypond_version()
     local result = p:read()
     p:close()
     if result and result:match('GNU LilyPond') then
-        print(result)
+        info(
+            "Compiling score %s with LilyPond executable '%s'.",
+            self.output, self.program
+        )
+        debug(result)
     else
         err([[
         LilyPond could not be started.
@@ -756,12 +765,10 @@ end
 
 
 function ly.conclusion_text()
-    print(
-        string.format('\n'..[[
-            Output written on %s.pdf.
-            Transcript written on %s.log.]],
-            tex.jobname, tex.jobname
-        )
+    info([[
+        Output written on %s.pdf.
+        Transcript written on %s.log.]],
+        tex.jobname, tex.jobname
     )
 end
 
@@ -844,9 +851,10 @@ end
 function ly.set_local_options(opts)
     local options = {}
     local a, b, c, d
+    opts = opts:gsub(' }}}', '}}}')
     while true do
         a, b = opts:find('%w[^=]+=', d)
-        c, d = opts:find('{{{%w*}}}', d)
+        c, d = opts:find('{{{[^=]*}}}', d)
         if not d then break end
         local k, v = process_options(
             opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
