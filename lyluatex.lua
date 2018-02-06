@@ -106,6 +106,7 @@ local function locate(file, includepaths)
         end
     end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
+    if not result and file:sub(-3) ~= '.ly' then return locate(file..'.ly', includepaths) end
     return result
 end
 
@@ -202,9 +203,17 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:calc_properties()
+    -- relative
+    if self.relative == '' then
+        self.relative = 1
+    else
+        self.relative = tonumber(self.relative)
+    end
+    -- staffsize
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     self.staffsize = staffsize
+    -- dimensions that can be given by LaTeX
     local value
     for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
         value = self[dimension]
@@ -215,11 +224,14 @@ function Score:calc_properties()
         end
         self[dimension] = convert_unit(value)
     end
+    -- dimensions specific to LilyPond
     self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
     self['extra-bottom-margin'] = convert_unit(self['extra-bottom-margin'])
+    -- score fonts
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
     end
+    -- temporary file name
     self.output = self:output_filename()
 end
 
@@ -263,7 +275,7 @@ produced a score. %s
             tex.sprint(string.format([[
                 \begin{quote}
                 \minibox[frame]{LilyPond failed to compile a score.\\
-                %s}
+%s}
                 \end{quote}
 
                 ]],
@@ -306,6 +318,19 @@ function Score:check_properties()
             )
         end
     end
+end
+
+function Score:content()
+    local n = ''
+    if self.relative then
+        if self.relative < 0 then
+            for _ = -1, self.relative, -1 do n = n..',' end
+        elseif self.relative > 0 then
+            for _ = 1, self.relative do n = n.."'" end
+        end
+        return string.format([[\relative c%s {%s}]], n, self.ly_code)
+    end
+    return self.ly_code
 end
 
 function Score:delete_intermediate_files()
@@ -548,7 +573,7 @@ function Score:process()
     self:calc_properties()
     local do_compile = not self:is_compiled()
     if do_compile then
-        self.ly_code = self:header()..self.ly_code
+        self.ly_code = self:header()..self:content()
         self:run_lilypond()
     end
     self:write_tex(do_compile)
@@ -686,10 +711,18 @@ end
 
 function ly.declare_package_options(options)
     OPTIONS = options
+    local exopt = ''
     for k, v in pairs(options) do
-        tex.sprint(string.format([[\DeclareStringOption[%s]{%s}%%]], v[1], k))
+        tex.sprint(string.format(
+            [[\DeclareOptionX{%s}{\directlua{
+                ly.set_property('%s', '\luatexluaescapestring{#1}')
+                }}%%
+            ]],
+            k, k))
+            exopt = exopt..k..'='..v[1]..','
     end
-    tex.sprint([[\ProcessKeyvalOptions*]])
+    tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]])
+    tex.sprint([[\ProcessOptionsX]])
     mkdirs(options.tmpdir[1])
     FILELIST = options.tmpdir[1]..'/'..splitext(status.log_name, 'log')..'.list'
     os.remove(FILELIST)
@@ -697,12 +730,11 @@ end
 
 
 function ly.file(input_file, options)
-    if input_file:sub(-3) ~= '.ly' then input_file = input_file..'.ly' end
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
     input_file = locate(input_file, Score.includepaths)
     options = ly.set_local_options(options)
-    if not input_file then err("File %s.ly doesn't exist.", file) end
+    if not input_file then err("File %s.ly doesn't exist.", input_file) end
     local i = io.open(input_file, 'r')
     ly.score = Score:new(i:read('*a'), options, input_file)
     i:close()
@@ -728,17 +760,22 @@ function ly.get_option(opt)
 end
 
 
-function ly.is_dim (dim, value)
-    if value == '' then return true end
-    local n, u = value:match('%d*%.?%d*'), value:match('%a+')
-    if tonumber(value) or n and contains(TEX_UNITS, u) then return true
+function ly.is_dim (k, v)
+    if v == '' then return true end
+    local n, u = v:match('%d*%.?%d*'), v:match('%a+')
+    if tonumber(v) or n and contains(TEX_UNITS, u) then return true
     else err(
         [[Unexpected value "%s" for dimension %s:
         should be either a number (for example "12"), or a number with unit, without space ("12pt")
         ]],
-        value, dim
+        v, k
     )
     end
+end
+
+
+function ly.is_num(_, v)
+    return v == '' or tonumber(v)
 end
 
 
@@ -760,20 +797,6 @@ function ly.set_local_options(opts)
         if k then options[k] = v end
     end
     return options
-end
-
-
-function ly.set_default_options()
-    for k, _ in pairs(OPTIONS) do
-        tex.sprint(
-            string.format(
-                [[
-                \directlua{
-                  ly.set_property('%s', '\luatexluaescapestring{\lyluatex@%s}')
-                }]], k, k
-            )
-        )
-    end
 end
 
 
