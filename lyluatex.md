@@ -295,6 +295,18 @@ process.
 
 ### LilyPond Executable
 
+By default \lyluatex\ will invoke LilyPond through the `lilypond` command, which
+will work in many situations for default installations. However, in order to
+accomodate specific installations (Windows?) or to use specific versions of
+LilyPond the command to be used can be specified with the
+
+\lyOption{program}{lilypond}
+
+option.  If given this must point to a valid LilyPond *executable* (and not,
+say, to the installation directory).  If LilyPond can be started the version
+string will be printed to the console for every score, otherwise an error is
+raised, as is described in [Handling LilyPond Failures](#lilypond-failures).
+
 ### Temp Directory for scores
 
 * tmpdir
