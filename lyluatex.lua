@@ -264,7 +264,7 @@ produced a score. %s
             tex.sprint(string.format([[
                 \begin{quote}
                 \minibox[frame]{LilyPond failed to compile a score.\\
-                %s}
+%s}
                 \end{quote}
 
                 ]],
