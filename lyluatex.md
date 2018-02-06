@@ -140,12 +140,10 @@ to clean the temporary directory only makes sense as a package option for
 example, or you can't reasonably apply a label other than locally to a single
 score.
 
-All options are `key==value` options, and there is no support for empty options
-where the presence of the keyword is equivalent to setting the option to `true`.
-Options that are *not* set explicitly will be set to their default values, which
-are documented with each option.
-
-
+All options are `key=value` options, and options that are *not* set explicitly
+will use their default value which is documented with each option.  Boolean
+options don't have to be set to `true` explicitly, using the option alone will
+do that as well, for example: `[debug=true]` is equivalent to `[debug]`.
 
 \lyMargin{Package Options\index{Package Options}}
 Options can be set globally through package options, which are used with
