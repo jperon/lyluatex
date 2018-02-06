@@ -259,15 +259,55 @@ continuous text, has not been implemented yet.
 
 ## Score Layout
 
-### `line-width`
+### Dimensions
 
-### `staffsize`
+#### General
+
+\lyOption{line-width}{default}
+
+\lyOption{staffsize}{default}
+
+\lyOption{ragged-right}{false}
+
+#### Fullpage
+
+\lyOption{papersize}{?}
+Not implemented yet
+
+\lyOption{paperwidth}{}
+
+\lyOption{paperheight}{}
+
 
 ### Alignment {#alignment}
 
+#### Protrusion
+
+#### Vertical Alignment of Fullpage Scores
+
+\lyOption{extra-bottom-margin}{0}
+
+\lyOption{extra-top-margin}{0}
+
+\lyOption{fullpagealign}{staffline}
+
 ## Score Options
 
+### Staff Display
+
+\lyOption{noclef}{false}
+\lyOption{nostaff}{false}
+\lyOption{nostaffsymbol}{false}
+\lyOption{notime}{false}
+\lyOption{notiming}{false}
+\lyOption{notimesig}{false}
+
+
 ### Labels {#labels}
+
+\lyOption{label}{}
+
+\lyOption{labelprefix}{ly\_}
 
 ## Miscellaneous Options
 
