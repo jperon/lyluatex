@@ -265,6 +265,10 @@ continuous text, has not been implemented yet.
 
 ### Alignment {#alignment}
 
+## Score Options
+
+### Labels {#labels}
+
 ## Miscellaneous Options
 
 ### Include Paths {#include-paths}
@@ -307,10 +311,44 @@ say, to the installation directory).  If LilyPond can be started the version
 string will be printed to the console for every score, otherwise an error is
 raised, as is described in [Handling LilyPond Failures](#lilypond-failures).
 
-### Temp Directory for scores
+### Temporary Directory for Scores
 
-* tmpdir
-* cleantmp
+\lyluatex\ uses a temporary directory to store LilyPond scores.  For each score
+a unique name will be created using its *content* and the state of all options.
+LilyPond will only be invoked to compile a score when no corresponding file is
+present in the temporary directory, an approach that avoids unnecessary
+recompilation while ensuring that any updates to the content or the parameters
+of a score will trigger a new score.
+
+The directory that is used for this purpose can be set with
+
+\lyOption{tmpdir}{tmp\_ly}
+
+**TODO:** Complete when the question in [issue 88](https://github.com/jperon/lyluatex/issues/88) has been decided.
+
+\lyOption{cleantmp}{false}
+While the caching mechanism is great for avoiding redundant LilyPond
+compilations it can quickly produce a significant number of unused score files
+since *any* change will cause a new set of image files to be generated.
+Therefore the \option{cleantmp} option can be used to trigger some garbage
+collection after the \LaTeX\ document has been completed.
+
+\lyluatex\ writes a `<documentname>.list` log file to the temporary directory,
+listing the hashed filenames of all scores produced in the document.  If the
+score has been given a \option{label} (see [Labels](#labels)) or if it is
+generated from an external file this information is added to the list entry for
+use in any later inspection.
+
+With the \option{cleantmp} option in place \lyluatex\ will remove *all* files
+that have not been generated from the current document. Note that this will also
+remove scores that may become useful again in the future if changes to the
+document will be reverted (for example if a document is created for different
+output formats).  But of course these will simply be regenerated when necessary.
+
+When the temporary directory is shared by several documents purging files might
+remove scores needed by *other* documents. Therefore \lyluatex\ will read *all*
+`<documentname>.list` files and only remove scores that are not referenced by
+*any* list file.
 
 ### Handling LilyPond Failures{#lilypond-failures}
 
