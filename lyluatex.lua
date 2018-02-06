@@ -38,6 +38,9 @@ local LY_HEAD = [[
     <<<RAGGEDRIGHT>>>
     <<<FONTS>>>
 }
+\layout{
+    <<<STAFFPROPS>>>
+}
 
 %%Follows original score
 ]]
@@ -80,7 +83,7 @@ local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
     for i, path in ipairs(includepaths) do
         -- delete initial space (in case someone puts a space after the comma)
-        includepaths[i] = path:gsub('^ ', '')
+        includepaths[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME"))
     end
     return includepaths
 end
@@ -203,12 +206,62 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:calc_properties()
+    -- staff display
+    -- handle meta properties
+    if self.notime then
+        self.notimesig = 'true'
+        self.notiming = 'true'
+    end
+    if self.nostaff then
+        self.nostaffsymbol = 'true'
+        self.notimesig = 'true'
+        -- do *not* suppress timing
+        self.noclef = 'true'
+    end
+    -- set templates
+    if self.noclef then
+        self.l_clef = [[
+            \context { \Staff \remove "Clef_engraver" }
+        ]]
+    else self.l_clef = ''
+    end
+    if self.notiming then
+        self.l_timing = [[
+            \context { \Score timing = ##f }
+        ]]
+    else self.l_timing = ''
+    end
+    if self.notimesig then
+        self.l_timesig = [[
+            \context { \Staff \remove "Time_signature_engraver" }
+        ]]
+    else self.l_timesig = ''
+    end
+    if self.nostaffsymbol then
+        self.l_staff = [[
+            \context { \Staff \remove "Staff_symbol_engraver" }
+        ]]
+    else self.l_staff = ''
+    end
+    self.staff_props = string.format([[
+    %s
+    %s
+    %s
+    %s
+    ]],
+    self.l_clef,
+    self.l_timing,
+    self.l_timesig,
+    self.l_staff
+    )
+
     -- relative
     if self.relative == '' then
         self.relative = 1
     else
         self.relative = tonumber(self.relative)
     end
+
     -- staffsize
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
@@ -414,7 +467,8 @@ function Score:header()
         [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
         [[<<<RAGGEDRIGHT>>>]], self:raggedright()):gsub(
-        [[<<<FONTS>>>]], self:fonts())
+        [[<<<FONTS>>>]], self:fonts()):gsub(
+        [[<<<STAFFPROPS>>>]], self.staff_props)
     if self.insert == 'fullpage' then
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
@@ -465,6 +519,9 @@ function Score:lilypond_cmd()
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
         cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
     end
+    print("")
+    print("Generated command")
+    print(cmd)
     return cmd.."-o "..self.output.." "..input, mode
 end
 
