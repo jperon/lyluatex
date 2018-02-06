@@ -206,6 +206,7 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:calc_properties()
+    self:calc_verbatim()
     -- staff display
     -- handle meta properties
     if self.notime then
@@ -351,6 +352,18 @@ LilyPond failed to compile the score.
     end
 end
 
+function Score:calc_verbatim()
+    if self.verbatim then
+        self.verbatim = string.format([[
+\begin{verbatim}
+%s
+  \end{verbatim}
+        ]],
+        self.ly_code)
+    else self.verbatim = ''
+    end
+end
+
 function Score:check_properties()
     local unexpected = false
     for k, _ in orderedpairs(OPTIONS) do
@@ -370,15 +383,6 @@ function Score:check_properties()
                 self[k], k, table.concat(OPTIONS[k], ', ')
             )
         end
-    end
-    if self.verbatim then
-        self.verbatim = string.format([[
-\begin{verbatim}
-%s
-\end{verbatim}
-        ]],
-        self.ly_code)
-    else self.verbatim = ''
     end
 end
 
@@ -685,7 +689,7 @@ function Score:write_tex(do_compile)
     if do_compile then
         if not self:check_failed_compilation() then return end
     end
-    if self.verbatim ~= '' then tex.sprint(self.verbatim) end
+    if self.verbatim ~= '' then tex.print(self.verbatim:explode('\n')) end
     --[[ Now we know there is a proper score --]]
     if self.fullpagestyle == '' then
         if self['print-page-number'] then
