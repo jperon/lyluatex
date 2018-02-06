@@ -48,6 +48,15 @@
     ['showfailed'] = {'false', 'true' ,''},
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
+    % MusicXML options
+    ['absolute'] = {'false', 'true', ''},
+    ['language'] = {'false'},
+    ['lxml'] = {'false', 'true'},
+    ['no-articulation-directions'] = {'true', 'false', ''},
+    ['no-beaming'] = {'true', 'false', ''},
+    ['no-page-layout'] = {'true', 'false', ''},
+    ['no-rest-positions'] = {'true', 'false', ''},
+    ['verbose'] = {'false', 'true', ''},
   })
 }
 \directlua{
@@ -103,6 +112,20 @@
 \directlua{
   ly.CURRFILEDIR = '\currfiledir'
   ly.file('\luatexluaescapestring{#1}', [[\commandkey{options}]])
+  ly.newpage_if_fullpage()
+}
+\ly@resetunits%
+\ly@page%
+\ly@currentfonts%
+\directlua{ly.score:process()}%
+}
+
+% Inclusion of a musicxml file
+\newkeycommand*\musicxmlfile[][options][1]{%
+\ly@setunits%
+\directlua{
+  ly.CURRFILEDIR = '\currfiledir'
+  ly.file_musicxml('\luatexluaescapestring{#1}', [[\commandkey{options}]])
   ly.newpage_if_fullpage()
 }
 \ly@resetunits%
