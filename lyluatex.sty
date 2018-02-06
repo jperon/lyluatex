@@ -23,6 +23,7 @@
     ['debug'] = {'false', 'true', ''},
     ['extra-bottom-margin'] = {'0', ly.is_dim},
     ['extra-top-margin'] = {'0', ly.is_dim},
+    ['fragment'] = {'true', 'false', ''},
     ['fullpagealign'] = {'staffline', 'crop'},
     ['fullpagestyle'] = {''},
     ['includepaths'] = {'./'},
@@ -131,7 +132,7 @@
 \newkeycommand{\lily}[][options][1]{%
 \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
 \begin{ly@compilely}%
-{#1}
+#1
 \end{ly@compilely}%
 \let\repeat\ly@oldrepeat%
 }

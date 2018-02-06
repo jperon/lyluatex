@@ -383,14 +383,16 @@ end
 function Score:content()
     local n = ''
     if self.relative then
+        self.fragment = true  -- in case it would serve later
         if self.relative < 0 then
             for _ = -1, self.relative, -1 do n = n..',' end
         elseif self.relative > 0 then
             for _ = 1, self.relative do n = n.."'" end
         end
         return string.format([[\relative c%s {%s}]], n, self.ly_code)
+    elseif self.fragment then return [[{]]..self.ly_code..[[}]]
+    else return self.ly_code
     end
-    return self.ly_code
 end
 
 function Score:delete_intermediate_files()
