@@ -214,9 +214,17 @@ function Score:calc_properties()
         ]]
     else self.notime = ''
     end
+    -- relative
+    if self.relative == '' then
+        self.relative = 1
+    else
+        self.relative = tonumber(self.relative)
+    end
+    -- staffsize
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     self.staffsize = staffsize
+    -- dimensions that can be given by LaTeX
     local value
     for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
         value = self[dimension]
@@ -227,11 +235,14 @@ function Score:calc_properties()
         end
         self[dimension] = convert_unit(value)
     end
+    -- dimensions specific to LilyPond
     self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
     self['extra-bottom-margin'] = convert_unit(self['extra-bottom-margin'])
+    -- score fonts
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
     end
+    -- temporary file name
     self.output = self:output_filename()
 end
 
@@ -318,6 +329,19 @@ function Score:check_properties()
             )
         end
     end
+end
+
+function Score:content()
+    local n = ''
+    if self.relative then
+        if self.relative < 0 then
+            for _ = -1, self.relative, -1 do n = n..',' end
+        elseif self.relative > 0 then
+            for _ = 1, self.relative do n = n.."'" end
+        end
+        return string.format([[\relative c%s {%s}]], n, self.ly_code)
+    end
+    return self.ly_code
 end
 
 function Score:delete_intermediate_files()
@@ -561,7 +585,7 @@ function Score:process()
     self:calc_properties()
     local do_compile = not self:is_compiled()
     if do_compile then
-        self.ly_code = self:header()..self.ly_code
+        self.ly_code = self:header()..self:content()
         self:run_lilypond()
     end
     self:write_tex(do_compile)
@@ -748,17 +772,22 @@ function ly.get_option(opt)
 end
 
 
-function ly.is_dim (dim, value)
-    if value == '' then return true end
-    local n, u = value:match('%d*%.?%d*'), value:match('%a+')
-    if tonumber(value) or n and contains(TEX_UNITS, u) then return true
+function ly.is_dim (k, v)
+    if v == '' then return true end
+    local n, u = v:match('%d*%.?%d*'), v:match('%a+')
+    if tonumber(v) or n and contains(TEX_UNITS, u) then return true
     else err(
         [[Unexpected value "%s" for dimension %s:
         should be either a number (for example "12"), or a number with unit, without space ("12pt")
         ]],
-        value, dim
+        v, k
     )
     end
+end
+
+
+function ly.is_num(_, v)
+    return v == '' or tonumber(v)
 end
 
 
