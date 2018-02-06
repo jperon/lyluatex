@@ -519,8 +519,11 @@ function Score:header()
     elseif self.insert == 'systems' then
 	header = header:gsub(
 	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
-	    [[<<<PAPER>>>]], [[indent = 0\mm]])
+	    [[<<<PAPER>>>]], '')
     else
+        header = header:gsub(
+        [[<<<PREAMBLE>>>]], [[#(ly:set-option 'preview #t)]]):gsub(
+        [[<<<PAPER>>>]], '')
         err('"inline" insertion mode not implemented yet')
     end
     return header
@@ -580,7 +583,10 @@ function Score:lilypond_version()
 end
 
 function Score:ly_indent()
-    if self.indent == '' then return ''
+    if self.indent == '' then
+        if self.insert == 'fullpage' then return ''
+        else return [[ indent = 0\cm ]]
+        end
     else
         return [[indent = ]]..convert_unit(self.indent)..[[\pt]]
     end
