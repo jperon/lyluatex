@@ -1,17 +1,30 @@
 \documentclass{scrartcl}
-% Example file producing LilyPond code that doesn't produce a score
-% Try setting debug to false and true
-\usepackage[%
-debug=true]{lyluatex}
-
+\usepackage{lyluatex}
 \begin{document}
 
-The following block of LilyPond code will cause LilyPond to exit reporting
-a “failed compilation“ but still produce a correct score file.  Setting the
-\texttt{debug} options controls the behaviour.
+\section*{Handling LilyPond Failures -- With Score}
 
-\begin{lilypond}
+The following block of LilyPond code will cause LilyPond to exit reporting
+a “failed compilation“ but still produce a correct score file.  Without the
+\texttt{debug} option no log files are produced.
+
+\begin{verbatim}
+\begin{lilypond}[debug=false]
 \version "5.11"
 { c' }
 \end{lilypond}
+\end{verbatim}
+
+\begin{lilypond}[debug=false]
+\version "5.11"
+{ c' }
+\end{lilypond}
+
+\emph{With} the \texttt{debug} option log files are produced and referenced in the warning.
+
+\begin{lilypond}[debug]
+\version "5.11"
+{ c' }
+\end{lilypond}
+
 \end{document}
