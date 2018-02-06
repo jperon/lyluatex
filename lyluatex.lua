@@ -518,9 +518,6 @@ function Score:lilypond_cmd()
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
         cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
     end
-    print("")
-    print("Generated command")
-    print(cmd)
     return cmd.."-o "..self.output.." "..input, mode
 end
 
