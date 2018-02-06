@@ -31,6 +31,7 @@ local LY_HEAD = [[
     tagline = ##f
 }
 \paper{
+    <<<PAPER>>>
     two-sided = ##t
     line-width = <<<LINEWIDTH>>>\pt
     <<<INDENT>>>
@@ -496,7 +497,8 @@ function Score:header()
         )
     elseif self.insert == 'systems' then
 	header = header:gsub(
-	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]])
+	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
+	    [[<<<PAPER>>>]], [[indent = 0\mm]])
     else
         err('"inline" insertion mode not implemented yet')
     end
