@@ -378,6 +378,23 @@ function Score:check_properties()
             )
         end
     end
+    if self.input_file or self.ly_code:find([[\score]]) then
+        if self.fragment or self.relative then
+            if self.input_file then
+                warn([[
+You may not set `fragment` (or `relative`)
+with \lilypondfile. Setting them to false.
+                ]])
+            else
+                warn([[
+Found a \score block: setting `fragment`
+and `relative` to false.
+                ]])
+            end
+            self.fragment = false
+            self.relative = false
+        end
+    end
 end
 
 function Score:content()
@@ -678,7 +695,6 @@ function Score:run_lilypond()
     mkdirs(dirname(self.output))
     self:lilypond_version()
     local p = io.popen(self:lilypond_cmd())
-    local debug_msg
     if self.debug then
         local f = io.open(self.output..".log", 'w')
         f:write(p:read('*a'))
