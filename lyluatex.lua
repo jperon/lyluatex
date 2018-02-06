@@ -371,6 +371,15 @@ function Score:check_properties()
             )
         end
     end
+    if self.verbatim then
+        self.verbatim = string.format([[
+\begin{verbatim}
+%s
+\end{verbatim}
+        ]],
+        self.ly_code)
+    else self.verbatim = ''
+    end
 end
 
 function Score:content()
@@ -676,6 +685,7 @@ function Score:write_tex(do_compile)
     if do_compile then
         if not self:check_failed_compilation() then return end
     end
+    if self.verbatim ~= '' then tex.sprint(self.verbatim) end
     --[[ Now we know there is a proper score --]]
     if self.fullpagestyle == '' then
         if self['print-page-number'] then
