@@ -264,10 +264,12 @@ function Score:calc_properties()
     self.l_staff
     )
     -- relative
-    if self.relative == '' then
-        self.relative = 1
-    else
-        self.relative = tonumber(self.relative)
+    if self.relative then
+        if self.relative == '' then
+            self.relative = 1
+        else
+            self.relative = tonumber(self.relative)
+        end
     end
     -- staffsize
     local staffsize = tonumber(self.staffsize)
