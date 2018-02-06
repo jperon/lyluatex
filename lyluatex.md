@@ -267,29 +267,31 @@ continuous text, has not been implemented yet.
 
 ## Miscellaneous Options
 
-### LilyPond Include Paths {#include-paths}
+### Include Paths {#include-paths}
 
-The default reference point for \lyluatex's operations is the current `.tex`
-file.  It will look in its directory for referenced LilyPond input files, and
-include directives in LilyPond code will initially search there too.  As a
-specialty \lyluatex\ also finds all files that \LaTeX\ can see, i.\\,e. all files
-in the `\textsc{texmf}` tree.
+When referencing external files with \cmd{lilypondfile} \lyluatex\ understands
+absolute and relative paths.  Relative paths are considered relative to the
+current `.tex` document's directory by default, and additionally \lyluatex\ will
+find any file that is visible to \LaTeX\ itself, i.e. all files in the
+\texttt{\textsc{texmf}} tree.  A special case are paths that start with a tilde
+(\textasciitilde). This tilde (which has to be input as
+\cmd{string\textasciitilde} in \LaTeX) will be expanded to the user's `HOME`
+directory, which should work equally in UNIX/Linux and Windows.
 
 \lyOption{includepaths}{./}
 
-The \option{includepaths} option accepts a comma-separated list of paths that
-will serve as paths for both \lyluatex\ and LilyPond.  The given paths are
-passed along to LilyPond's include path so any \cmd{include} in a LilyPond file
-will start its relative searches on any of its paths.
+With the \option{includepaths} option a comma-separated list of search paths can
+be specified.  These paths will be used by \lyluatex\ to locate external files,
+and relative paths are searched for in the following order:
 
-\lyluatex\ will use these paths when searching for external LilyPond files
-referenced by \cmd{lilypondfile}.  Absolute paths can of course be used, and
-relative pahts are interpreted in the following order:
+* relative to the current `.tex` file's directory
+* relative to each `includepath`, in the order of their definition in the list
+* using \LaTeX's search mechansim
 
-* relative to the current `.tex` file
-* relative
-
-**TODO:** What actually happens when an include path is given as relative? Will all lookups go through all the variants? Or is the assignment of a relative "inlcudepath" really clear?
+Additionally the list of include paths is passed to LilyPond's include path, so
+they can be used for including files from within the LilyPond code.  Paths
+starting with the tilde will ibe mplicitly expanded to absolute paths in that
+process.
 
 ### LilyPond Executable
 
