@@ -262,10 +262,12 @@ function Score:calc_properties()
     self.l_staff
     )
     -- relative
-    if self.relative == '' then
-        self.relative = 1
-    else
-        self.relative = tonumber(self.relative)
+    if self.relative then
+        if self.relative == '' then
+            self.relative = 1
+        else
+            self.relative = tonumber(self.relative)
+        end
     end
     -- staffsize
     local staffsize = tonumber(self.staffsize)
@@ -376,19 +378,38 @@ function Score:check_properties()
             )
         end
     end
+    if self.input_file or self.ly_code:find([[\score]]) then
+        if self.fragment or self.relative then
+            if self.input_file then
+                warn([[
+You may not set `fragment` (or `relative`)
+with \lilypondfile. Setting them to false.
+                ]])
+            else
+                warn([[
+Found a \score block: setting `fragment`
+and `relative` to false.
+                ]])
+            end
+            self.fragment = false
+            self.relative = false
+        end
+    end
 end
 
 function Score:content()
     local n = ''
     if self.relative then
+        self.fragment = true  -- in case it would serve later
         if self.relative < 0 then
             for _ = -1, self.relative, -1 do n = n..',' end
         elseif self.relative > 0 then
             for _ = 1, self.relative do n = n.."'" end
         end
         return string.format([[\relative c%s {%s}]], n, self.ly_code)
+    elseif self.fragment then return [[{]]..self.ly_code..[[}]]
+    else return self.ly_code
     end
-    return self.ly_code
 end
 
 function Score:delete_intermediate_files()
@@ -682,7 +703,6 @@ function Score:run_lilypond()
     mkdirs(dirname(self.output))
     self:lilypond_version()
     local p = io.popen(self:lilypond_cmd())
-    local debug_msg
     if self.debug then
         local f = io.open(self.output..".log", 'w')
         f:write(p:read('*a'))
