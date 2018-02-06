@@ -38,6 +38,9 @@ local LY_HEAD = [[
     <<<RAGGEDRIGHT>>>
     <<<FONTS>>>
 }
+\layout{
+    <<<NOTIME>>>
+}
 
 %%Follows original score
 ]]
@@ -203,6 +206,14 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:calc_properties()
+    -- notime
+    if self.notime then
+        self.notime = [[
+            \context { \Score timing = ##f }
+            \context { \Staff \remove "Time_signature_engraver" }
+        ]]
+    else self.notime = ''
+    end
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     self.staffsize = staffsize
@@ -390,7 +401,8 @@ function Score:header()
         [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
         [[<<<RAGGEDRIGHT>>>]], self:raggedright()):gsub(
-        [[<<<FONTS>>>]], self:fonts())
+        [[<<<FONTS>>>]], self:fonts()):gsub(
+        [[<<<NOTIME>>>]], self.notime)
     if self.insert == 'fullpage' then
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
