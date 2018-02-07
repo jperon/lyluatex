@@ -33,7 +33,7 @@
 \hspace*{-1em}%
 \noindent%
 \textcolor{blue}{#1}
-
+\nopagebreak
 }
 
 \newcommand{\lyOption}[2]{%
