@@ -213,6 +213,7 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:calc_properties()
+    self:calc_verbatim()
     -- staff display
     -- handle meta properties
     if self.notime then
@@ -355,6 +356,28 @@ LilyPond failed to compile the score.
             ]],
           debug_msg)
         end
+    end
+end
+
+function Score:calc_verbatim()
+    local intertext = ''
+    if self.verbatim then
+        if self.intertext ~= '' then
+            intertext = string.format([[
+\lyIntertext{%s}
+            ]],
+            self.intertext)
+        end
+        self.verbatim = string.format([[
+\begin{verbatim}
+%s
+  \end{verbatim}
+%s
+        ]],
+        self.ly_code:gsub('.*%%%s*begin verbatim', ''):gsub(
+            '%%%s*end verbatim.*', ''),
+        intertext)
+    else self.verbatim = ''
     end
 end
 
@@ -723,6 +746,7 @@ function Score:write_tex(do_compile)
     if do_compile then
         if not self:check_failed_compilation() then return end
     end
+    if self.verbatim ~= '' then tex.print(self.verbatim:explode('\n')) end
     --[[ Now we know there is a proper score --]]
     if self.fullpagestyle == '' then
         if self['print-page-number'] then
@@ -841,8 +865,9 @@ end
 
 function ly.fragment(ly_code, options)
     options = ly.set_local_options(options)
+    info(ly_code:gsub('\\par ','\n\n'):gsub('\r', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'))
     ly.score = Score:new(
-        ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'),
+        ly_code:gsub('\\par ','\n\n'):gsub('\r', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'),
         options
     )
 end

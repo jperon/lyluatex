@@ -1,0 +1,38 @@
+\documentclass{scrartcl}
+\usepackage{libertine}
+\usepackage[verbatim,
+intertext={The “intertext” option can be used to print some text between the code and the score}]{lyluatex}
+\begin{document}
+
+\section*{Print LilyPond code}
+
+The \texttt{verbatim} option causes the LilyPond code to be printed before the score.  The current issue is that the content of \texttt{\textbackslash lilypond} and the \texttt{lilypond} environment are passed as one line.
+
+\lilypond[intertext=]{ c d e d }
+
+\hrule
+
+\textbf{NOTE:} The local \texttt{intertext} option doesn't work properly yet: it will only work when set to an empty string or to a single word. Setting it to a string enclosed in curly braces or quotation marks will make the option ignored.
+
+\begin{lilypond}[intertext={This change of content does not have any effect}]
+{
+c d e d
+}
+\end{lilypond}
+
+\hrule
+
+\medskip
+\renewcommand{\lyIntertext}[1]{
+
+\textcolor{magenta}{#1}
+
+\bigskip
+}
+The contents of included \emph{files} already work properly:
+
+\lysetoption{intertext}{The formatting of the intertext be adjusted by renewing the command “lyIntertext”}
+
+\lilypondfile[intertext={This change of content does not have any effect}]{../ly/Sphinx/Sphinx}
+
+\end{document}
