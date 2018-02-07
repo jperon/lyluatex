@@ -338,12 +338,33 @@ whether the fonts are selected by their family or file names.
 
 ### Staff Display
 
+There are a number of options that directly affect how staves are displayed,
+basically removing parts of the staff elements.  The options can be freely
+combined, and a few presets have been prepared.
+
 \lyOption{noclef}{false}
-\lyOption{nostaff}{false}
-\lyOption{nostaffsymbol}{false}
-\lyOption{notime}{false}
-\lyOption{notiming}{false}
+Don't print clefs.
+
 \lyOption{notimesig}{false}
+Don't print time signatures.
+
+\lyOption{nostaffsymbol}{false}
+Don't print staff lines.
+
+\lyOption{notiming}{false}
+Don't use any timing information, e.g. don't print automatic barlines.
+
+\lyOption{notime}{false}
+Preset: don't print time signatures and don't use timing (`lilypond-book`
+option).
+
+\lyOption{nostaff}{false}
+Preset: suppress staff lines, clefs, and time signatures (but do use timing).
+
+Note that there is no option to suppress key signatures because since a key
+signature is not *implicitly* printed. *If* there should be the need to *have* a
+key signature and at the same time suppress it, it's reasonable to expect this
+to be explicitly done in the LilyPond code.
 
 
 ### Labels {#labels}
@@ -364,6 +385,29 @@ Sets the prefix to be prepended to each label.
 \lyIssue{Note:}
 When using \option{musicexamples} (see [musicexamples](#musicexamples)) the
 prefix will be hard-coded to `xmp:`.
+
+### Captions {#captions}
+
+\lyOption{caption}{}
+If the \option{caption} option is set then a \cmd{caption} is inserted after the
+score.
+
+\lyOption{captionbefore}{false}
+If \option{captionbefore} is set to `true` then the caption is inserted *before*
+the scores instead of after it.
+
+\lyIssue{Note:}
+It may seem like this option is unnecessary since entering the captions can be
+entered manually just the same.  However, when using `musicexamples` (see
+[musicexamples](#musicexamples)) the score is automatically wrapped in an
+environment and the caption properly applied.
+
+\lyIssue{NOTE:}
+Presumably the caption suffers the same issues as \option{intertext} for
+\option{verbatim}.
+
+\lyIssue{NOTE:}
+Captions haven't been implemented yet.
 
 ### Printing LilyPond Code (WIP)
 
