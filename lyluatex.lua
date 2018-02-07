@@ -374,7 +374,8 @@ function Score:calc_verbatim()
   \end{verbatim}
 %s
         ]],
-        self.ly_code,
+        self.ly_code:gsub('.*%% begin verbatim', ''):gsub(
+            '%% end verbatim.*', ''),
         intertext)
     else self.verbatim = ''
     end
