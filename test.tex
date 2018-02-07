@@ -1,5 +1,5 @@
 \documentclass[a5paper, fontsize=12pt]{scrbook}
-\usepackage[program=lilypond, tmpdir=tmp_ly, pass-fonts]{lyluatex}
+\usepackage[program=lilypond, tmpdir=tmp_ly, pass-fonts, debug]{lyluatex}
 \usepackage{multicol}
 
 \title{}
@@ -90,7 +90,8 @@ Paroles = \lyricmode {
 \end{lilypond}
 
 \lilypond[relative]{
-{ c d e f g a b c } \addlyrics{do ré mi fa sol la si do.}
+{ c d e f g a b c }
+\addlyrics{do ré mi fa sol la si do.}
 }
 
 Ce fragment :

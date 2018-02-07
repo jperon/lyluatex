@@ -137,13 +137,15 @@
 #1
 \end{ly@compilely}%
 \let\repeat\ly@oldrepeat%
-}
+}%
 
 \newkeyenvironment{ly}[][options]{%
 \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
+\bgroup\obeylines%
 \ly@compilely%
 }{%
 \endly@compilely%
+\egroup%
 \let\repeat\ly@oldrepeat%
 }
 

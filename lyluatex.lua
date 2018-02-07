@@ -835,8 +835,9 @@ end
 
 function ly.fragment(ly_code, options)
     options = ly.set_local_options(options)
+    info(ly_code:gsub('\\par ','\n\n'):gsub('\r', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'))
     ly.score = Score:new(
-        ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'),
+        ly_code:gsub('\\par ','\n\n'):gsub('\r', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'),
         options
     )
 end
