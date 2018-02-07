@@ -28,6 +28,10 @@ Handling](#option-handling) section below.
 \lyIssue{Note:} \lyluatex\ can only be used with \LuaLaTeX, and compiling with
 any other \LaTeX\ engine will fail.
 
+\lyIssue{Note:} In order to avoid unexpected behaviour it is strongly suggested
+that documents are generally compiled from their actual directory, i.e. without
+referring to it through a path.
+
 \lyIssue{NOTE:} \lyluatex\ requires that \LuaLaTeX\ is started with the
 `--shell-escape` command line option to enable the execution of arbitrary shell
 commands, which is necessary to let LilyPond compile the inserted scores
@@ -418,11 +422,12 @@ present in the temporary directory, an approach that avoids unnecessary
 recompilation while ensuring that any updates to the content or the parameters
 of a score will trigger a new score.
 
-The directory that is used for this purpose can be set with
-
 \lyOption{tmpdir}{tmp\_ly}
-
-**TODO:** Complete when the question in [issue 88](https://github.com/jperon/lyluatex/issues/88) has been decided.
+The directory that is used for this purpose can be set with the \option{tmpdir}
+option.  Its value is a relative path starting from the *current working
+directory*, i.e. the directory from which \LuaLaTeX\ has been started, not
+necessarily that of the `.tex` document. Note that for several reasons it is
+strongly suggested to always compile documents from the current directory.
 
 \lyOption{cleantmp}{false}
 While the caching mechanism is great for avoiding redundant LilyPond
