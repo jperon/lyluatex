@@ -297,7 +297,7 @@ Not implemented yet
 
 ## Score Options
 
-## Font Handling
+### Font Handling
 
 \lyOption{pass-fonts}{false}
 Use the text document's fonts in the LilyPond score.
