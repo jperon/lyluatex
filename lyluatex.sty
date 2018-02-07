@@ -14,6 +14,13 @@
 \RequirePackage{metalogo}
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
 
+\newcommand{\lyIntertext}[1]{%
+
+#1
+
+\bigskip
+}
+
 % Options
 \catcode`-=11
 \directlua{
@@ -28,6 +35,7 @@
     ['fullpagestyle'] = {''},
     ['includepaths'] = {'./'},
     ['insert'] = {'systems', 'fullpage', 'inline'},
+    ['intertext'] = {''},
     ['labelprefix'] = {'ly_'},
     ['line-width'] = {'', ly.is_dim},
     ['noclef'] = {'false', 'true', ''},

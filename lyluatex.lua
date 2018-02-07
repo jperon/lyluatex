@@ -353,13 +353,22 @@ LilyPond failed to compile the score.
 end
 
 function Score:calc_verbatim()
+    local intertext = ''
     if self.verbatim then
+        if self.intertext ~= '' then
+            intertext = string.format([[
+\lyIntertext{%s}
+            ]],
+            self.intertext)
+        end
         self.verbatim = string.format([[
 \begin{verbatim}
 %s
   \end{verbatim}
+%s
         ]],
-        self.ly_code)
+        self.ly_code,
+        intertext)
     else self.verbatim = ''
     end
 end
