@@ -1,8 +1,7 @@
--- luacheck: ignore ly self warn info log luatexbase internalversion font fonts tex kpse status
+-- luacheck: ignore ly log self luatexbase internalversion font fonts tex kpse status
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
-    greinternalversion = internalversion,
     date               = "2018/02/02",
     description        = "Module lyluatex.",
     author             = "The Gregorio Project  − Jacques Peron <cataclop@hotmail.com>",
@@ -35,6 +34,7 @@ local LY_HEAD = [[
     <<<PAPER>>>
     two-sided = ##t
     line-width = <<<LINEWIDTH>>>\pt
+    <<<INDENT>>>
     <<<RAGGEDRIGHT>>>
     <<<FONTS>>>
 }
@@ -44,9 +44,20 @@ local LY_HEAD = [[
 
 %%Follows original score
 ]]
+local Score = {}
 
 
 --[[ ========================== Helper functions ========================== ]]
+-- dirty fix as info doesn't work as expected
+local oldinfo = info
+function info(...)
+    print('\n(lyluatex)', string.format(...))
+    oldinfo(...)
+end
+-- debug acts as info if [debug] is specified
+local function debug(...)
+    if Score.debug then info(...) end
+end
 
 local function contains (table_var, value)
     for _, v in pairs(table_var) do
@@ -65,6 +76,8 @@ end
 
 
 local function convert_unit(value)
+    if not value then return 0 end
+    value = value:gsub([[\]], '')
     return tonumber(value) or tex.sp(value) / tex.sp("1pt")
 end
 
@@ -156,16 +169,12 @@ end
 
 local function process_options(k, v)
     if v == 'false' then v = false end
-    local _, i = k:find('^no')
-    if i then
-        local n = k:sub(i + 1)
-        if contains_key(OPTIONS, n) then
-            if v ~= nil and v ~= 'default' then
-                k = n
-                v = not v
-            else
-                return
-            end
+    if ly.is_neg(k) then
+        if v ~= nil and v ~= 'default' then
+            k = k:gsub('^no(.*)', '%1')
+            v = not v
+        else
+            return
         end
     end
     return k, v
@@ -193,9 +202,7 @@ end
 
 --[[ =============================== Classes =============================== ]]
 
-local Score = {}
 -- Score class
-
 function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
@@ -255,14 +262,14 @@ function Score:calc_properties()
     self.l_timesig,
     self.l_staff
     )
-
     -- relative
-    if self.relative == '' then
-        self.relative = 1
-    else
-        self.relative = tonumber(self.relative)
+    if self.relative then
+        if self.relative == '' then
+            self.relative = 1
+        else
+            self.relative = tonumber(self.relative)
+        end
     end
-
     -- staffsize
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
@@ -393,19 +400,38 @@ function Score:check_properties()
             )
         end
     end
+    if self.input_file or self.ly_code:find([[\score]]) then
+        if self.fragment or self.relative then
+            if self.input_file then
+                warn([[
+You may not set `fragment` (or `relative`)
+with \lilypondfile. Setting them to false.
+                ]])
+            else
+                warn([[
+Found a \score block: setting `fragment`
+and `relative` to false.
+                ]])
+            end
+            self.fragment = false
+            self.relative = false
+        end
+    end
 end
 
 function Score:content()
     local n = ''
     if self.relative then
+        self.fragment = true  -- in case it would serve later
         if self.relative < 0 then
             for _ = -1, self.relative, -1 do n = n..',' end
         elseif self.relative > 0 then
             for _ = 1, self.relative do n = n.."'" end
         end
         return string.format([[\relative c%s {%s}]], n, self.ly_code)
+    elseif self.fragment then return [[{]]..self.ly_code..[[}]]
+    else return self.ly_code
     end
-    return self.ly_code
 end
 
 function Score:delete_intermediate_files()
@@ -488,7 +514,8 @@ function Score:header()
     local header = LY_HEAD:gsub(
         [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
-        [[<<<RAGGEDRIGHT>>>]], self:raggedright()):gsub(
+        [[<<<INDENT>>>]], self:ly_indent()):gsub(
+        [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
         [[<<<FONTS>>>]], self:fonts()):gsub(
         [[<<<STAFFPROPS>>>]], self.staff_props)
     if self.insert == 'fullpage' then
@@ -514,8 +541,11 @@ function Score:header()
     elseif self.insert == 'systems' then
 	header = header:gsub(
 	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
-	    [[<<<PAPER>>>]], [[indent = 0\mm]])
+	    [[<<<PAPER>>>]], '')
     else
+        header = header:gsub(
+        [[<<<PREAMBLE>>>]], [[#(ly:set-option 'preview #t)]]):gsub(
+        [[<<<PAPER>>>]], '')
         err('"inline" insertion mode not implemented yet')
     end
     return header
@@ -537,14 +567,18 @@ function Score:lilypond_cmd()
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
+    if self.input_file then
+        cmd = cmd.."-I "..lfs.currentdir()..'/'..dirname(self.input_file).." "
+    end
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
         cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
     end
-    return cmd.."-o "..self.output.." "..input, mode
+    cmd = cmd.."-o "..self.output.." "..input
+    debug("Command:\n"..cmd)
+    return cmd, mode
 end
 
 function Score:lilypond_version()
-    print("\nCompiling Score with LilyPond executable '"..self.program.."' ...")
     local p = io.popen(self.program..' --version', 'r')
     if not p then
       err([[
@@ -556,13 +590,34 @@ function Score:lilypond_version()
     local result = p:read()
     p:close()
     if result and result:match('GNU LilyPond') then
-        print(result)
+        info(
+            "Compiling score %s with LilyPond executable '%s'.",
+            self.output, self.program
+        )
+        debug(result)
     else
         err([[
         LilyPond could not be started.
         Please check that 'program' points
         to a valid LilyPond executable
         ]])
+    end
+end
+
+function Score:ly_indent()
+    if self.indent == '' then
+        if self.insert == 'fullpage' then return ''
+        else return [[ indent = 0\cm ]]
+        end
+    else
+        return [[indent = ]]..convert_unit(self.indent)..[[\pt]]
+    end
+end
+
+function Score:ly_raggedright()
+    if self['ragged-right'] == 'default' then return ''
+    elseif self['ragged-right'] then return 'ragged-right = ##t'
+    else return 'ragged-right = ##f'
     end
 end
 
@@ -672,18 +727,10 @@ function Score:protrusion()
     return protrusion
 end
 
-function Score:raggedright()
-    if self['ragged-right'] == 'default' then return ''
-    elseif self['ragged-right'] then return 'ragged-right = ##t'
-    else return 'ragged-right = ##f'
-    end
-end
-
 function Score:run_lilypond()
     mkdirs(dirname(self.output))
     self:lilypond_version()
     local p = io.popen(self:lilypond_cmd())
-    local debug_msg
     if self.debug then
         local f = io.open(self.output..".log", 'w')
         f:write(p:read('*a'))
@@ -775,12 +822,10 @@ end
 
 
 function ly.conclusion_text()
-    print(
-        string.format('\n'..[[
-            Output written on %s.pdf.
-            Transcript written on %s.log.]],
-            tex.jobname, tex.jobname
-        )
+    info([[
+        Output written on %s.pdf.
+        Transcript written on %s.log.]],
+        tex.jobname, tex.jobname
     )
 end
 
@@ -837,16 +882,21 @@ end
 
 
 function ly.is_dim (k, v)
-    if v == '' then return true end
+    if v == '' or v == false then return true end
     local n, u = v:match('%d*%.?%d*'), v:match('%a+')
-    if tonumber(v) or n and contains(TEX_UNITS, u) then return true
-    else err(
+    if tonumber(v) or n and contains(TEX_UNITS, u) then return true end
+    err(
         [[Unexpected value "%s" for dimension %s:
         should be either a number (for example "12"), or a number with unit, without space ("12pt")
         ]],
         v, k
     )
-    end
+end
+
+
+function ly.is_neg(k, _)
+    local _, i = k:find('^no')
+    return i and contains_key(OPTIONS, k:sub(i + 1))
 end
 
 
@@ -863,9 +913,10 @@ end
 function ly.set_local_options(opts)
     local options = {}
     local a, b, c, d
+    opts = opts:gsub(' }}}', '}}}')
     while true do
         a, b = opts:find('%w[^=]+=', d)
-        c, d = opts:find('{{{%w*}}}', d)
+        c, d = opts:find('{{{[^=]*}}}', d)
         if not d then break end
         local k, v = process_options(
             opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
