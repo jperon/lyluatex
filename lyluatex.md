@@ -297,6 +297,45 @@ Not implemented yet
 
 ## Score Options
 
+## Font Handling
+
+\lyOption{pass-fonts}{false}
+Use the text document's fonts in the LilyPond score.
+
+\lyOption{current-font-as-main}{true}
+Use the font family *currently* used for typesetting as LilyPond's main font
+if \option{pass-fonts=false}.
+
+The choice of fonts is arguably the most obvious factor in the appearance of any
+document, be it text or music.  In text documents with interspersed scores the
+text fonts should be consistent between text and music sections. \lyluatex\ can
+handle this automatically by passing the used text fonts to LilyPond, so the
+user doesn't have to worry about keeping the scores' fonts in sync with the text
+document.
+
+The following steps are taken when \option{pass-fonts} is `true`:
+Before generating any score \lyluatex\ retrieves the currently defined fonts for
+\cmd{rmfamily}, \cmd{sffamily}, and \cmd{ttfamily}, as well as the font that is
+currently in use for typesetting.  By default the *current* font is used as the
+roman font in LilyPond, while `sans` and `mono` fonts are passed to their
+corresponding families.  This ensures that the score's main font is consistent
+with the surrounding text.  However, this behaviour may not be desirable because
+it effectively removes the roman font from the LilyPond score, and it may make
+the *scores* look inconsistent with each other.  Therefore \lyluatex\ can also
+just pass the three font families to their LilyPond counterparts by setting
+\option{current-font-as-main} to `false`.
+
+If fonts are explicitly defined in a \cmd{paper \{\}} block in the LilyPond
+input this takes precedence over the automatically transferred fonts.
+
+\lyIssue{Note:} So far only the main *font family* is used by LilyPond, but it is intended to add support for OpenType features in the future.
+
+\lyIssue{Note:} LilyPond handles font selection differently from \LuaTeX and can
+only look up fonts that are installed as system fonts. For any font that is
+installed in the `texmf` tree LilyPond will use an arbitrary fallback font.
+Therefore \option{pass-fonts} defaults to `false`. However, it doesn't matter
+whether the fonts are selected by their family or file names.
+
 ### Staff Display
 
 \lyOption{noclef}{false}
@@ -481,45 +520,6 @@ If LilyPond failed to produce a score and \option{showfailed} is set to `false`
 then the \LaTeX\ compilation will stop with an error.  If on the other hand
 \option{showfailed} is set to `true` only a warning is issued and a box with an
 informative text is typeset into the resulting document.
-
-## Font Handling
-
-\lyOption{pass-fonts}{false}
-Use the text document's fonts in the LilyPond score.
-
-\lyOption{current-font-as-main}{true}
-Use the font family *currently* used for typesetting as LilyPond's main font
-if \option{pass-fonts=false}.
-
-The choice of fonts is arguably the most obvious factor in the appearance of any
-document, be it text or music.  In text documents with interspersed scores the
-text fonts should be consistent between text and music sections. \lyluatex\ can
-handle this automatically by passing the used text fonts to LilyPond, so the
-user doesn't have to worry about keeping the scores' fonts in sync with the text
-document.
-
-The following steps are taken when \option{pass-fonts} is `true`:
-Before generating any score \lyluatex\ retrieves the currently defined fonts for
-\cmd{rmfamily}, \cmd{sffamily}, and \cmd{ttfamily}, as well as the font that is
-currently in use for typesetting.  By default the *current* font is used as the
-roman font in LilyPond, while `sans` and `mono` fonts are passed to their
-corresponding families.  This ensures that the score's main font is consistent
-with the surrounding text.  However, this behaviour may not be desirable because
-it effectively removes the roman font from the LilyPond score, and it may make
-the *scores* look inconsistent with each other.  Therefore \lyluatex\ can also
-just pass the three font families to their LilyPond counterparts by setting
-\option{current-font-as-main} to `false`.
-
-If fonts are explicitly defined in a \cmd{paper \{\}} block in the LilyPond
-input this takes precedence over the automatically transferred fonts.
-
-\lyIssue{Note:} So far only the main *font family* is used by LilyPond, but it is intended to add support for OpenType features in the future.
-
-\lyIssue{Note:} LilyPond handles font selection differently from \LuaTeX and can
-only look up fonts that are installed as system fonts. For any font that is
-installed in the `texmf` tree LilyPond will use an arbitrary fallback font.
-Therefore \option{pass-fonts} defaults to `false`. However, it doesn't matter
-whether the fonts are selected by their family or file names.
 
 # Cooperations
 
