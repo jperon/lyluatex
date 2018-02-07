@@ -98,12 +98,12 @@
 }
 
 % Main commands
-% Inclusion of a .ly file
-\newkeycommand*\includely[][options][1]{%
+% Score processing
+\newcommand{\ly@compilescore}[1]{%
 \ly@setunits%
 \directlua{
   ly.CURRFILEDIR = '\currfiledir'
-  ly.file('\luatexluaescapestring{#1}', [[\commandkey{options}]])
+  #1
   ly.newpage_if_fullpage()
 }
 \ly@resetunits%
@@ -112,22 +112,27 @@
 \directlua{ly.score:process()}%
 }
 
+% Inclusion of a .ly file
+\newkeycommand*\includely[][options][1]{%
+  \ly@compilescore{ly.file(
+    '\luatexluaescapestring{#1}', [[\commandkey{options}]]
+  )}%
+}
+
 % Base environment to include a LilyPond fragment integrated into
 % the document.
 \NewEnviron{ly@compilely}{%
-\ly@setunits%
-\directlua{
-  ly.CURRFILEDIR = '\currfiledir'
-  ly.fragment(
+  \ly@compilescore{ly.fragment(
     '\luatexluaescapestring{\unexpanded\expandafter{\BODY}}',
     [[\commandkey{options}]]
-  )
-  ly.newpage_if_fullpage()
-}%
-\ly@resetunits%
-\ly@page%
-\ly@currentfonts%
-\directlua{ly.score:process()}%
+  )}%
+}
+
+% Command to print verbatim content of the score
+\newcommand\ly@verbprint[1]{%
+  \begin{noindent}
+  \directlua{ly.verbprint(#1)}%
+  \end{noindent}
 }
 
 % Parametrized command and environment for included LilyPond fragment
@@ -139,12 +144,14 @@
 \let\repeat\ly@oldrepeat%
 }
 
+\newcommand\lyscorebegin[1]{\directlua{ly.env_begin('#1')}}
+\newcommand\lyscoreend{\directlua{ly.env_end()}}
+
 \newkeyenvironment{ly}[][options]{%
-\let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
-\ly@compilely%
+\lyscorebegin{ly, lilypond}
 }{%
-\endly@compilely%
-\let\repeat\ly@oldrepeat%
+\lyscoreend%
+\ly@compilescore{ly.fragment(ly.score_content, [[\commandkey{options}]])}%
 }
 
 % Commands for compatibility with lilypond-book

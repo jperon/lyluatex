@@ -827,6 +827,35 @@ function ly.declare_package_options(options)
 end
 
 
+ly.env = {}
+ly.env_name = ''
+ly.score_content = {}
+function ly.env_begin(envs)
+    function ly.process_buffer(line)
+        table.insert(ly.score_content, line)
+        for _, env in pairs(envs:explode(',')) do
+            if line:find([[\end{]]..env:gsub('^ ', '')..[[}]]) then return nil end
+        end
+        return ''
+    end
+    ly.score_content = {}
+    luatexbase.add_to_callback(
+        'process_input_buffer',
+        ly.process_buffer,
+        'readline'
+    )
+end
+
+
+function ly.env_end()
+    luatexbase.remove_from_callback(
+        'process_input_buffer',
+        'readline'
+    )
+    table.remove(ly.score_content)
+end
+
+
 function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
@@ -841,8 +870,13 @@ end
 
 function ly.fragment(ly_code, options)
     options = ly.set_local_options(options)
+    if type(ly_code) == 'string' then
+        ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
+    else
+        ly_code = table.concat(ly_code, '\n')
+    end
     ly.score = Score:new(
-        ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'),
+        ly_code,
         options
     )
 end
