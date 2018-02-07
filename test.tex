@@ -16,7 +16,6 @@
 
 \pageref{ly_test}
 
-\begin{multicols}{2}
 % Saisie directe d'un fragment musical.
 \begin{lilypond}[staffsize=16]
 \version "2.16"
@@ -89,18 +88,28 @@ Paroles = \lyricmode {
 
 \end{lilypond}
 
-\lilypond[relative]{
-{ c d e f g a b c } \addlyrics{do ré mi fa sol la si do.}
+\medskip
+L'environnement \texttt{lilypond} :
+\begin{lilypond}[relative, verbatim]
+{ c d e f g a b c }
+\addlyrics{do ré mi fa sol la si do.}
+\end{lilypond}
+
+\medskip
+\noindent se comporte mieux que la commande du même nom :
+
+\lilypond[relative, verbatim]{
+{ c d e f g a b c }
+\addlyrics{do ré mi fa sol la si do.}
 }
 
+\clearpage
 Ce fragment :
 
 \lilypond{a' b' c''}
 
 sera écrit plus petit en note de bas de
 page\footnote{\lilypond[relative=2]{a b c}}.
-
-\end{multicols}
 
 \newpage
 

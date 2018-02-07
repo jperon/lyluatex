@@ -209,6 +209,7 @@ function Score:new(ly_code, options, input_file)
     self.__index = self
     o.input_file = input_file
     o.ly_code = ly_code
+    o.orig_ly_code = ly_code
     return o
 end
 
@@ -720,6 +721,9 @@ function Score:run_lilypond()
 end
 
 function Score:write_tex(do_compile)
+    if self.verbatim then
+        ly.verbprint(self.orig_ly_code:explode('\n'))
+    end
     if do_compile then
         if not self:check_failed_compilation() then return end
     end
@@ -941,6 +945,21 @@ end
 function ly.set_property(k, v)
     k, v = process_options(k, v)
     if k then Score[k] = v end
+end
+
+
+function ly.verbprint(lines)
+    local spaces
+    tex.sprint('\\begin{noindent}')
+    for i, line in pairs(lines) do
+        local _, e = line:find('^%s*')
+        spaces = line:sub(1, e):gsub(' ', '\\ ')
+        tex.sprint('\\hspace*{0ex}', [[\texttt{]], spaces)
+        tex.sprint(-2, line:sub(e))
+        tex.sprint([[}]])
+        if i ~= #lines then tex.sprint('\\\\') end
+    end
+    tex.sprint('\\end{noindent}\\par\\smallskip')
 end
 
 
