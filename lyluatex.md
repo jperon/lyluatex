@@ -349,8 +349,21 @@ whether the fonts are selected by their family or file names.
 ### Labels {#labels}
 
 \lyOption{label}{}
+If the \option{label} option is set a \cmd{label} is inserted directly before
+the image.  The label name is prepended with the value of the
+\option{labelprefix} option, so any references to the score have to take that
+into account.
+
+\lyIssue{Note:}
+It should be obvious but \option{label} can only be used as a *local* option
+since multiple labels will trigger \LaTeX\ errors.
 
 \lyOption{labelprefix}{ly\_}
+Sets the prefix to be prepended to each label.
+
+\lyIssue{Note:}
+When using \option{musicexamples} (see [musicexamples](#musicexamples)) the
+prefix will be hard-coded to `xmp:`.
 
 ### Printing LilyPond Code (WIP)
 
