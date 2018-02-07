@@ -309,6 +309,64 @@ Not implemented yet
 
 \lyOption{labelprefix}{ly\_}
 
+### Printing LilyPond Code (WIP)
+
+\lyOption{verbatim}{false}
+Depending on the use case it may be desired to not only include the score into
+the document but to also print the LilyPond input verbatim.  This can be
+achieved by setting the \option{verbatim} option to `true`.  In this case first
+the input code will be printed in a `verbatim` environment, followed by the
+score.
+
+
+\lyMargin{Partial printing}
+If the LilyPond input contains a comment with the character sequence `% begin
+verbatim` then everything up to and including this comment will *not* be printed
+verbatim (but still used for engraving the score).  If after that `% end
+verbatim` is found then the remainder of the input will be skipped too,
+otherwise the code is printed to the end.
+
+\lyIssue{Note:}
+Please note that input from LilyPond fragments entered with the \cmd{lilypond}
+command will be printed on a single line.  But as such fragments are intended to
+contain short snippets anyway this shouldn't be an issue.
+
+\lyIssue{Note:}
+Due to a not-yet-understood issue leading whitespace, i.e. any indentation of
+the LilyPond input, will currently be suppressed.
+
+\lyOption{intertext}{}
+If \option{intertext} is set to a string its value will be printed between the
+verbatim code and the score.
+
+\lyCmd{lyIntertext}
+
+By default the intertext will be printed in its own paragraph, with a
+\cmd{bigskip} glue space between it and the score.  The appearance is controlled
+by the macro \cmd{lyIntertext}, and by renewing this macro the appearance can be
+modified.  The following redefinition removes any indent and prints the text
+blue:
+
+```tex
+\renewcommand{\lyIntertext}[1]{%
+\noindent \textcolor{blue}{#1}
+
+\bigskip
+}
+```
+
+\lyIssue{Note:}
+Due to a not-yet-understood issue setting \option{intertext} as a local option
+only works for single words. Any value that contains more than one word will
+silently be ignored.  This limitation is not present in the global option, so as
+a workaround local texts can be faked using \cmd{lysetoption}.
+
+\lyIssue{Note:}
+Due to a not-yet-understood issue the \option{intertext} value has some serious
+limitations: no single quotes can be used (as in “don't”), and, worse, no macros
+can be used to apply formatting for parts of the text. We hope to fix both these
+issues.
+
 ## Miscellaneous Options
 
 ### Include Paths {#include-paths}
