@@ -263,15 +263,37 @@ continuous text, has not been implemented yet.
 
 ## Score Layout
 
+One of the most obvious features of \lyluatex\ is its ability to configure the
+layout and appearance of LilyPond scores from within the `.tex` document.
+Without further configuration \lyluatex\ will try to match the score as closely
+as possible to the layout of the surrounding text, but there are numerous
+options to tweak the layout in detail.
+
 ### Dimensions
+
+If not stated otherwise dimensions can be given in arbitrary \TeX\ units, e.g.
+`200pt`, `1ex` or `3cm`.
 
 #### General
 
 \lyOption{line-width}{default}
+Set the line width of the score.  By default this exactly matches the current
+actual line width of the text, which also works in multicolumn settings.  See
+[Alignment](#alignment) for a discussion of the details of the alignment of
+staves to the text.
 
 \lyOption{staffsize}{default}
+Set the staffsize of the score.  By default (`[staffsize=default]` or simply
+`[staffsize]`) this is calculated relative to the size of the current text font,
+so it will give a consistent relation to the text at any font size.  Absolute
+sizes can be given as a number, which is interpreted as `pt`. For example
+LilyPond's own default staff size is `20`.
 
 \lyOption{ragged-right}{false}
+Set the score to ragged-right systems.  Single-system scores will not be
+justified but printed at their “natural” width, while scores with multiple
+systems be default wil be justified.  With this option that default can be
+changed so that all systems are printed at their natural width.
 
 #### Fullpage
 
