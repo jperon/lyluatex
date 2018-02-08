@@ -741,6 +741,9 @@ function Score:write_tex(do_compile)
     end
     if self.verbatim then
         ly.verbprint(self.orig_ly_code:explode('\n'))
+        if self.intertext then
+            tex.print('\\lyIntertext{'..self.intertext..'}\\par')
+        end
     end
     if do_compile then
         if not self:check_failed_compilation() then return end

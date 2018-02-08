@@ -30,6 +30,7 @@
     ['indent'] = {'', ly.is_dim},
     ['noindent'] = {'default', ly.is_neg},
     ['insert'] = {'systems', 'fullpage', 'inline'},
+    ['intertext'] = {''},
     ['labelprefix'] = {'ly_'},
     ['line-width'] = {[[\linewidth]], ly.is_dim},
     ['ly-version'] = {'2.18.2'},
@@ -92,6 +93,9 @@
 
 % This macro defines how the filename of a score will look like if printed.
 \newcommand{\lyFilename}[1]{\noindent #1}
+
+% Command to change the appearance of verbatim 'intertext'
+\newcommand{\lyIntertext}[1]{\noindent #1}
 
 % Line width is calculated if set to 'default'
 \def\ly@page{\directlua{ly.PAGE = \thepage}}
