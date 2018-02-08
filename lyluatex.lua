@@ -16,6 +16,16 @@ ly = {}
 
 local FILELIST
 local OPTIONS = {}
+local MXML_OPTIONS = {
+    'absolute',
+    'language',
+    'lxml',
+    'no-articulation-directions',
+    'no-beaming',
+    'no-page-layout',
+    'no-rest-positions',
+    'verbose',
+}
 local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
 local LY_HEAD = [[
 %%File header
@@ -112,7 +122,7 @@ local function fontinfo(id)
 end
 
 
-local function locate(file, includepaths)
+local function locate(file, includepaths, ext)
     local result = ly.CURRFILEDIR..file
     if not lfs.isfile(result) then result = file end
     if not lfs.isfile(result) then
@@ -122,7 +132,7 @@ local function locate(file, includepaths)
         end
     end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
-    if not result and file:sub(-3) ~= '.ly' then return locate(file..'.ly', includepaths) end
+    if not result and ext and file:match('.%w+$') ~= ext then return locate(file..ext, includepaths) end
     return result
 end
 
@@ -444,7 +454,7 @@ function Score:flatten_content(ly_code)
         if not e then break
         else
             ly_file = ly_code:match('\\include%s*"([^"]*)"', b)
-            ly_file = locate(ly_file, self.includepaths)
+            ly_file = locate(ly_file, self.includepaths, '.ly')
             if ly_file then
                 i = io.open(ly_file, 'r')
                 ly_code = ly_code:sub(1, b - 1)..
@@ -548,12 +558,12 @@ function Score:lilypond_cmd()
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
     if self.input_file then
-        cmd = cmd.."-I "..lfs.currentdir()..'/'..dirname(self.input_file).." "
+        cmd = cmd..'-I "'..lfs.currentdir()..'/'..dirname(self.input_file)..'" '
     end
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
-        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
+        cmd = cmd..'-I "'..dir:gsub('^./', lfs.currentdir()..'/')..'" '
     end
-    cmd = cmd.."-o "..self.output.." "..input
+    cmd = cmd..'-o "'..self.output..'" '..input
     debug("Command:\n"..cmd)
     return cmd, mode
 end
@@ -862,10 +872,35 @@ end
 function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
-    input_file = locate(input_file, Score.includepaths)
+    local filename = input_file
+    input_file = locate(input_file, Score.includepaths, '.ly')
     options = ly.set_local_options(options)
-    if not input_file then err("File %s.ly doesn't exist.", input_file) end
+    if not input_file then err("File %s doesn't exist.", filename) end
     local i = io.open(input_file, 'r')
+    ly.score = Score:new(i:read('*a'), options, input_file)
+    i:close()
+end
+
+
+function ly.file_musicxml(input_file, options)
+    --[[ Here, we only take in account global option includepaths,
+    as it really doesn't mean anything as a local option. ]]
+    local filename = input_file
+    input_file = locate(input_file, Score.includepaths, '.xml')
+    options = ly.set_local_options(options)
+    if not input_file then err("File %s doesn't exist.", filename) end
+    local xmlopts = ''
+    for _, opt in pairs(MXML_OPTIONS) do
+        if options[opt] ~= nil then
+            if options[opt] then xmlopts = xmlopts..' --'..opt end
+            if options[opt] ~= 'true' and options[opt] ~= 'false' and options[opt] ~= '' then
+                xmlopts = xmlopts..' '..options[opt]
+            end
+        elseif Score[opt] then xmlopts = xmlopts..' --'..opt
+        end
+    end
+    local xml2ly = ly.get_option('xml2ly')
+    local i = io.popen(xml2ly..' --out=-'..xmlopts..' "'..input_file..'"', 'r')
     ly.score = Score:new(i:read('*a'), options, input_file)
     i:close()
 end

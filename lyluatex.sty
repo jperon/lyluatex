@@ -51,6 +51,16 @@
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
     ['verbatim'] = {'false', 'true', ''},
+    % MusicXML options
+    ['absolute'] = {'false', 'true', ''},
+    ['language'] = {'false'},
+    ['lxml'] = {'false', 'true'},
+    ['no-articulation-directions'] = {'true', 'false', ''},
+    ['no-beaming'] = {'true', 'false', ''},
+    ['no-page-layout'] = {'true', 'false', ''},
+    ['no-rest-positions'] = {'true', 'false', ''},
+    ['verbose'] = {'false', 'true', ''},
+    ['xml2ly'] = {'musicxml2ly'},
   })
 }
 \directlua{
@@ -119,6 +129,13 @@
   \ly@compilescore{ly.file(
     '\luatexluaescapestring{#1}', [[\commandkey{options}]]
   )}%
+}
+
+% Inclusion of a musicxml file
+\newkeycommand*\musicxmlfile[][options][1]{%
+  \ly@compilescore{ly.file_musicxml(
+    '\luatexluaescapestring{#1}', [[\commandkey{options}]]
+  )}
 }
 
 % Base environment to include a LilyPond fragment integrated into
