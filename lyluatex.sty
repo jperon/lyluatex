@@ -83,7 +83,7 @@
 
 % Command to change options during the document
 \newcommand{\lysetoption}[2]{%
-  \directlua{ly.set_property('#1', '#2')}
+  \directlua{ly.set_property([[#1]], [[#2]])}
 }
 
 % Line width is calculated if set to 'default'
