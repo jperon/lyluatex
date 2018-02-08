@@ -69,6 +69,7 @@ local function debug(...)
     if Score.debug then info(...) end
 end
 
+
 local function contains (table_var, value)
     for _, v in pairs(table_var) do
         if v == value then return true
@@ -730,6 +731,14 @@ function Score:run_lilypond()
 end
 
 function Score:write_tex(do_compile)
+    if self.printfilename and self.input_file then
+        if self.insert == 'fullpage' then
+            warn('`printfilename` ignored with `insert=fullpage`')
+        else
+            local filename = self.input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
+            tex.sprint(filename)
+        end
+    end
     if self.verbatim then
         ly.verbprint(self.orig_ly_code:explode('\n'))
     end
