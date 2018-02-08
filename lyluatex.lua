@@ -949,6 +949,10 @@ end
 
 function ly.verbprint(lines, highlight)
     local spaces
+    local content = table.concat(lines, '\n'):gsub(
+      '.*%%%s*begin verbatim', ''):gsub(
+      '%%%s*end verbatim.*', '')
+    lines = content:explode('\n')
     if highlight then
         --[[ We unfortunately need an external file,
              as minted is a verbatim environment. ]]
@@ -956,9 +960,7 @@ function ly.verbprint(lines, highlight)
         local f = io.open(fname, 'w')
         f:write(
             -- We use tex until one decedes to implement lilypond
-            '\\begin{minted}{tex}\n'..
-            table.concat(lines, '\n')..
-            '\n\\end{minted}\n'
+            '\\begin{minted}{tex}\n'..content..'\n\\end{minted}\n'
         )
         f:close()
         tex.sprint('\\input{'..fname..'}')
