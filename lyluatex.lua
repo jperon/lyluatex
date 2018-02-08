@@ -19,7 +19,7 @@ local OPTIONS = {}
 local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
 local LY_HEAD = [[
 %%File header
-\version "2.18.2"
+\version "<<<VERSION>>>"
 
 <<<PREAMBLE>>>
 
@@ -490,6 +490,7 @@ end
 
 function Score:header()
     local header = LY_HEAD:gsub(
+        [[<<<VERSION>>>]], self['ly-version']):gsub(
         [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
         [[<<<INDENT>>>]], self:ly_indent()):gsub(
