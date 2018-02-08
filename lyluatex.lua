@@ -532,12 +532,12 @@ function Score:lilypond_cmd()
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
     if self.input_file then
-        cmd = cmd.."-I "..lfs.currentdir()..'/'..dirname(self.input_file).." "
+        cmd = cmd..'-I "'..lfs.currentdir()..'/'..dirname(self.input_file)..'" '
     end
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
-        cmd = cmd.."-I "..dir:gsub('^./', lfs.currentdir()..'/').." "
+        cmd = cmd..'-I "'..dir:gsub('^./', lfs.currentdir()..'/')..'" '
     end
-    cmd = cmd.."-o "..self.output.." "..input
+    cmd = cmd..'-o "'..self.output..'" '..input
     debug("Command:\n"..cmd)
     return cmd, mode
 end
@@ -692,7 +692,6 @@ function Score:run_lilypond()
     mkdirs(dirname(self.output))
     self:lilypond_version()
     local p = io.popen(self:lilypond_cmd())
-    local debug_msg
     if self.debug then
         local f = io.open(self.output..".log", 'w')
         f:write(p:read('*a'))
@@ -842,7 +841,7 @@ function ly.file_musicxml(input_file, options)
         end
     end
     local xml2ly = ly.get_option('xml2ly')
-    local i = io.popen(xml2ly..' --out=-'..xmlopts..' '..input_file, 'r')
+    local i = io.popen(xml2ly..' --out=-'..xmlopts..' "'..input_file..'"', 'r')
     ly.score = Score:new(i:read('*a'), options, input_file)
     i:close()
 end
