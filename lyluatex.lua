@@ -831,8 +831,6 @@ function ly.declare_package_options(options)
 end
 
 
-ly.env = {}
-ly.env_name = ''
 ly.score_content = {}
 function ly.env_begin(envs)
     function ly.process_buffer(line)
