@@ -80,6 +80,9 @@
   \directlua{ly.set_property([[#1]], [[#2]])}
 }
 
+% This macro defines how the filename of a score will look like if printed.
+\newcommand{\lyFilename}[1]{\noindent #1}
+
 % Line width is calculated if set to 'default'
 \def\ly@page{\directlua{ly.PAGE = \thepage}}
 

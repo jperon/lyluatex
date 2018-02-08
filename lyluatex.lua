@@ -727,7 +727,7 @@ function Score:write_tex(do_compile)
         if self.insert == 'fullpage' then
             warn('`printfilename` ignored with `insert=fullpage`')
         else
-            local filename = self.input_file:gsub("(.*/)(.*)", "\\noindent %2\\par")
+            local filename = self.input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
             tex.sprint(filename)
         end
     end
