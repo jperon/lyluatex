@@ -949,13 +949,16 @@ end
 
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
 function ly.verbprint(lines)
+    local content = table.concat(lines, '\n'):gsub(
+      '.*%%%s*begin verbatim', ''):gsub(
+      '%%%s*end verbatim.*', '')
     --[[ We unfortunately need an external file,
          as verbatim environments are quite special. ]]
     local fname = ly.get_option('tmpdir')..'/verb.tex'
     local f = io.open(fname, 'w')
     f:write(
         ly.verbenv[1]..'\n'..
-        table.concat(lines, '\n')..
+        content..
         '\n'..ly.verbenv[2]:gsub([[\end {]], [[\end{]])..'\n'
     )
     f:close()
