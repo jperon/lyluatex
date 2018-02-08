@@ -939,8 +939,11 @@ function ly.is_dim (k, v)
     if n and sl and u then return true end
     if n and contains(TEX_UNITS, u) then return true end
     err(
-        [[Unexpected value "%s" for dimension %s:
-        should be either a number (for example "12"), or a number with unit, without space ("12pt")
+        [[
+Unexpected value "%s" for dimension %s:
+should be either a number (for example "12"),
+a number with unit, without space ("12pt"),
+or a (multiplied) TeX length (".8\linewidth")
         ]],
         v, k
     )
