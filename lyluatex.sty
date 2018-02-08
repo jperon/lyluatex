@@ -156,7 +156,7 @@
 \newcommand\lyscoreend{\directlua{ly.env_end()}}
 
 \newkeyenvironment{ly}[][options]{%
-\lyscorebegin{ly, lilypond}
+\lyscorebegin{\@currenvir}
 }{%
 \lyscoreend%
 \ly@compilescore{ly.fragment(ly.score_content, [[\commandkey{options}]])}%

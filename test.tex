@@ -1,5 +1,5 @@
 \documentclass[a5paper, fontsize=12pt]{scrbook}
-\usepackage[program=lilypond, tmpdir=tmp_ly, pass-fonts, verbatim-highlight]{lyluatex}
+\usepackage[program=lilypond, tmpdir=tmp_ly, pass-fonts, verbatim-highlight, debug]{lyluatex}
 \usepackage{multicol}
 
 \title{}
@@ -10,6 +10,17 @@
 %\def\staffsize{20.5}
 
 \begin{document}
+
+% It's possible to wrup `ly` within another environment, using \ly[] and \endly.
+\newenvironment{verbly}{%
+\ly[verbatim]
+}{%
+\endly
+}
+
+\begin{verbly}
+a b c
+\end{verbly}
 
 % Import d'une partition externe. La commande \includely est strictement équivalente.
 \lilypondfile[line-width=250pt, insert=fullpage, label=test]{ly/AveMariaDeLourdes/AveMariaDeLourdes}
