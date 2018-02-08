@@ -122,7 +122,7 @@ local function locate(file, includepaths)
         end
     end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
-    if not result and ext and file:sub(-3) ~= '.ly' then return locate(file..'.ly', includepaths) end
+    if not result and file:sub(-3) ~= '.ly' then return locate(file..'.ly', includepaths) end
     return result
 end
 
