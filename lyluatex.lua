@@ -280,15 +280,8 @@ function Score:calc_properties()
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     self.staffsize = staffsize
     -- dimensions that can be given by LaTeX
-    local value
     for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
-        value = self[dimension]
-        if value == '' then
-            if dimension == 'line-width' then value = tex.dimen.linewidth..'sp'
-            else value = tex.dimen[dimension]..'sp'
-            end
-        end
-        self[dimension] = convert_unit(value)
+        self[dimension] = convert_unit(self[dimension])
     end
     -- dimensions specific to LilyPond
     self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
