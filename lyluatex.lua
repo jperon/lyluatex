@@ -132,7 +132,7 @@ local function locate(file, includepaths, ext)
         end
     end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
-    if not result and file:match('.%w+$') ~= ext then return locate(file..ext, includepaths) end
+    if not result and ext and file:match('.%w+$') ~= ext then return locate(file..ext, includepaths) end
     return result
 end
 
@@ -841,7 +841,8 @@ function ly.file_musicxml(input_file, options)
         elseif Score[opt] then xmlopts = xmlopts..' --'..opt
         end
     end
-    local i = io.popen('musicxml2ly --out=-'..xmlopts..' '..input_file, 'r')
+    local xml2ly = ly.get_option('xml2ly')
+    local i = io.popen(xml2ly..' --out=-'..xmlopts..' '..input_file, 'r')
     ly.score = Score:new(i:read('*a'), options, input_file)
     i:close()
 end

@@ -1,5 +1,5 @@
 \documentclass[a5paper, fontsize=12pt]{scrbook}
-\usepackage[program=lilypond, tmpdir=tmp_ly, pass-fonts]{lyluatex}
+\usepackage[program=lilypond, xml2ly=musicxml2ly, tmpdir=tmp_ly, pass-fonts]{lyluatex}
 \usepackage{multicol}
 
 \title{}
@@ -10,6 +10,8 @@
 %\def\staffsize{20.5}
 
 \begin{document}
+
+\musicxmlfile{xml/FaurReveSample.mxl}
 
 % Import d'une partition externe. La commande \includely est strictement équivalente.
 \lilypondfile[line-width=250pt, insert=fullpage, label=test]{ly/AveMariaDeLourdes/AveMariaDeLourdes}
