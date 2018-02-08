@@ -509,6 +509,13 @@ say, to the installation directory).  If LilyPond can be started the version
 string will be printed to the console for every score, otherwise an error is
 raised, as is described in [Handling LilyPond Failures](#lilypond-failures).
 
+\lyOption{ly-version}{2.18.2} The LilyPond version to be written to the
+generated LilyPond code.  This option is partially redundant with the
+\option{program} option but may serve as a guard against using outdated LilyPond
+versions.  This can for example be relevant when sharing documents and
+\option{program} is set to its default `lilypond`, which may be something
+different on another computer.
+
 ### Temporary Directory for Scores
 
 \lyluatex\ uses a temporary directory to store LilyPond scores.  For each score
