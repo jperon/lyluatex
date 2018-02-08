@@ -50,6 +50,7 @@
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
     ['verbatim'] = {'false', 'true', ''},
+    ['verbatim-highlight'] = {'false', 'true', ''}
   })
 }
 \directlua{
@@ -59,6 +60,12 @@
   end
 }
 \catcode`-=12
+
+\directlua{
+    if ly.get_option('verbatim-highlight') then
+        tex.sprint([[\detokenize{\RequirePackage{minted}}]])
+    end
+}
 
 \newcommand{\ly@setunits}{%
   \let\ly@old@in\in\protected\def\in{in}%

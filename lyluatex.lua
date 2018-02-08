@@ -722,7 +722,7 @@ end
 
 function Score:write_tex(do_compile)
     if self.verbatim then
-        ly.verbprint(self.orig_ly_code:explode('\n'))
+        ly.verbprint(self.orig_ly_code:explode('\n'), self['verbatim-highlight'])
     end
     if do_compile then
         if not self:check_failed_compilation() then return end
@@ -948,18 +948,33 @@ function ly.set_property(k, v)
 end
 
 
-function ly.verbprint(lines)
+function ly.verbprint(lines, highlight)
     local spaces
-    tex.sprint('\\begin{noindent}')
-    for i, line in pairs(lines) do
-        local _, e = line:find('^%s*')
-        spaces = line:sub(1, e):gsub(' ', '\\ ')
-        tex.sprint('\\hspace*{0ex}', [[\texttt{]], spaces)
-        tex.sprint(-2, line:sub(e))
-        tex.sprint([[}]])
-        if i ~= #lines then tex.sprint('\\\\') end
+    if highlight then
+        --[[ We unfortunately need an external file,
+             as minted is a verbatim environment. ]]
+        local fname = ly.get_option('tmpdir')..'/verb.tex'
+        local f = io.open(fname, 'w')
+        f:write(
+            -- We use tex until one decedes to implement lilypond
+            '\\begin{minted}{tex}\n'..
+            table.concat(lines, '\n')..
+            '\n\\end{minted}\n'
+        )
+        f:close()
+        tex.sprint('\\input{'..fname..'}')
+    else
+        tex.sprint('\\begin{noindent}')
+        for i, line in pairs(lines) do
+            local _, e = line:find('^%s*')
+            spaces = line:sub(1, e):gsub(' ', '\\ ')
+            tex.sprint('\\hspace*{0ex}', [[\texttt{]], spaces)
+            tex.sprint(-2, line:sub(e))
+            tex.sprint([[}]])
+            if i ~= #lines then tex.sprint('\\\\') end
+        end
+        tex.sprint('\\end{noindent}\\par\\smallskip')
     end
-    tex.sprint('\\end{noindent}\\par\\smallskip')
 end
 
 
