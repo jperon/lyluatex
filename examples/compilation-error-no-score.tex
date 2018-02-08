@@ -1,0 +1,34 @@
+\documentclass{scrartcl}
+\usepackage{lyluatex}
+\begin{document}
+
+\section*{Handling LilyPond Failures -- No Score}
+
+The following block of LilyPond code will cause LilyPond to error out and
+produce no score file.  Without the use of \texttt{debug} and \texttt{showfailed} no logfile is produced, nothing is shown in the document, and an error raised.
+
+\begin{verbatim}
+\begin{lilypond}[debug=false, showfailed=false]
+  some meaningless words
+\end{lilypond}
+\end{verbatim}
+
+\begin{lilypond}[debug=false, showfailed=false]
+  some meaningless words
+\end{lilypond}
+
+Compiling the same code \emph{with} \texttt{showfailed} will produce a warning
+instead of raising an error and prints an information text box in the document.
+
+\begin{lilypond}[debug=false, showfailed]
+  some meaningless words
+\end{lilypond}
+
+In a final variant, \texttt{debug} is active too, showing different information
+in the console and the text box, referencing the log files.
+
+\begin{lilypond}[debug, showfailed]
+  some meaningless words
+\end{lilypond}
+
+\end{document}

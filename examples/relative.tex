@@ -1,0 +1,20 @@
+\documentclass{scrartcl}
+\usepackage[relative]{lyluatex}
+\begin{document}
+
+\section*{Relative mode}
+
+With the \texttt{relative} option pitches entered in fragments are parsed in
+relative mode.  The empty option starts with LilyPond's \texttt{c'} pitch (middle
+C).  This is equivalent to setting \texttt{relative} to \texttt{1}:
+
+\lilypond{ c d e d}
+
+\texttt{relative=2} starts with \texttt{c''}
+
+\lilypond[relative=2]{ c d e d }
+
+and \texttt{relative=0} uses the plain \texttt{c} as origin pitch.
+
+\lilypond[relative=0]{ \clef bass c d e d }
+\end{document}

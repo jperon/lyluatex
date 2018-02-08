@@ -1,0 +1,28 @@
+\documentclass{scrartcl}
+\usepackage[relative]{lyluatex}
+\begin{document}
+
+\section*{Staff Display Options}
+
+The \texttt{notime} option suppresses the time signature and also any
+application of timingm, i.\,e. automatic barlines:
+
+\lilypond[notime]{ c d e d c d e }
+
+\texttt{notimesig} only suppresses printing the time signature:
+
+\lilypond[notimesig]{ c d e d c d e }
+
+\texttt{noclef} suppresses the clef:
+
+\lilypond[noclef]{ c d e d c d e }
+
+\texttt{nostaffsymbol} suppresses the staff lines:
+
+\lilypond[nostaffsymbol]{ c d e d c d e }
+
+\texttt{nostaff} suppresses, stafflines, clefs and time signatures.
+
+\lilypond[nostaff]{ c d e d c d e }
+
+\end{document}
