@@ -209,6 +209,7 @@ function Score:new(ly_code, options, input_file)
     self.__index = self
     o.input_file = input_file
     o.ly_code = ly_code
+    o.orig_ly_code = ly_code
     return o
 end
 
@@ -721,6 +722,9 @@ function Score:run_lilypond()
 end
 
 function Score:write_tex(do_compile)
+    if self.verbatim then
+        ly.verbprint(self.orig_ly_code:explode('\n'), self['verbatim-highlight'])
+    end
     if do_compile then
         if not self:check_failed_compilation() then return end
     end
@@ -828,6 +832,33 @@ function ly.declare_package_options(options)
 end
 
 
+ly.score_content = {}
+function ly.env_begin(envs)
+    function ly.process_buffer(line)
+        table.insert(ly.score_content, line)
+        for _, env in pairs(envs:explode(',')) do
+            if line:find([[\end{]]..env:gsub('^ ', '')..[[}]]) then return nil end
+        end
+        return ''
+    end
+    ly.score_content = {}
+    luatexbase.add_to_callback(
+        'process_input_buffer',
+        ly.process_buffer,
+        'readline'
+    )
+end
+
+
+function ly.env_end()
+    luatexbase.remove_from_callback(
+        'process_input_buffer',
+        'readline'
+    )
+    table.remove(ly.score_content)
+end
+
+
 function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
@@ -842,8 +873,13 @@ end
 
 function ly.fragment(ly_code, options)
     options = ly.set_local_options(options)
+    if type(ly_code) == 'string' then
+        ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
+    else
+        ly_code = table.concat(ly_code, '\n')
+    end
     ly.score = Score:new(
-        ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'),
+        ly_code,
         options
     )
 end
@@ -908,6 +944,36 @@ end
 function ly.set_property(k, v)
     k, v = process_options(k, v)
     if k then Score[k] = v end
+end
+
+
+function ly.verbprint(lines, highlight)
+    local spaces
+    if highlight then
+        --[[ We unfortunately need an external file,
+             as minted is a verbatim environment. ]]
+        local fname = ly.get_option('tmpdir')..'/verb.tex'
+        local f = io.open(fname, 'w')
+        f:write(
+            -- We use tex until one decedes to implement lilypond
+            '\\begin{minted}{tex}\n'..
+            table.concat(lines, '\n')..
+            '\n\\end{minted}\n'
+        )
+        f:close()
+        tex.sprint('\\input{'..fname..'}')
+    else
+        tex.sprint('\\begin{noindent}')
+        for i, line in pairs(lines) do
+            local _, e = line:find('^%s*')
+            spaces = line:sub(1, e):gsub(' ', '\\ ')
+            tex.sprint('\\hspace*{0ex}', [[\texttt{]], spaces)
+            tex.sprint(-2, line:sub(e))
+            tex.sprint([[}]])
+            if i ~= #lines then tex.sprint('\\\\') end
+        end
+        tex.sprint('\\end{noindent}\\par\\smallskip')
+    end
 end
 
 
