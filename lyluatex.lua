@@ -29,7 +29,7 @@ local MXML_OPTIONS = {
 local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
 local LY_HEAD = [[
 %%File header
-\version "2.18.2"
+\version "<<<VERSION>>>"
 
 <<<PREAMBLE>>>
 
@@ -219,6 +219,7 @@ function Score:new(ly_code, options, input_file)
     self.__index = self
     o.input_file = input_file
     o.ly_code = ly_code
+    o.orig_ly_code = ly_code
     return o
 end
 
@@ -272,10 +273,12 @@ function Score:calc_properties()
     self.l_staff
     )
     -- relative
-    if self.relative == '' then
-        self.relative = 1
-    else
-        self.relative = tonumber(self.relative)
+    if self.relative then
+        if self.relative == '' then
+            self.relative = 1
+        else
+            self.relative = tonumber(self.relative)
+        end
     end
     -- staffsize
     local staffsize = tonumber(self.staffsize)
@@ -386,19 +389,38 @@ function Score:check_properties()
             )
         end
     end
+    if self.input_file or self.ly_code:find([[\score]]) then
+        if self.fragment or self.relative then
+            if self.input_file then
+                warn([[
+You may not set `fragment` (or `relative`)
+with \lilypondfile. Setting them to false.
+                ]])
+            else
+                warn([[
+Found a \score block: setting `fragment`
+and `relative` to false.
+                ]])
+            end
+            self.fragment = false
+            self.relative = false
+        end
+    end
 end
 
 function Score:content()
     local n = ''
     if self.relative then
+        self.fragment = true  -- in case it would serve later
         if self.relative < 0 then
             for _ = -1, self.relative, -1 do n = n..',' end
         elseif self.relative > 0 then
             for _ = 1, self.relative do n = n.."'" end
         end
         return string.format([[\relative c%s {%s}]], n, self.ly_code)
+    elseif self.fragment then return [[{]]..self.ly_code..[[}]]
+    else return self.ly_code
     end
-    return self.ly_code
 end
 
 function Score:delete_intermediate_files()
@@ -479,6 +501,7 @@ end
 
 function Score:header()
     local header = LY_HEAD:gsub(
+        [[<<<VERSION>>>]], self['ly-version']):gsub(
         [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
         [[<<<INDENT>>>]], self:ly_indent()):gsub(
@@ -508,8 +531,11 @@ function Score:header()
     elseif self.insert == 'systems' then
 	header = header:gsub(
 	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
-	    [[<<<PAPER>>>]], [[indent = 0\mm]])
+	    [[<<<PAPER>>>]], '')
     else
+        header = header:gsub(
+        [[<<<PREAMBLE>>>]], [[#(ly:set-option 'preview #t)]]):gsub(
+        [[<<<PAPER>>>]], '')
         err('"inline" insertion mode not implemented yet')
     end
     return header
@@ -569,7 +595,10 @@ function Score:lilypond_version()
 end
 
 function Score:ly_indent()
-    if self.indent == '' then return ''
+    if self.indent == '' then
+        if self.insert == 'fullpage' then return ''
+        else return [[ indent = 0\cm ]]
+        end
     else
         return [[indent = ]]..convert_unit(self.indent)..[[\pt]]
     end
@@ -703,6 +732,9 @@ function Score:run_lilypond()
 end
 
 function Score:write_tex(do_compile)
+    if self.verbatim then
+        ly.verbprint(self.orig_ly_code:explode('\n'))
+    end
     if do_compile then
         if not self:check_failed_compilation() then return end
     end
@@ -810,6 +842,33 @@ function ly.declare_package_options(options)
 end
 
 
+ly.score_content = {}
+function ly.env_begin(envs)
+    function ly.process_buffer(line)
+        table.insert(ly.score_content, line)
+        for _, env in pairs(envs:explode(',')) do
+            if line:find([[\end{]]..env:gsub('^ ', '')..[[}]]) then return nil end
+        end
+        return ''
+    end
+    ly.score_content = {}
+    luatexbase.add_to_callback(
+        'process_input_buffer',
+        ly.process_buffer,
+        'readline'
+    )
+end
+
+
+function ly.env_end()
+    luatexbase.remove_from_callback(
+        'process_input_buffer',
+        'readline'
+    )
+    table.remove(ly.score_content)
+end
+
+
 function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
@@ -849,8 +908,13 @@ end
 
 function ly.fragment(ly_code, options)
     options = ly.set_local_options(options)
+    if type(ly_code) == 'string' then
+        ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
+    else
+        ly_code = table.concat(ly_code, '\n')
+    end
     ly.score = Score:new(
-        ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2'),
+        ly_code,
         options
     )
 end
@@ -915,6 +979,25 @@ end
 function ly.set_property(k, v)
     k, v = process_options(k, v)
     if k then Score[k] = v end
+end
+
+
+ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
+function ly.verbprint(lines)
+    local content = table.concat(lines, '\n'):gsub(
+      '.*%%%s*begin verbatim', ''):gsub(
+      '%%%s*end verbatim.*', '')
+    --[[ We unfortunately need an external file,
+         as verbatim environments are quite special. ]]
+    local fname = ly.get_option('tmpdir')..'/verb.tex'
+    local f = io.open(fname, 'w')
+    f:write(
+        ly.verbenv[1]..'\n'..
+        content..
+        '\n'..ly.verbenv[2]:gsub([[\end {]], [[\end{]])..'\n'
+    )
+    f:close()
+    tex.sprint('\\input{'..fname..'}')
 end
 
 

@@ -23,6 +23,7 @@
     ['debug'] = {'false', 'true', ''},
     ['extra-bottom-margin'] = {'0', ly.is_dim},
     ['extra-top-margin'] = {'0', ly.is_dim},
+    ['fragment'] = {'true', 'false', ''},
     ['fullpagealign'] = {'staffline', 'crop'},
     ['fullpagestyle'] = {''},
     ['includepaths'] = {'./'},
@@ -31,6 +32,7 @@
     ['insert'] = {'systems', 'fullpage', 'inline'},
     ['labelprefix'] = {'ly_'},
     ['line-width'] = {'', ly.is_dim},
+    ['ly-version'] = {'2.18.2'},
     ['noclef'] = {'false', 'true', ''},
     ['nostaff'] = {'false', 'true', ''},
     ['nostaffsymbol'] = {'false', 'true', ''},
@@ -48,6 +50,7 @@
     ['showfailed'] = {'false', 'true' ,''},
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
+    ['verbatim'] = {'false', 'true', ''},
     % MusicXML options
     ['absolute'] = {'false', 'true', ''},
     ['language'] = {'false'},
@@ -83,7 +86,7 @@
 
 % Command to change options during the document
 \newcommand{\lysetoption}[2]{%
-  \directlua{ly.set_property('#1', '#2')}
+  \directlua{ly.set_property([[#1]], [[#2]])}
 }
 
 % Line width is calculated if set to 'default'
@@ -107,12 +110,12 @@
 }
 
 % Main commands
-% Inclusion of a .ly file
-\newkeycommand*\includely[][options][1]{%
+% Score processing
+\newcommand{\ly@compilescore}[1]{%
 \ly@setunits%
 \directlua{
   ly.CURRFILEDIR = '\currfiledir'
-  ly.file('\luatexluaescapestring{#1}', [[\commandkey{options}]])
+  #1
   ly.newpage_if_fullpage()
 }
 \ly@resetunits%
@@ -121,53 +124,54 @@
 \directlua{ly.score:process()}%
 }
 
+% Inclusion of a .ly file
+\newkeycommand*\includely[][options][1]{%
+  \ly@compilescore{ly.file(
+    '\luatexluaescapestring{#1}', [[\commandkey{options}]]
+  )}%
+}
+
 % Inclusion of a musicxml file
 \newkeycommand*\musicxmlfile[][options][1]{%
-\ly@setunits%
-\directlua{
-  ly.CURRFILEDIR = '\currfiledir'
-  ly.file_musicxml('\luatexluaescapestring{#1}', [[\commandkey{options}]])
-  ly.newpage_if_fullpage()
-}
-\ly@resetunits%
-\ly@page%
-\ly@currentfonts%
-\directlua{ly.score:process()}%
+  \ly@compilescore{ly.file_musicxml(
+    '\luatexluaescapestring{#1}', [[\commandkey{options}]]
+  )}
 }
 
 % Base environment to include a LilyPond fragment integrated into
 % the document.
 \NewEnviron{ly@compilely}{%
-\ly@setunits%
-\directlua{
-  ly.CURRFILEDIR = '\currfiledir'
-  ly.fragment(
+  \ly@compilescore{ly.fragment(
     '\luatexluaescapestring{\unexpanded\expandafter{\BODY}}',
     [[\commandkey{options}]]
-  )
-  ly.newpage_if_fullpage()
-}%
-\ly@resetunits%
-\ly@page%
-\ly@currentfonts%
-\directlua{ly.score:process()}%
+  )}%
+}
+
+% Commands to print verbatim content of the score
+\newcommand\lysetverbenv[2]{%
+  \directlua{ly.verbenv = {
+    '\luatexluaescapestring{\detokenize{#1}}',
+    '\luatexluaescapestring{\detokenize{#2}}'
+  }}%
 }
 
 % Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[][options][1]{%
 \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
 \begin{ly@compilely}%
-{#1}
+#1
 \end{ly@compilely}%
 \let\repeat\ly@oldrepeat%
 }
 
+\newcommand\lyscorebegin[1]{\directlua{ly.env_begin('#1')}}
+\newcommand\lyscoreend{\directlua{ly.env_end()}}
+
 \newkeyenvironment{ly}[][options]{%
-\let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
-\ly@compilely%
+\lyscorebegin{\@currenvir}
 }{%
-\endly@compilely%
-\let\repeat\ly@oldrepeat%
+\lyscoreend%
+\ly@compilescore{ly.fragment(ly.score_content, [[\commandkey{options}]])}%
 }
 
 % Commands for compatibility with lilypond-book
