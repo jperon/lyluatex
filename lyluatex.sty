@@ -51,7 +51,6 @@
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
     ['verbatim'] = {'false', 'true', ''},
-    ['verbatim-highlight'] = {'false', 'true', ''}
   })
 }
 \directlua{
@@ -61,12 +60,6 @@
   end
 }
 \catcode`-=12
-
-\directlua{
-    if ly.get_option('verbatim-highlight') then
-        tex.sprint([[\detokenize{\RequirePackage{minted}}]])
-    end
-}
 
 \newcommand{\ly@setunits}{%
   \let\ly@old@in\in\protected\def\in{in}%
@@ -137,11 +130,12 @@
   )}%
 }
 
-% Command to print verbatim content of the score
-\newcommand\ly@verbprint[1]{%
-  \begin{noindent}
-  \directlua{ly.verbprint(#1)}%
-  \end{noindent}
+% Commands to print verbatim content of the score
+\newcommand\lysetverbenv[2]{%
+  \directlua{ly.verbenv = {
+    '\luatexluaescapestring{\detokenize{#1}}',
+    '\luatexluaescapestring{\detokenize{#2}}'
+  }}%
 }
 
 % Parametrized command and environment for included LilyPond fragment
