@@ -77,8 +77,13 @@ end
 
 local function convert_unit(value)
     if not value then return 0 end
-    value = value:gsub([[\]], '')
-    return tonumber(value) or tex.sp(value) / tex.sp("1pt")
+    if value:match('\\') then
+        local n, u = value:match('^%d*%.?%d*'), value:match('%a+')
+        if n == '' then n = 1 end
+        return tonumber(n) * tex.dimen[u] / tex.sp("1pt")
+    else
+        return tonumber(value) or tex.sp(value) / tex.sp("1pt")
+    end
 end
 
 
@@ -896,9 +901,15 @@ end
 
 
 function ly.is_dim (k, v)
-    if v == '' or v == false then return true end
-    local n, u = v:match('%d*%.?%d*'), v:match('%a+')
-    if tonumber(v) or n and contains(TEX_UNITS, u) then return true end
+    if v == '' or
+        v == false or
+        tonumber(v)
+        then return true end
+    local n, sl, u = v:match('^%d*%.?%d*'), v:match('\\'), v:match('%a+')
+    -- a value of number - backslash - length is a dimension
+    -- invalid input will be prevented in by the LaTeX parser already
+    if n and sl and u then return true end
+    if n and contains(TEX_UNITS, u) then return true end
     err(
         [[Unexpected value "%s" for dimension %s:
         should be either a number (for example "12"), or a number with unit, without space ("12pt")
