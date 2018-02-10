@@ -74,6 +74,11 @@
 }
 \catcode`-=12
 
+% Store the current file's directory
+\directlua{
+  ly.CURRFILEDIR = '\currfiledir
+}
+
 \newcommand{\ly@setunits}{%
   \let\ly@old@in\in\protected\def\in{in}%
   \let\ly@old@pt\pt\protected\def\pt{pt}%
@@ -123,7 +128,6 @@
 \newcommand{\ly@compilescore}[1]{%
 \ly@setunits%
 \directlua{
-  ly.CURRFILEDIR = '\currfiledir'
   #1
   ly.newpage_if_fullpage()
 }
