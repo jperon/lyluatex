@@ -1,6 +1,7 @@
 \documentclass[a5paper, fontsize=12pt]{scrbook}
-\usepackage[program=lilypond, tmpdir=tmp_ly, pass-fonts]{lyluatex}
+\usepackage[program=lilypond, tmpdir=tmp_ly, pass-fonts, debug]{lyluatex}
 \usepackage{multicol}
+\usepackage{listings}
 
 \title{}
 \author{}
@@ -11,14 +12,29 @@
 
 \begin{document}
 
+\musicxmlfile{xml/Faur Reve Sample.mxl}
+
+% The environment commands that will be used for verbatim.
+\lysetverbenv{\begin{lstlisting}[language=TeX]}{\end{lstlisting}}
+
+% It's possible to wrap `ly` within another environment, using \ly[] and \endly.
+\newenvironment{verbly}{%
+\ly[verbatim]
+}{%
+\endly
+}
+
+\begin{verbly}
+a b c
+\end{verbly}
+
 % Import d'une partition externe. La commande \includely est strictement équivalente.
-\lilypondfile[line-width=250\pt, insert=fullpage, label=test]{ly/AveMariaDeLourdes/AveMariaDeLourdes}
+\lilypondfile[line-width=250pt, insert=fullpage, label=test]{ly/Ave Maria De Lourdes/Ave Maria De Lourdes}
 
 \pageref{ly_test}
 
-\begin{multicols}{2}
 % Saisie directe d'un fragment musical.
-\begin{lilypond}[staffsize=16, fragment]
+\begin{lilypond}[staffsize=16]
 \version "2.16"
 \language "français"
 
@@ -89,18 +105,28 @@ Paroles = \lyricmode {
 
 \end{lilypond}
 
-\lilypond[relative]{
-{ c d e f g a b c } \addlyrics{do ré mi fa sol la si do.}
+\medskip
+L'environnement \texttt{lilypond} :
+\begin{lilypond}[relative, verbatim]
+{ c d e f g a b c }
+\addlyrics{do ré mi fa sol la si do.}
+\end{lilypond}
+
+\medskip
+\noindent se comporte mieux que la commande du même nom :
+
+\lilypond[relative, verbatim]{
+{ c d e f g a b c }
+\addlyrics{do ré mi fa sol la si do.}
 }
 
+\clearpage
 Ce fragment :
 
 \lilypond{a' b' c''}
 
 sera écrit plus petit en note de bas de
 page\footnote{\lilypond[relative=2]{a b c}}.
-
-\end{multicols}
 
 \newpage
 

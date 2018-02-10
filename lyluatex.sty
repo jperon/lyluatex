@@ -13,7 +13,6 @@
 
 \RequirePackage{metalogo}
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
-
 % Options
 \catcode`-=11
 \directlua{
@@ -24,23 +23,47 @@
     ['debug'] = {'false', 'true', ''},
     ['extra-bottom-margin'] = {'0', ly.is_dim},
     ['extra-top-margin'] = {'0', ly.is_dim},
+    ['fragment'] = {'true', 'false', ''},
     ['fullpagealign'] = {'staffline', 'crop'},
     ['fullpagestyle'] = {''},
     ['includepaths'] = {'./'},
+    ['indent'] = {'', ly.is_dim},
+    ['noindent'] = {'default', ly.is_neg},
     ['insert'] = {'systems', 'fullpage', 'inline'},
+    ['intertext'] = {''},
     ['labelprefix'] = {'ly_'},
-    ['line-width'] = {'', ly.is_dim},
-    ['paperwidth'] = {'', ly.is_dim},
-    ['paperheight'] = {'', ly.is_dim},
+    ['line-width'] = {[[\linewidth]], ly.is_dim},
+    ['ly-version'] = {'2.18.2'},
+    ['noclef'] = {'false', 'true', ''},
+    ['nostaff'] = {'false', 'true', ''},
+    ['nostaffsymbol'] = {'false', 'true', ''},
+    ['notime'] = {'false', 'true', ''},
+    ['notiming'] = {'false', 'true', ''},
+    ['notimesig'] = {'false', 'true', ''},
+    ['optimize-pdf'] = {'false', 'true', ''},
+    ['paperwidth'] = {[[\paperwidth]], ly.is_dim},
+    ['paperheight'] = {[[\paperheight]], ly.is_dim},
     ['pass-fonts'] = {'false', 'true', ''},
     ['print-page-number'] = {'false', 'true', ''},
+    ['printfilename'] = {'false', 'true', ''},
     ['program'] = {'lilypond'},
     ['ragged-right'] = {'default', 'true', 'false', ''},
+    ['noragged-right'] = {'default', ly.is_neg},
     ['relative'] = {'false', ly.is_num},
-    ['noragged-right'] = {'default'},
     ['showfailed'] = {'false', 'true' ,''},
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
+    ['verbatim'] = {'false', 'true', ''},
+    % MusicXML options
+    ['absolute'] = {'false', 'true', ''},
+    ['language'] = {'false'},
+    ['lxml'] = {'false', 'true'},
+    ['no-articulation-directions'] = {'true', 'false', ''},
+    ['no-beaming'] = {'true', 'false', ''},
+    ['no-page-layout'] = {'true', 'false', ''},
+    ['no-rest-positions'] = {'true', 'false', ''},
+    ['verbose'] = {'false', 'true', ''},
+    ['xml2ly'] = {'musicxml2ly'},
   })
 }
 \directlua{
@@ -51,14 +74,29 @@
 }
 \catcode`-=12
 
-\newcommand{\pt}{pt}
-\newcommand{\mm}{mm}
-\newcommand{\cm}{cm}
+\newcommand{\ly@setunits}{%
+  \let\ly@old@in\in\protected\def\in{in}%
+  \let\ly@old@pt\pt\protected\def\pt{pt}%
+  \let\ly@old@mm\mm\protected\def\mm{mm}%
+  \let\ly@old@cm\cm\protected\def\cm{cm}%
+}
+\newcommand{\ly@resetunits}{%
+  \let\in\ly@old@in%
+  \let\pt\ly@old@pt%
+  \let\mm\ly@old@mm%
+  \let\cm\ly@old@cm%
+}
 
 % Command to change options during the document
 \newcommand{\lysetoption}[2]{%
-  \directlua{ly.set_property('#1', '#2')}
+  \directlua{ly.set_property([[#1]], [[#2]])}
 }
+
+% This macro defines how the filename of a score will look like if printed.
+\newcommand{\lyFilename}[1]{\noindent #1}
+
+% Command to change the appearance of verbatim 'intertext'
+\newcommand{\lyIntertext}[1]{\noindent #1}
 
 % Line width is calculated if set to 'default'
 \def\ly@page{\directlua{ly.PAGE = \thepage}}
@@ -81,49 +119,68 @@
 }
 
 % Main commands
-% Inclusion of a .ly file
-\newkeycommand*\includely[][options][1]{%
+% Score processing
+\newcommand{\ly@compilescore}[1]{%
+\ly@setunits%
 \directlua{
   ly.CURRFILEDIR = '\currfiledir'
-  ly.file('\luatexluaescapestring{#1}', '\commandkey{options}')
+  #1
   ly.newpage_if_fullpage()
 }
-\ly@page
-\ly@currentfonts
-\directlua{ly.score:process()}
+\ly@resetunits%
+\ly@page%
+\ly@currentfonts%
+\directlua{ly.score:process()}%
+}
+
+% Inclusion of a .ly file
+\newkeycommand*\includely[][options][1]{%
+  \ly@compilescore{ly.file(
+    '\luatexluaescapestring{#1}', [[\commandkey{options}]]
+  )}%
+}
+
+% Inclusion of a musicxml file
+\newkeycommand*\musicxmlfile[][options][1]{%
+  \ly@compilescore{ly.file_musicxml(
+    '\luatexluaescapestring{#1}', [[\commandkey{options}]]
+  )}
 }
 
 % Base environment to include a LilyPond fragment integrated into
 % the document.
 \NewEnviron{ly@compilely}{%
-\directlua{
-  ly.CURRFILEDIR = '\currfiledir'
-  ly.fragment(
+  \ly@compilescore{ly.fragment(
     '\luatexluaescapestring{\unexpanded\expandafter{\BODY}}',
-    '\commandkey{options}'
-  )
-  ly.newpage_if_fullpage()
+    [[\commandkey{options}]]
+  )}%
 }
-\ly@page
-\ly@currentfonts
-\directlua{ly.score:process()}%
+
+% Commands to print verbatim content of the score
+\newcommand\lysetverbenv[2]{%
+  \directlua{ly.verbenv = {
+    '\luatexluaescapestring{\detokenize{#1}}',
+    '\luatexluaescapestring{\detokenize{#2}}'
+  }}%
 }
 
 % Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[][options][1]{%
 \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
 \begin{ly@compilely}%
-{#1}
+#1
 \end{ly@compilely}%
 \let\repeat\ly@oldrepeat%
 }
 
+\newcommand\lyscorebegin[1]{\directlua{ly.env_begin('#1')}}
+\newcommand\lyscoreend{\directlua{ly.env_end()}}
+
 \newkeyenvironment{ly}[][options]{%
-\let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
-\ly@compilely%
+\lyscorebegin{\@currenvir}
 }{%
-\endly@compilely%
-\let\repeat\ly@oldrepeat%
+\lyscoreend%
+\ly@compilescore{ly.fragment(ly.score_content, [[\commandkey{options}]])}%
 }
 
 % Commands for compatibility with lilypond-book
