@@ -439,6 +439,29 @@ Presumably the caption suffers the same issues as \option{intertext} for
 \lyIssue{NOTE:}
 Captions haven't been implemented yet.
 
+### Printing the Filename
+
+For scores included by \cmd{lilypondfile} it is possible to print the filename
+before the score.  This is activated by the
+
+\lyOption{printfilename}{false}
+option.  It will print the actual filename only, without any path information.
+
+By default the filename is printed in its own unindented paragraph, including 
+\cmd{bigskip} between the text and the score.  However, the appearance can be
+modified by renewing the command
+
+\lyCmd{lyFilename}
+
+The following redefinition removes any indent and prints the text
+in monospace:
+
+```TeX
+\renewcommand{\lyFilename}[1]{%
+\noindent \texttt{#1}\par\bigskip%
+}
+```
+
 ### Printing LilyPond Code
 
 \lyOption{verbatim}{false}
