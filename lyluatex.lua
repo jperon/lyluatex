@@ -110,6 +110,8 @@ end
 
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
+    if Score.currfiledir == '' then Score.currfiledir = './' end
+    table.insert(includepaths, 1, Score.currfiledir)
     for i, path in ipairs(includepaths) do
         -- delete initial space (in case someone puts a space after the comma)
         includepaths[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME"))
@@ -129,13 +131,11 @@ end
 
 
 local function locate(file, includepaths, ext)
-    local result = ly.CURRFILEDIR..file
-    if not lfs.isfile(result) then result = file end
-    if not lfs.isfile(result) then
-        for _, d in ipairs(extract_includepaths(includepaths)) do
-            result = d..'/'..file
-            if lfs.isfile(result) then break end
-        end
+    local result
+    for _, d in ipairs(extract_includepaths(includepaths)) do
+        if d:sub(-1) ~= '/' then d = d..'/' end
+        result = d..file
+        if lfs.isfile(result) then break end
     end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
     if not result and ext and file:match('.%w+$') ~= ext then return locate(file..ext, includepaths) end
@@ -557,10 +557,10 @@ function Score:lilypond_cmd()
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
     if self.input_file then
-        cmd = cmd..'-I "'..lfs.currentdir()..'/'..dirname(self.input_file)..'" '
+        cmd = cmd..'-I "'..dirname(self.input_file):gsub('%./', lfs.currentdir()..'/')..'" '
     end
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
-        cmd = cmd..'-I "'..dir:gsub('^./', lfs.currentdir()..'/')..'" '
+        cmd = cmd..'-I "'..dir:gsub('^%./', lfs.currentdir()..'/')..'" '
     end
     cmd = cmd..'-o "'..self.output..'" '..input
     debug("Command:\n"..cmd)
