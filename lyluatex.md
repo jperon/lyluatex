@@ -145,7 +145,7 @@ Note that the automatic wrapping does *not* work in the environment and that the
 content of the environment must represent a compilable LilyPond file.
 
 \lyCmd{lilypondfile}
-Finally external files of arbitrary complexity can be referenced with
+External files of arbitrary complexity can be referenced with
 
 ```lilypond
 \lilypondfile{path/to/file}
@@ -158,6 +158,27 @@ following order:
 * relative to all given include paths (see [LilyPond Include Paths](#include-paths)))
 * relative to all paths visible to \LaTeX\ (like the package search)
 
+\lyCmd{musicxmlfile}
+Finally there is a command to include scores encoded as 
+[MusicXML](https://www.musicxml.com/) files.  These will be converted to
+LilyPond input by LilyPond's `musicxml2ly` script and then compiled by
+LilyPond.
+
+\lyIssue{Note:]
+This command has been added to provide compatibility with `lilypond-book`,
+but it is discouraged to use it since its use implies substantial problems:
+
+* The conversion process with `musicxml2ly` is somewhat fragile and can crash
+  in unpredictable ways due to encoding problems between various versions of
+  Python and Lua involved
+* `musicxml2ly` itself doesn't provide totally reliable conversion results,
+  even if the conversion reports successful operation.  In this case LilyPond
+  may produce inferior results or may fail to compile the score completely
+
+If there is the need to include music scores that are only available as
+MusicXML files it will nearly always be the better option to independently 
+convert the source using `musicxml2ly` and then manually post-process the
+resulting Lilypond input files.
 
 ## Option Handling {#option-handling}
 
