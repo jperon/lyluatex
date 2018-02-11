@@ -297,12 +297,19 @@ changed so that all systems are printed at their natural width.
 
 #### Fullpage
 
-\lyOption{papersize}{?}
+There are several options that can change the basic page layout of full-page
+scores.  However, by default all these options inherit their values from the
+`.tex` document.  There should very rarely be the need to explicitly change the
+values for these options.
+
+\lyOption{papersize}{default}
 Not implemented yet
 
-\lyOption{paperwidth}{}
+\lyOption{paperwidth}{\cmd{paperwidth}}
 
-\lyOption{paperheight}{}
+\lyOption{paperheight}{\cmd{paperheight}}
+
+\lyOption{twoside}{default}
 
 
 ### Alignment {#alignment}
