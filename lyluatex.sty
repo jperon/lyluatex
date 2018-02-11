@@ -13,6 +13,9 @@
 
 \RequirePackage{metalogo}
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
+
+\edef\ly@false{false}\def\ly@istwosided{\if@twoside\else\ly@false\fi}
+
 % Options
 \catcode`-=11
 \directlua{
@@ -53,6 +56,7 @@
     ['showfailed'] = {'false', 'true' ,''},
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
+    ['twoside'] = {'\ly@istwosided', 'false', 'true', ''},
     ['verbatim'] = {'false', 'true', ''},
     % MusicXML options
     ['absolute'] = {'false', 'true', ''},
@@ -73,6 +77,8 @@
   end
 }
 \catcode`-=12
+
+%\directlua{ly.TWOSIDE = 'f'}
 
 \newcommand{\ly@setunits}{%
   \let\ly@old@in\in\protected\def\in{in}%
@@ -124,6 +130,7 @@
 \ly@setunits%
 \directlua{
   ly.CURRFILEDIR = '\currfiledir'
+  ly.set_property('twoside', '\ly@istwosided')
   #1
   ly.newpage_if_fullpage()
 }
