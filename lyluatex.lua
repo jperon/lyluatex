@@ -42,7 +42,7 @@ local LY_HEAD = [[
 }
 \paper{
     <<<PAPER>>>
-    two-sided = ##t
+    two-sided = ##<<<TWOSIDE>>>
     line-width = <<<LINEWIDTH>>>\pt
     <<<INDENT>>>
     <<<RAGGEDRIGHT>>>
@@ -301,6 +301,7 @@ function Score:calc_properties()
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
     end
+    self.twoside = self:ly_twoside()
     -- temporary file name
     self.output = self:output_filename()
 end
@@ -506,7 +507,8 @@ function Score:header()
         [[<<<INDENT>>>]], self:ly_indent()):gsub(
         [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
         [[<<<FONTS>>>]], self:fonts()):gsub(
-        [[<<<STAFFPROPS>>>]], self.staff_props)
+        [[<<<STAFFPROPS>>>]], self.staff_props):gsub(
+        [[<<<TWOSIDE>>>]], self.twoside)
     if self.insert == 'fullpage' then
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
@@ -610,6 +612,10 @@ function Score:ly_raggedright()
     end
 end
 
+function Score:ly_twoside()
+    if self.twoside then return 't' else return 'f' end
+end
+
 function Score:margins()
     local tex_top = self['extra-top-margin'] + convert_unit((
         tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
@@ -629,8 +635,9 @@ function Score:margins()
             top-margin = %s\pt
             bottom-margin = %s\pt
             inner-margin = %s\pt
+            left-margin = %s\pt
             ]],
-            tex_top, tex_bottom, inner
+            tex_top, tex_bottom, inner, inner
         )
     elseif self.fullpagealign == 'staffline' then
       local top_distance = 4 * tex_top / self.staffsize + 2
@@ -639,6 +646,7 @@ function Score:margins()
         top-margin = 0\pt
         bottom-margin = 0\pt
         inner-margin = %s\pt
+        left-margin = %s\pt
         top-system-spacing =
         #'((basic-distance . %s)
            (minimum-distance . %s)
@@ -656,6 +664,7 @@ function Score:margins()
            (stretchability . 0))
         ]],
         inner,
+        inner,
         top_distance,
         top_distance,
         top_distance,
@@ -672,6 +681,36 @@ function Score:margins()
         ]],
             self.fullpagealign
         )
+    end
+end
+
+function Score:optimize_pdf()
+    if self['optimize-pdf'] then
+        local pdf2ps, ps2pdf, path
+        for file in lfs.dir(self.tmpdir) do
+            path = self.tmpdir..'/'..file
+            if path:match(self.output) and path:sub(-4) == '.pdf' then
+                pdf2ps = io.popen(
+                    'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE '..path..' -c quit',
+                    'r'
+                )
+                ps2pdf = io.popen(
+                    'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile='..
+                    path..'-gs -',
+                    'w'
+                )
+                if pdf2ps then
+                    ps2pdf:write(pdf2ps:read('*a'))
+                    pdf2ps:close()
+                    ps2pdf:close()
+                    os.rename(path..'-gs', path)
+                else
+                    warn(
+                        [[You have asked for pdf optimization, but gs wasn't found.]]
+                    )
+                end
+            end
+        end
     end
 end
 
@@ -694,6 +733,7 @@ function Score:process()
     if do_compile then
         self.ly_code = self:header()..self:content()
         self:run_lilypond()
+        self:optimize_pdf()
     end
     self:write_tex(do_compile)
 end
