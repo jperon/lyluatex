@@ -1,5 +1,6 @@
 \documentclass{scrartcl}
 \usepackage{libertine}
+\usepackage{minted}
 \usepackage[verbatim,
 intertext={The “intertext” option can be used to print some text between the code and the score}]{lyluatex}
 \begin{document}
@@ -32,6 +33,8 @@ c d e d
 The contents of included \emph{files} already work properly:
 
 \lysetoption{intertext}{The formatting of the intertext be adjusted by renewing the command “lyIntertext”}
+
+\lysetverbenv{\begin{minted}{TeX}}{\end{minted}}
 
 \lilypondfile[intertext={This change of content does not have any effect}]{../ly/Sphinx/Sphinx}
 

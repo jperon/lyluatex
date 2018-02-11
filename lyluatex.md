@@ -439,7 +439,7 @@ Presumably the caption suffers the same issues as \option{intertext} for
 \lyIssue{NOTE:}
 Captions haven't been implemented yet.
 
-### Printing LilyPond Code (WIP)
+### Printing LilyPond Code
 
 \lyOption{verbatim}{false}
 Depending on the use case it may be desired to not only include the score into
@@ -448,6 +448,10 @@ achieved by setting the \option{verbatim} option to `true`.  In this case first
 the input code will be printed in a `verbatim` environment, followed by the
 score.
 
+\lyIssue{Note:}
+Please note that input from LilyPond fragments entered with the \cmd{lilypond}
+command will be printed on a single line.  But as such fragments are intended to
+contain short snippets anyway this shouldn't be an issue.
 
 \lyMargin{Partial printing}
 If the LilyPond input contains a comment with the character sequence `% begin
@@ -456,46 +460,44 @@ verbatim (but still used for engraving the score).  If after that `% end
 verbatim` is found then the remainder of the input will be skipped too,
 otherwise the code is printed to the end.
 
-\lyIssue{Note:}
-Please note that input from LilyPond fragments entered with the \cmd{lilypond}
-command will be printed on a single line.  But as such fragments are intended to
-contain short snippets anyway this shouldn't be an issue.
-
-\lyIssue{Note:}
-Due to a not-yet-understood issue leading whitespace, i.e. any indentation of
-the LilyPond input, will currently be suppressed.
-
 \lyOption{intertext}{}
 If \option{intertext} is set to a string its value will be printed between the
 verbatim code and the score.
 
 \lyCmd{lyIntertext}
-
 By default the intertext will be printed in its own paragraph, with a
 \cmd{bigskip} glue space between it and the score.  The appearance is controlled
 by the macro \cmd{lyIntertext}, and by renewing this macro the appearance can be
 modified.  The following redefinition removes any indent and prints the text
 blue:
 
-```tex
+```TeX
 \renewcommand{\lyIntertext}[1]{%
-\noindent \textcolor{blue}{#1}
-
-\bigskip
+\noindent \textcolor{blue}{#1}\par\bigskip%
 }
 ```
 
-\lyIssue{Note:}
-Due to a not-yet-understood issue setting \option{intertext} as a local option
-only works for single words. Any value that contains more than one word will
-silently be ignored.  This limitation is not present in the global option, so as
-a workaround local texts can be faked using \cmd{lysetoption}.
+\lyMargin{Syntax Highlighting}
+By default printed LilyPond code will be wrapped in a \option{verbatim}
+environment.  It is possible to change the way how the code is wrapped through
+the command
 
-\lyIssue{Note:}
-Due to a not-yet-understood issue the \option{intertext} value has some serious
-limitations: no single quotes can be used (as in “don't”), and, worse, no macros
-can be used to apply formatting for parts of the text. We hope to fix both these
-issues.
+\lyCmd{lysetverbenv}
+which works very much like \cmd{newenvironment} and expects the code to be
+inserted before and after the LilyPond code as its two arguments.  Typical use
+cases would be to enable some syntax highlighting, although it may also be of
+interest to wrap the `verbatim` environment into a `quote` environment.
+
+So far no proper syntax highlighting for LilyPond is available in
+\LaTeX\ (which is why it is not switched on by default), and the closest match today is to use the `TeX` highlighting of the \option{minted} package.
+
+```TeX
+% In the document header:
+\usepackage{minted}
+
+% anywhere in the header or the body:
+\lysetverbenv{\begin{minted}{TeX}}{\end{minted}}
+```
 
 ## Miscellaneous Options
 
