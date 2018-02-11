@@ -53,6 +53,7 @@
     ['showfailed'] = {'false', 'true' ,''},
     ['staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
+    ['twoside'] = {'default', 'false', 'true', ''},
     ['verbatim'] = {'false', 'true', ''},
     % MusicXML options
     ['absolute'] = {'false', 'true', ''},
@@ -73,6 +74,16 @@
   end
 }
 \catcode`-=12
+
+\makeatletter
+\if@twoside%
+\directlua{ly.TWOSIDE = "t"}
+\else
+\directlua{ly.TWOSIDE = "f"}
+\fi
+%\makeatother
+
+%\directlua{ly.TWOSIDE = 'f'}
 
 \newcommand{\ly@setunits}{%
   \let\ly@old@in\in\protected\def\in{in}%
