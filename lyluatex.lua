@@ -613,10 +613,7 @@ function Score:ly_raggedright()
 end
 
 function Score:ly_twoside()
-    if self.twoside == 'default' then return ly.TWOSIDE
-    elseif self.twoside then return 't'
-    else return 'f'
-    end
+    if self.twoside then return 't' else return 'f' end
 end
 
 function Score:margins()
