@@ -12,10 +12,34 @@ abstract: >
 
 # Introduction
 
-* General idea
-* Main features
-* lilypond-book
-* Minimal Working Example
+\lyluatex\ is a \LaTeX\ package that manages the inclusion of musical scores in
+\LaTeX\ documents.  It uses the GNU LilyPond^[\url{http://lilypond.org}] score
+writer to produce beautiful music elements in beautifully typeset text documents.
+\lyluatex\ supports a wide range of use cases and lends itself equally well to
+authoring musicological texts with music examples and preparing musical editions
+with interspersed text parts, to creating song booklets used in service and to
+provide work sheets for teaching and exams.
+
+\lyluatex\ is inspired by and provides a fully compatible drop-in replacement to
+[lilypond-book](http://lilypond.org/doc/v2.18/Documentation/usage/invoking-lilypond_002dbook.html),
+a \LaTeX\ document preprocessor shipping with LilyPond.  However, thanks to the
+use of \LuaLaTeX\ it can overcome substantial limitations of the scripted solution,
+and it actually is a *superset* of `lilypond-book`, providing numerous additional
+features.
+
+\lyluatex's main features include:
+
+* Fully automatic management of using LilyPond to compile musical scores from
+  within the \LaTeX\ run
+* Intelligent caching of engraved scores, avoiding recompilation when possible
+* Fully automatic matching of layout and appearance to perfectly fit the scores
+  into the text document
+* Comprehensive configuration of the scores through options which work on global
+  or per-score level
+* (Planned: intelligent interaction with other packages such as
+  [musicexamples](https://github.com/uliska/musicexamples),
+  [lilyglyphs](https://github.com/uliska/lilyglyphs) or
+  [scholarLY](https://github.com/openlilylib/scholarLY))
 
 ## Installation
 
