@@ -27,6 +27,7 @@ local MXML_OPTIONS = {
     'no-rest-positions',
     'verbose',
 }
+local TEXINFO_OPTIONS = {'doctitle', 'nogettext', 'texidoc'}
 local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
 local LY_HEAD = [[
 %%File header
@@ -71,7 +72,7 @@ local function debug(...)
 end
 
 
-local function contains (table_var, value)
+local function contains(table_var, value)
     for _, v in pairs(table_var) do
         if v == value then return true
         elseif v == 'false' and value == false then return true
@@ -80,7 +81,7 @@ local function contains (table_var, value)
 end
 
 
-local function contains_key (table_var, key)
+local function contains_key(table_var, key)
     for k in pairs(table_var) do
         if k == key then return true end
     end
@@ -154,10 +155,10 @@ local function mkdirs(str)
 end
 
 
-local function __genorderedindex( t )
+local function __genorderedindex(t)
     local orderedIndex = {}
     for key in pairs(t) do
-        table.insert( orderedIndex, key )
+        table.insert(orderedIndex, key)
     end
     table.sort( orderedIndex )
     return orderedIndex
@@ -165,7 +166,7 @@ end
 local function __orderednext(t, state)
     local key = nil
     if state == nil then
-        t.__orderedIndex = __genorderedindex( t )
+        t.__orderedIndex = __genorderedindex(t)
         key = t.__orderedIndex[1]
     else
         for i = 1, #t.__orderedIndex do
@@ -266,12 +267,11 @@ function latex.label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
 end
 
-function latex.verbatim(verbatim, ly_code, intertext)
+function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
         ly.verbprint(ly_code:explode('\n'))
-        if intertext then
-            tex.print('\\lyIntertext{'..intertext..'}\\par')
-        end
+        if version then tex.sprint('\\lyVersion{'..version..'}') end
+        if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
     end
 end
 
@@ -361,6 +361,8 @@ function Score:calc_properties()
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
     end
+    -- LilyPond version
+    if self.addversion then self.addversion = self:lilypond_version(true) end
     -- temporary file name
     self.output = self:output_filename()
 end
@@ -383,6 +385,11 @@ function Score:check_properties()
                 'authorized values are "%s"',
                 self[k], k, table.concat(OPTIONS[k], ', ')
             )
+        end
+    end
+    for _, k in pairs(TEXINFO_OPTIONS) do
+        if self[k] then
+            info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
     if self.input_file or self.ly_code:find([[\score]]) then
@@ -626,7 +633,7 @@ function Score:lilypond_cmd()
     return cmd, mode
 end
 
-function Score:lilypond_version()
+function Score:lilypond_version(number)
     local p = io.popen(self.program..' --version', 'r')
     if not p then
       err([[
@@ -638,11 +645,14 @@ function Score:lilypond_version()
     local result = p:read()
     p:close()
     if result and result:match('GNU LilyPond') then
-        info(
-            "Compiling score %s with LilyPond executable '%s'.",
-            self.output, self.program
-        )
-        debug(result)
+        if number then return result:match('%d+%.%d+%.?%d*')
+        else
+            info(
+                "Compiling score %s with LilyPond executable '%s'.",
+                self.output, self.program
+            )
+            debug(result)
+        end
     else
         err([[
         LilyPond could not be started.
@@ -821,7 +831,7 @@ end
 
 function Score:write_latex(do_compile)
     latex.filename(self.printfilename, self.insert, self.input_file)
-    latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext)
+    latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext, self.addversion)
     if do_compile then
         if not self:is_compiled_without_error() then return end
     end
