@@ -88,8 +88,9 @@ end
 
 
 local function convert_unit(value)
-    if not value then return 0 end
-    if value:match('\\') then
+    if not value then return 0
+    elseif value == '' then return false
+    elseif value:match('\\') then
         local n, u = value:match('^%d*%.?%d*'), value:match('%a+')
         if n == '' then n = 1 end
         return tonumber(n) * tex.dimen[u] / tex.sp("1pt")
@@ -236,18 +237,25 @@ function latex.includepdf(pdfname)
     tex.sprint('\\includepdf[pages=-]{'..pdfname..'}')
 end
 
-function latex.includesystems(file, protrusion, do_compile)
-    local systems_file = io.open(file, 'r')
-    local texoutput = systems_file:read('*a')
-    systems_file:close()
+function latex.includesystems(filename, protrusion, indent, do_compile)
+    local f = io.open(filename..'.tex', 'r')
+    local texoutput = f:read('*a')
+    f:close()
+    f = io.open(filename..'.count', 'r')
+    local nsystems = tonumber(f:read('*a'))
+    f:close()
+    if nsystems == 1 and protrusion ~= 0 then
+        warn('Only one system, deactivating indentation.')
+        protrusion = protrusion - indent
+    end
     if do_compile then  -- new compilation, update output-systems.tex
         texoutput =
             [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
             texoutput:gsub([[\includegraphics{]], string.format(
                 [[\noindent\hspace*{%spt}\includegraphics{%s]],
-                protrusion, dirname(file)))..
+                protrusion, dirname(filename)))..
             [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
-        local f = io.open(file, 'w')
+        f = io.open(filename..'.tex', 'w')
         f:write(texoutput)
         f:close()
     end
@@ -781,14 +789,20 @@ function Score:process()
     if not self.debug then self:delete_intermediate_files() end
 end
 
-function Score:protrusion()
+function Score:_protrusion()
     --[[ Determine the amount of space used to the left of the staff lines
       and generate a horizontal offset command. ]]
-    local f = io.open(self.output..'.eps')
-    local bbline = ''
-    while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
-    f:close()
-    return bbline:match('-?%d+')
+    local protrusion = convert_unit(self.protrusion)
+    if protrusion then return protrusion
+    elseif self.protrusion then
+        local f = io.open(self.output..'.eps')
+        local bbline = ''
+        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
+        f:close()
+        protrusion = bbline:match('-?%d+')
+        return tonumber(protrusion)
+    else return 0
+    end
 end
 
 function Score:run_lilypond()
@@ -814,11 +828,13 @@ function Score:write_latex(do_compile)
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
-    local systems_file = self.output..'-systems.tex'
-    if not lfs.isfile(systems_file) then  -- fullpage score
+    local systems_file = self.output..'-systems'
+    if not lfs.isfile(systems_file..'.tex') then  -- fullpage score
         latex.includepdf(self.output)
     else  -- fragment
-        latex.includesystems(systems_file, self:protrusion(), do_compile)
+        latex.includesystems(
+            systems_file, self:_protrusion(), convert_unit(self.indent), do_compile
+        )
     end
 end
 
