@@ -93,10 +93,10 @@
 }
 
 % This macro defines how the filename of a score will look like if printed.
-\newcommand{\lyFilename}[1]{\noindent #1}
+\newcommand{\lyFilename}[1]{\noindent #1\par\bigskip}
 
 % Command to change the appearance of verbatim 'intertext'
-\newcommand{\lyIntertext}[1]{\noindent #1}
+\newcommand{\lyIntertext}[1]{\noindent #1\par\bigskip}
 
 % Retrieve the current page number for use in the functions
 \def\ly@page{\directlua{ly.PAGE = \thepage}}
