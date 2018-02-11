@@ -210,6 +210,17 @@ end
 
 --[[ =============== Functions that output LaTeX code ===================== ]]
 
+function latex.filename(printfilename, insert, input_file)
+    if printfilename and input_file then
+        if insert == 'fullpage' then
+            warn('`printfilename` ignored with `insert=fullpage`')
+        else
+            local filename = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
+            tex.sprint(filename)
+        end
+    end
+end
+
 function latex.fullpagestyle(style, ppn)
     local function texoutput(s) return '\\includepdfset{pagecommand='..s..'}' end
     if style == '' then
@@ -227,38 +238,24 @@ end
 
 function latex.includesystems(file, protrusion, do_compile)
     local systems_file = io.open(file, 'r')
-    local content = systems_file:read('*a')
+    local texoutput = systems_file:read('*a')
     systems_file:close()
-    local texoutput
-    if do_compile then  -- new compilation, calculate protrusion and update -systems.tex file
-        texoutput = content:gsub([[\includegraphics{]],
-            [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(file))
-        local f = io.open(file..'-systems.tex', 'w')
+    if do_compile then  -- new compilation, update output-systems.tex
+        texoutput =
+            [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
+            texoutput:gsub([[\includegraphics{]], string.format(
+                [[\noindent\hspace*{%spt}\includegraphics{%s]],
+                protrusion, dirname(file)))..
+            [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
+        local f = io.open(file, 'w')
         f:write(texoutput)
         f:close()
-    else  -- simply reuse existing -systems.tex file
-        texoutput = content
     end
-    texoutput =
-        [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
-        texoutput..
-        [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
     tex.sprint(texoutput:explode('\n'))
 end
 
 function latex.label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
-end
-
-function latex.filename(printfilename, insert, input_file)
-    if printfilename and input_file then
-        if insert == 'fullpage' then
-            warn('`printfilename` ignored with `insert=fullpage`')
-        else
-            local filename = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
-            tex.sprint(filename)
-        end
-    end
 end
 
 function latex.verbatim(verbatim, ly_code, intertext)
@@ -781,25 +778,17 @@ function Score:process()
         self:optimize_pdf()
     end
     self:write_latex(do_compile)
-    self:delete_intermediate_files()
+    if not self.debug then self:delete_intermediate_files() end
 end
 
 function Score:protrusion()
-    --[[
-      Determine the amount of space used to the left of the staff lines
-      and generate a horizontal offset command.
-    --]]
-    local protrusion = ''
+    --[[ Determine the amount of space used to the left of the staff lines
+      and generate a horizontal offset command. ]]
     local f = io.open(self.output..'.eps')
-    --[[ The information we need is in the third line --]]
-    f:read(); f:read()
-    local bb_line = f:read()
+    local bbline = ''
+    while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
     f:close()
-    local cropped = bb_line:match('%d+')
-    if cropped ~= 0 then
-        protrusion = string.format('\\hspace*{-%spt}', cropped)
-    end
-    return protrusion
+    return bbline:match('-?%d+')
 end
 
 function Score:run_lilypond()
