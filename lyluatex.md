@@ -71,15 +71,18 @@ the `.tex` document or in referenced standalone files.  \lyluatex\ will
 automatically take care of compiling the scores if necessary -- making use of an
 intelligent caching mechansim --, and it will match the score's layout to that
 of the text document.  \lyluatex\ will produce PDF image files which are
-automatically included in their own paragraphs or as full pages, but more
-sophisticated integrations are possible in combination with the `musicexamples`
+automatically included within the current paragraph, in their own paragraphs
+or as full pages, but more sophisticated integrations are possible in combination
+with the `musicexamples`
 package^[[https://github.com/uliska/musicexamples](https://github.com/uliska/musicexamples)]
 (see section [musicexamples](#musicexamples)).
 
 
- \lyluatex\ aims at being a drop-in replacement for the `lilypond-book`
- preprocessor shipping with
- LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
+\lyluatex\ aims at being an upwards-compatible drop-in replacement for the
+`lilypond-book` preprocessor shipping with
+LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
+which means that any documents prepared for use with `lilypond-book` should
+be directly usable with \lyluatex.
 
 
 \lyCmd{lilypond}
@@ -98,6 +101,11 @@ Note that the sequence of notes is implicitly wrapped in a LilyPond music expres
 ```
 
 \lilypond{ \relative { c' d e }}
+
+Fragments specified with \cmd{lilypond} are by default inserted as *inline*
+scores like individual characters, while the other types are by default includes
+system per system.  For further information about the
+different insertion modes read the section about [insertion modes](#insertion-mode).
 
 \lyMargin{lilypond\index{lilypond}}
 More elaborate scores can be enclosed in the `lilypond` environment:
@@ -234,7 +242,7 @@ sophisticated set-ups.
 Local options will override this value as with package options.
 
 
-## System-by-System, Fullpage, and Inline Scores
+## System-by-System, Fullpage, and Inline Scores (Insertion Mode){#insertion-mode}
 
 \lyOption{insert}{systems}
 Scores can be included in documents in three basic modes: system-by-system,
