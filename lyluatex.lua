@@ -12,7 +12,8 @@ local err, warn, info, log = luatexbase.provides_module({
 local md5 = require 'md5'
 local lfs = require 'lfs'
 
-ly = {}
+local ly = {}
+local latex = {}
 
 local FILELIST
 local OPTIONS = {}
@@ -197,21 +198,75 @@ local function process_options(k, v)
 end
 
 
-local function set_fullpagestyle(style)
-    if style then
-        tex.sprint('\\includepdfset{pagecommand=\\thispagestyle{'..style..'}}')
-    else
-        tex.sprint('\\includepdfset{pagecommand=}')
-    end
-end
-
-
 local function splitext(str, ext)
     if str:match(".-%..-") then
         local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
         return name
     else
         return str
+    end
+end
+
+
+--[[ =============== Functions that output LaTeX code ===================== ]]
+
+function latex.fullpagestyle(style, ppn)
+    local function texoutput(s) return '\\includepdfset{pagecommand='..s..'}' end
+    if style == '' then
+        if ppn then
+            texoutput('\\thispagestyle{empty}')
+        else texoutput('')
+        end
+    else texoutput('\\thispagestyle{'..style..'}')
+    end
+end
+
+function latex.includepdf(pdfname)
+    tex.sprint('\\includepdf[pages=-]{'..pdfname..'}')
+end
+
+function latex.includesystems(file, protrusion, do_compile)
+    local systems_file = io.open(file, 'r')
+    local content = systems_file:read('*a')
+    systems_file:close()
+    local texoutput
+    if do_compile then  -- new compilation, calculate protrusion and update -systems.tex file
+        texoutput = content:gsub([[\includegraphics{]],
+            [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(file))
+        local f = io.open(file..'-systems.tex', 'w')
+        f:write(texoutput)
+        f:close()
+    else  -- simply reuse existing -systems.tex file
+        texoutput = content
+    end
+    texoutput =
+        [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
+        texoutput..
+        [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
+    tex.sprint(texoutput:explode('\n'))
+end
+
+function latex.label(label, labelprefix)
+    if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
+end
+
+function latex.filename(printfilename, insert, input_file)
+    if printfilename and input_file then
+        if insert == 'fullpage' then
+            warn('`printfilename` ignored with `insert=fullpage`')
+        else
+            local filename = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
+            tex.sprint(filename)
+        end
+    end
+end
+
+function latex.verbatim(verbatim, ly_code, intertext)
+    if verbatim then
+        ly.verbprint(ly_code:explode('\n'))
+        if intertext then
+            tex.print('\\lyIntertext{'..intertext..'}\\par')
+        end
     end
 end
 
@@ -303,69 +358,6 @@ function Score:calc_properties()
     end
     -- temporary file name
     self.output = self:output_filename()
-end
-
-function Score:check_failed_compilation()
-    local debug_msg, doc_debug_msg
-    if self.debug then
-        debug_msg = string.format([[
-Please check the log file
-and the generated LilyPond code in
-%s
-%s
-        ]],
-        self.output..'.log',
-        self.output..'.ly')
-        doc_debug_msg = [[
-A log file and a LilyPond file have been written.\\
-See log for details.]]
-    else
-        debug_msg = [[
-If you need more information
-than the above message,
-please retry with option debug=true.
-        ]]
-        doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
-    end
-    if self:is_compiled() then
-        if self.lilypond_error then
-            warn([[
-
-LilyPond reported a failed compilation but
-produced a score. %s
-            ]],
-            debug_msg
-            )
-        end
-        return true
-    else
-        --[[ ensure the score gets recompiled next time --]]
-        self:delete_intermediate_files()
-        if self.showfailed then
-            tex.sprint(string.format([[
-                \begin{quote}
-                \minibox[frame]{LilyPond failed to compile a score.\\
-%s}
-                \end{quote}
-
-                ]],
-                doc_debug_msg))
-            warn([[
-
-LilyPond failed to compile the score.
-%s
-            ]],
-            debug_msg)
-            return false
-        else
-            err([[
-
-LilyPond failed to compile the score.
-%s
-            ]],
-          debug_msg)
-        end
-    end
 end
 
 function Score:check_properties()
@@ -495,6 +487,68 @@ function Score:is_compiled()
         end
     else
         err('"inline" insertion mode not implemented yet')
+    end
+end
+
+function Score:is_compiled_without_error()
+    local debug_msg, doc_debug_msg
+    if self.debug then
+        debug_msg = string.format([[
+Please check the log file
+and the generated LilyPond code in
+%s
+%s
+        ]],
+        self.output..'.log',
+        self.output..'.ly')
+        doc_debug_msg = [[
+A log file and a LilyPond file have been written.\\
+See log for details.]]
+    else
+        debug_msg = [[
+If you need more information
+than the above message,
+please retry with option debug=true.
+        ]]
+        doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
+    end
+    if self:is_compiled() then
+        if self.lilypond_error then
+            warn([[
+
+LilyPond reported a failed compilation but
+produced a score. %s
+            ]],
+            debug_msg
+            )
+        end
+        return true
+    else
+        --[[ ensure the score gets recompiled next time --]]
+        self:delete_intermediate_files()
+        if self.showfailed then
+            tex.sprint(string.format([[
+                \begin{quote}
+                \minibox[frame]{LilyPond failed to compile a score.\\
+%s}
+                \end{quote}
+
+                ]],
+                doc_debug_msg))
+            warn([[
+
+LilyPond failed to compile the score.
+%s
+            ]],
+            debug_msg)
+        else
+            err([[
+
+LilyPond failed to compile the score.
+%s
+            ]],
+          debug_msg)
+        end
     end
 end
 
@@ -726,7 +780,8 @@ function Score:process()
         self:run_lilypond()
         self:optimize_pdf()
     end
-    self:write_tex(do_compile)
+    self:write_latex(do_compile)
+    self:delete_intermediate_files()
 end
 
 function Score:protrusion()
@@ -761,62 +816,20 @@ function Score:run_lilypond()
     self.lilypond_error = not p:close()
 end
 
-function Score:write_tex(do_compile)
-    if self.printfilename and self.input_file then
-        if self.insert == 'fullpage' then
-            warn('`printfilename` ignored with `insert=fullpage`')
-        else
-            local filename = self.input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
-            tex.sprint(filename)
-        end
-    end
-    if self.verbatim then
-        ly.verbprint(self.orig_ly_code:explode('\n'))
-        if self.intertext then
-            tex.print('\\lyIntertext{'..self.intertext..'}\\par')
-        end
-    end
+function Score:write_latex(do_compile)
+    latex.filename(self.printfilename, self.insert, self.input_file)
+    latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext)
     if do_compile then
-        if not self:check_failed_compilation() then return end
+        if not self:is_compiled_without_error() then return end
     end
     --[[ Now we know there is a proper score --]]
-    if self.fullpagestyle == '' then
-        if self['print-page-number'] then
-            set_fullpagestyle('empty')
-        else set_fullpagestyle(nil)
-        end
-    else set_fullpagestyle(self.fullpagestyle)
-    end
-    local label = ''
-    if self.label then label = '\\label{'..self.labelprefix..self.label..'}' end
-    local systems_file = io.open(self.output..'-systems.tex', 'r')
-    if not systems_file then
-        --[[ Fullpage score, use \includepdf ]]
-        tex.sprint(label..'\\includepdf[pages=-]{'..self.output..'}')
-    else
-        --[[ Fragment, use -systems.tex file]]
-        local content = systems_file:read("*all")
-        local texoutput
-        systems_file:close()
-        if do_compile then
-            --[[ new compilation, calculate protrusion
-                 and update -systems.tex file]]
-            local protrusion = self:protrusion()
-            texoutput = content:gsub([[\includegraphics{]],
-                [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(self.output))
-            local f = io.open(self.output..'-systems.tex', 'w')
-            f:write(texoutput)
-            f:close()
-            self:delete_intermediate_files()
-        else
-            -- simply reuse existing -systems.tex file
-            texoutput = content
-        end
-        texoutput = label..
-            [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
-            texoutput..
-            [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
-        tex.sprint(texoutput:explode('\n'))
+    latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
+    latex.label(self.label, self.labelprefix)
+    local systems_file = self.output..'-systems.tex'
+    if not lfs.isfile(systems_file) then  -- fullpage score
+        latex.includepdf(self.output)
+    else  -- fragment
+        latex.includesystems(systems_file, self:protrusion(), do_compile)
     end
 end
 
