@@ -141,7 +141,7 @@ local function locate(file, includepaths, ext)
         end
     end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
-    if not result and ext and file:match('.%w+$') ~= ext then return locate(file..ext, includepaths) end
+    if not result and ext and file:match('%.[^%.]+$') ~= ext then return locate(file..ext, includepaths) end
     return result
 end
 
