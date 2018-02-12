@@ -564,7 +564,7 @@ end
 function Score:header()
     local header = LY_HEAD:gsub(
         [[<<<VERSION>>>]], self['ly-version']):gsub(
-        [[<<<LANGUAGE>>>]], self.ly_language()):gsub(
+        [[<<<LANGUAGE>>>]], self:ly_language()):gsub(
         [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
         [[<<<INDENT>>>]], self:ly_indent()):gsub(
