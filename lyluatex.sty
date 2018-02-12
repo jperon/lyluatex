@@ -129,7 +129,7 @@
 \newcommand{\ly@compilescore}[1]{%
 \ly@setunits%
 \directlua{
-  ly.CURRFILEDIR = '\currfiledir'
+  ly.set_property('currfiledir', [[\currfiledir]])
   ly.set_property('twoside', '\ly@istwosided')
   #1
   ly.newpage_if_fullpage()
