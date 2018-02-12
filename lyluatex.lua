@@ -358,12 +358,18 @@ function Score:check_properties()
             info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
-    if self.input_file or self.ly_code:find([[\score]]) or self.ly_code:find([[\paper]]) then
+    if (self.input_file or
+        self.ly_code:find([[\book]]) or
+        self.ly_code:find([[\header]]) or
+        self.ly_code:find([[\layout]]) or
+        self.ly_code:find([[\paper]]) or
+        self.ly_code:find([[\score]])
+    ) then
         if self.fragment or self.relative then
             if self.input_file then
                 warn([[
-You may not set `fragment` (or `relative`)
-with \lilypondfile. Setting them to false.
+Fount something incompatible with `fragment`
+(or `relative`). Setting them to false.
                 ]])
             else
                 warn([[
