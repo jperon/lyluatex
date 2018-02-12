@@ -32,6 +32,7 @@ local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
 local LY_HEAD = [[
 %%File header
 \version "<<<VERSION>>>"
+<<<LANGUAGE>>>
 
 <<<PREAMBLE>>>
 
@@ -538,6 +539,7 @@ function Score:header()
     local header = LY_HEAD:gsub(
         [[<<<FONTS>>>]], self:fonts()):gsub(
         [[<<<INDENT>>>]], self:ly_indent()):gsub(
+        [[<<<LANGUAGE>>>]], self.ly_language()):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
         [[<<<PAPERSIZE>>>]], self:ly_papersize()):gsub(
         [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
@@ -637,6 +639,12 @@ end
 function Score:ly_indent()
     if self.indent == '' and self.insert == 'fullpage' then return ''
     else return [[indent = ]]..(convert_unit(self.indent) or 0)..[[\pt]]
+    end
+end
+
+function Score:ly_language()
+    if self.language == '' then return ''
+    else return '\\language "'..self.language..'"'
     end
 end
 
@@ -965,9 +973,10 @@ function ly.file_musicxml(input_file, options)
     local xmlopts = ''
     for _, opt in pairs(MXML_OPTIONS) do
         if options[opt] ~= nil then
-            if options[opt] then xmlopts = xmlopts..' --'..opt end
-            if options[opt] ~= 'true' and options[opt] ~= 'false' and options[opt] ~= '' then
-                xmlopts = xmlopts..' '..options[opt]
+            if options[opt] then xmlopts = xmlopts..' --'..opt
+                if options[opt] ~= 'true' and options[opt] ~= '' then
+                    xmlopts = xmlopts..' '..options[opt]
+                end
             end
         elseif Score[opt] then xmlopts = xmlopts..' --'..opt
         end
@@ -1004,10 +1013,7 @@ end
 
 
 function ly.is_dim (k, v)
-    if v == '' or
-        v == false or
-        tonumber(v)
-        then return true end
+    if v == '' or v == false or tonumber(v) then return true end
     local n, sl, u = v:match('^%d*%.?%d*'), v:match('\\'), v:match('%a+')
     -- a value of number - backslash - length is a dimension
     -- invalid input will be prevented in by the LaTeX parser already
