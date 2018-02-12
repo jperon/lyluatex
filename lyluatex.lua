@@ -32,6 +32,7 @@ local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
 local LY_HEAD = [[
 %%File header
 \version "<<<VERSION>>>"
+<<<LANGUAGE>>>
 
 <<<PREAMBLE>>>
 
@@ -286,6 +287,11 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:calc_properties()
+    if self.language == '' then
+        self.ly_language = ''
+    else
+        self.ly_language = '\\language "'..self.language..'"'
+    end
     self:calc_staff_properties()
     -- relative
     if self.relative then
@@ -563,6 +569,7 @@ end
 function Score:header()
     local header = LY_HEAD:gsub(
         [[<<<VERSION>>>]], self['ly-version']):gsub(
+        [[<<<LANGUAGE>>>]], self.ly_language):gsub(
         [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
         [[<<<INDENT>>>]], self:ly_indent()):gsub(
