@@ -167,7 +167,7 @@ following order:
 * relative to all paths visible to \LaTeX\ (like the package search)
 
 \lyCmd{musicxmlfile}
-Finally there is a command to include scores encoded as 
+Finally there is a command to include scores encoded as
 [MusicXML](https://www.musicxml.com/) files.  These will be converted to
 LilyPond input by LilyPond's `musicxml2ly` script and then compiled by
 LilyPond.
@@ -184,7 +184,7 @@ but it is discouraged to use it since its use implies substantial problems:
   may produce inferior results or may fail to compile the score completely
 
 If there is the need to include music scores that are only available as
-MusicXML files it will nearly always be the better option to independently 
+MusicXML files it will nearly always be the better option to independently
 convert the source using `musicxml2ly` and then manually post-process the
 resulting Lilypond input files.
 
@@ -449,6 +449,11 @@ signature is not *implicitly* printed. *If* there should be the need to *have* a
 key signature and at the same time suppress it, it's reasonable to expect this
 to be explicitly done in the LilyPond code.
 
+### Input Language {#language}
+
+\lyOption{language}{}
+Specify the language for LilyPond input, defaulting to LilyPond's default
+language Dutch.
 
 ### Labels {#labels}
 
@@ -500,7 +505,7 @@ before the score.  This is activated by the
 \lyOption{printfilename}{false}
 option.  It will print the actual filename only, without any path information.
 
-By default the filename is printed in its own unindented paragraph, including 
+By default the filename is printed in its own unindented paragraph, including
 \cmd{bigskip} between the text and the score.  However, the appearance can be
 modified by renewing the command
 
