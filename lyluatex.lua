@@ -184,7 +184,15 @@ end
 
 
 local function process_options(k, v)
+    -- aliases
+    if OPTIONS[k] and OPTIONS[k][2] == ly.is_alias then
+        if OPTIONS[k][1] == v then return
+        else k = OPTIONS[k][1]
+        end
+    end
+    -- boolean
     if v == 'false' then v = false end
+    -- negation (for example, noindent is the negation of indent)
     if ly.is_neg(k) then
         if v ~= nil and v ~= 'default' then
             k = k:gsub('^no(.*)', '%1')
@@ -301,8 +309,16 @@ function Score:calc_properties()
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     self.staffsize = staffsize
     -- dimensions that can be given by LaTeX
-    for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
+    for _, dimension in pairs({
+        'gutter', 'leftgutter', 'rightgutter', 'line-width', 'paperwidth', 'paperheight'
+    }) do
         self[dimension] = convert_unit(self[dimension])
+    end
+    if not self.leftgutter then self.leftgutter = self.gutter end
+    if not self.rightgutter then self.rightgutter = self.gutter end
+    print('\n', self.gutter, self.leftgutter, self.rightgutter)
+    if self.quote then
+        self['line-width'] = self['line-width'] - self.leftgutter - self.rightgutter
     end
     -- dimensions specific to LilyPond
     self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
@@ -814,8 +830,10 @@ end
 function Score:_protrusion()
     --[[ Determine the amount of space used to the left of the staff lines
       and generate a horizontal offset command. ]]
+    local gutter = 0
+    if self.quote then gutter = self.leftgutter end
     local protrusion = convert_unit(self.protrusion)
-    if protrusion then return protrusion
+    if protrusion then return protrusion + gutter
     elseif self.protrusion then
         local f = io.open(self.output..'.eps')
         if not f then return end
@@ -823,8 +841,8 @@ function Score:_protrusion()
         while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
         f:close()
         protrusion = bbline:match('-?%d+')
-        return tonumber(protrusion)
-    else return 0
+        return tonumber(protrusion) + gutter
+    else return gutter
     end
 end
 
@@ -1013,7 +1031,10 @@ function ly.get_option(opt)
 end
 
 
-function ly.is_dim (k, v)
+function ly.is_alias() end
+
+
+function ly.is_dim(k, v)
     if v == '' or v == false or tonumber(v) then return true end
     local n, sl, u = v:match('^%d*%.?%d*'), v:match('\\'), v:match('%a+')
     -- a value of number - backslash - length is a dimension
@@ -1059,7 +1080,11 @@ function ly.set_local_options(opts)
         local k, v = process_options(
             opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
         )
-        if k then options[k] = v end
+        if k then
+            if options[k] then err('Option %s is set two times for the same score.', k)
+            else options[k] = v
+            end
+        end
     end
     return options
 end
