@@ -57,10 +57,15 @@ that documents are generally compiled from their actual directory, i.e. without
 referring to it through a path.
 
 \lyIssue{NOTE:} \lyluatex\ requires that \LuaLaTeX\ is started with the
-`--shell-escape` command line option to enable the execution of arbitrary shell
-commands, which is necessary to let LilyPond compile the inserted scores
-on-the-fly.  However, this opens a significant security hole, and only fully
-trusted input files should be compiled.
+`--shell-escape` command line option to enable the execution of arbitrary
+shell commands, which is necessary to let LilyPond compile the inserted scores
+on-the-fly.
+However, this opens a significant security hole,
+and only fully trusted input files should be compiled.
+You may mitigate (but not totally remove) this security hole by adding
+`lilypond` to `shell_escape_commands`, and using `--shell-restricted` instead
+of `--shell-escape`:
+look at the documentation of your \TeX\ distribution.
 
 ## Basic Operation
 
@@ -69,7 +74,7 @@ musical scores and score fragments which are produced using the GNU LilyPond
 score writer.  They are encoded in LilyPond input language, either directly in
 the `.tex` document or in referenced standalone files.  \lyluatex\ will
 automatically take care of compiling the scores if necessary -- making use of an
-intelligent caching mechansim --, and it will match the score's layout to that
+intelligent caching mechanism --, and it will match the score's layout to that
 of the text document.  \lyluatex\ will produce PDF image files which are
 automatically included within the current paragraph, in their own paragraphs
 or as full pages, but more sophisticated integrations are possible in combination
@@ -111,7 +116,7 @@ different insertion modes read the section about [insertion modes](#insertion-mo
 More elaborate scores can be enclosed in the `lilypond` environment:
 
 ```lilypond
-\begin{lilypond}
+\begin{lilypond}[]
 music = \relative {
   c d e
 }
@@ -130,7 +135,7 @@ music = \relative {
 \end{lilypond}
 ```
 
-\begin{lilypond}
+\begin{lilypond}[]
 
 music = \relative {
   c d e
@@ -149,8 +154,13 @@ music = \relative {
 }
 \end{lilypond}
 
+Please note the `[]` after `\begin{lilypond}`: there's a known limitation that
+makes it necessary, even when no optional parameter is specified.
+
+<!-- FALSE
 Note that the automatic wrapping does *not* work in the environment and that the
 content of the environment must represent a compilable LilyPond file.
+-->
 
 \lyCmd{lilypondfile}
 External files of arbitrary complexity can be referenced with
@@ -172,7 +182,7 @@ Finally there is a command to include scores encoded as
 LilyPond input by LilyPond's `musicxml2ly` script and then compiled by
 LilyPond.
 
-\lyIssue{Note:]
+\lyIssue{Note:}
 This command has been added to provide compatibility with `lilypond-book`,
 but it is discouraged to use it since its use implies substantial problems:
 
@@ -343,11 +353,14 @@ so it will give a consistent relation to the text at any font size.  Absolute
 sizes can be given as a number, which is interpreted as `pt`. For example
 LilyPond's own default staff size is `20`.
 
-\lyOption{ragged-right}{false}
-Set the score to ragged-right systems.  Single-system scores will not be
-justified but printed at their “natural” width, while scores with multiple
-systems be default wil be justified.  With this option that default can be
-changed so that all systems are printed at their natural width.
+\lyOption{ragged-right}{default}
+Set the score to ragged-right systems.
+By default, single-system scores will not be justified but printed at their
+“natural” width, while scores with multiple systems be default wil be
+justified.
+With this option set to true, all systems are printed at their natural width;
+with this option set to false, all systems are justified (even for
+single-system scores).
 
 #### Fullpage
 
@@ -413,11 +426,13 @@ input this takes precedence over the automatically transferred fonts.
 
 \lyIssue{Note:} So far only the main *font family* is used by LilyPond, but it is intended to add support for OpenType features in the future.
 
-\lyIssue{Note:} LilyPond handles font selection differently from \LuaTeX and can
-only look up fonts that are installed as system fonts. For any font that is
-installed in the `texmf` tree LilyPond will use an arbitrary fallback font.
-Therefore \option{pass-fonts} defaults to `false`. However, it doesn't matter
-whether the fonts are selected by their family or file names.
+\lyIssue{Note:} LilyPond handles font selection differently from \LuaTeX\ and
+can only look up fonts that are installed as system fonts.
+For any font that is installed in the `texmf` tree LilyPond will use an
+arbitrary fallback font.
+Therefore \option{pass-fonts} defaults to `false`.
+However, it doesn't matter whether the fonts are selected by their family or
+file names.
 
 ### Staff Display
 
@@ -585,13 +600,17 @@ So far no proper syntax highlighting for LilyPond is available in
 ### Include Paths {#include-paths}
 
 When referencing external files with \cmd{lilypondfile} \lyluatex\ understands
-absolute and relative paths.  Relative paths are considered relative to the
-current `.tex` document's directory by default, and additionally \lyluatex\ will
-find any file that is visible to \LaTeX\ itself, i.e. all files in the
-\texttt{\textsc{texmf}} tree.  A special case are paths that start with a tilde
-(\textasciitilde). This tilde (which has to be input as
-\cmd{string\textasciitilde} in \LaTeX) will be expanded to the user's `HOME`
-directory, which should work equally in UNIX/Linux and Windows.
+absolute and relative paths.
+By default, relative paths are considered relative not to the current `.tex`
+document's directory, but to the *current working directory*,
+which is one reason why it's strongly recommended to launch \LuaLaTeX\ from
+the document's directory.
+Additionally, \lyluatex\ will find any file that is visible to \LaTeX\ itself,
+i.e. all files in the \texttt{\textsc{texmf}} tree.
+A special case are paths that start with a tilde (\textasciitilde).
+This tilde (which has to be input as \cmd{string\textasciitilde} in \LaTeX)
+will be expanded to the user's `HOME` directory,
+which should work equally in UNIX/Linux and Windows.
 
 \lyOption{includepaths}{./}
 
@@ -601,7 +620,7 @@ and relative paths are searched for in the following order:
 
 * relative to the current `.tex` file's directory
 * relative to each `includepath`, in the order of their definition in the list
-* using \LaTeX's search mechansim
+* using \LaTeX's search mechanism
 
 Additionally the list of include paths is passed to LilyPond's include path, so
 they can be used for including files from within the LilyPond code.  Paths
@@ -643,7 +662,7 @@ The directory that is used for this purpose can be set with the \option{tmpdir}
 option.  Its value is a relative path starting from the *current working
 directory*, i.e. the directory from which \LuaLaTeX\ has been started, not
 necessarily that of the `.tex` document. Note that for several reasons it is
-strongly suggested to always compile documents from the current directory.
+strongly suggested to always compile documents from their own directory.
 
 \lyOption{cleantmp}{false}
 While the caching mechanism is great for avoiding redundant LilyPond
