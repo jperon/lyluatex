@@ -230,31 +230,82 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
-function latex.includepdf(pdfname)
-    tex.sprint('\\includepdf[pages=-]{'..pdfname..'}')
+function latex.include_only(range)
+    if range == '' then return false
+    elseif tonumber(range) then return { range } end
+    local result = {}
+    if range:match('^%d+-%d+$')
+    then
+        from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
+        local dir
+        if from <= to then dir = 1 else dir = -1 end
+        for i = from, to, dir do
+            table.insert(result, i)
+        end
+    else
+        list = range:explode(',')
+        for _, v in pairs(list) do
+            v = v:gsub('^%s', ''):gsub('%s$', '')
+            v = tonumber(v)
+            if v then table.insert(result, v)
+            else
+                warn([[
+Unexpected value '%s' for option 'print-only'.
+Possible entries:
+- single page number
+- page range N-M
+- list of numbers 1,3,4,6 (spaces allowed)
+                ]], range)
+            end
+        end
+    end
+    return result
 end
 
-function latex.includesystems(filename, protrusion, indent, do_compile)
-    local f = io.open(filename..'.tex', 'r')
-    local texoutput = f:read('*a')
-    f:close()
-    if do_compile then  -- new compilation, update output-systems.tex
-        f = io.open(filename..'.count', 'r')
-        local nsystems = tonumber(f:read('*a'))
+function latex.includepdf(pdfname, range)
+    local print_only = latex.include_only(range)
+    if not print_only then print_only = '-'
+    else
+        print_only = '{'..table.concat(print_only, ',')..'}'
+    end
+    tex.sprint(string.format(
+        [[\includepdf[pages=%s]{%s}]], print_only, pdfname))
+end
+
+function latex.includesystems(filename, range, protrusion, indent, do_compile)
+    local print_only
+    if range == '' then  -- no range given, check available systems
+        f = io.open(filename..'-systems.count', 'r')
+        local nsystems = f:read('*a')
         f:close()
-        if nsystems == 1 and indent then
-            warn('Only one system, deactivating indentation.')
-            protrusion = protrusion - indent
+        print_only = latex.include_only('1-'..nsystems)
+    else
+        print_only = latex.include_only(range)
+    end
+    if #print_only == 1 and print_only[1] == "1" and indent then
+        warn([[
+Only one system, deactivating indentation.]])
+        protrusion = protrusion - indent
+    end
+    local texoutput = ''
+    if ly.pre_lilypond then
+        texoutput = texoutput..'\\preLilyPondExample'
+    end
+    for index, system in pairs(print_only) do
+        texoutput = texoutput..string.format([[
+        \noindent\hspace*{%spt}\includegraphics{%s}
+        ]],
+        protrusion, filename..'-'..system)
+        if ly.between_lilypond then
+            texoutput = texoutput..string.format([[
+            \betweenLilyPondSystem{%s}
+            ]], index)
+        else
+            texoutput = texoutput..'\n\\par\\bigskip'
         end
-        texoutput =
-            [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
-            texoutput:gsub([[\includegraphics{]], string.format(
-                [[\noindent\hspace*{%spt}\includegraphics{%s]],
-                protrusion, dirname(filename)))..
-            [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
-        f = io.open(filename..'.tex', 'w')
-        f:write(texoutput)
-        f:close()
+    end
+    if ly.post_lilypond then
+        texoutput = texoutput..'\n\\postLilyPondExample'
     end
     tex.sprint(texoutput:explode('\n'))
 end
@@ -432,7 +483,7 @@ function Score:delete_intermediate_files()
       for j = 1, n, 1 do
           os.remove(self.output..'-'..j..'.eps')
       end
-      os.remove(self.output..'-systems.count')
+      os.remove(self.output..'-systems.tex')
       os.remove(self.output..'-systems.texi')
       os.remove(self.output..'.eps')
       os.remove(self.output..'.pdf')
@@ -845,10 +896,10 @@ function Score:write_latex(do_compile)
     latex.label(self.label, self.labelprefix)
     local systems_file = self.output..'-systems'
     if not lfs.isfile(systems_file..'.tex') then  -- fullpage score
-        latex.includepdf(self.output)
+        latex.includepdf(self.output, self['print-only'])
     else  -- fragment
         latex.includesystems(
-            systems_file, self:_protrusion(), convert_unit(self.indent), do_compile
+            self.output, self['print-only'], self:_protrusion(), convert_unit(self.indent), do_compile
         )
     end
 end
