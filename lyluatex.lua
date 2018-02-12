@@ -224,7 +224,7 @@ function latex.filename(printfilename, insert, input_file)
 end
 
 function latex.fullpagestyle(style, ppn)
-    local function texoutput(s) return '\\includepdfset{pagecommand='..s..'}' end
+    local function texoutput(s) tex.print('\\includepdfset{pagecommand='..s..'}') end
     if style == '' then
         if ppn then
             texoutput('\\thispagestyle{empty}')
