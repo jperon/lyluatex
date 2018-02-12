@@ -290,50 +290,7 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:calc_properties()
-    -- staff display
-    -- handle meta properties
-    if self.notime then
-        self.notimesig = 'true'
-        self.notiming = 'true'
-    end
-    if self.nostaff then
-        self.nostaffsymbol = 'true'
-        self.notimesig = 'true'
-        -- do *not* suppress timing
-        self.noclef = 'true'
-    end
-    -- set templates
-    if self.noclef then
-        self.l_clef = [[
-            \context { \Staff \remove "Clef_engraver" }
-        ]]
-    else self.l_clef = ''
-    end
-    if self.notiming then
-        self.l_timing = [[
-            \context { \Score timing = ##f }
-        ]]
-    else self.l_timing = ''
-    end
-    if self.notimesig then
-        self.l_timesig = [[
-            \context { \Staff \remove "Time_signature_engraver" }
-        ]]
-    else self.l_timesig = ''
-    end
-    if self.nostaffsymbol then
-        self.l_staff = [[
-            \context { \Staff \remove "Staff_symbol_engraver" }
-        ]]
-    else self.l_staff = ''
-    end
-    self.staff_props = string.format([[%s%s%s%s
-    ]],
-    self.l_clef,
-    self.l_timing,
-    self.l_timesig,
-    self.l_staff
-    )
+    self:calc_staff_properties()
     -- relative
     if self.relative then
         if self.relative == '' then
@@ -363,6 +320,53 @@ function Score:calc_properties()
     self.twoside = self:ly_twoside()
     -- temporary file name
     self.output = self:output_filename()
+end
+
+function Score:calc_staff_properties()
+    -- handle meta properties
+    if self.notime then
+        self.notimesig = 'true'
+        self.notiming = 'true'
+    end
+    if self.nostaff then
+        self.nostaffsymbol = 'true'
+        self.notimesig = 'true'
+        -- do *not* suppress timing
+        self.noclef = 'true'
+    end
+    -- set templates
+    local clef, timing, timesig, staff
+    if self.noclef then
+        clef = [[
+            \context { \Staff \remove "Clef_engraver" }
+        ]]
+    else clef = ''
+    end
+    if self.notiming then
+        timing = [[
+            \context { \Score timing = ##f }
+        ]]
+    else timing = ''
+    end
+    if self.notimesig then
+        timesig = [[
+            \context { \Staff \remove "Time_signature_engraver" }
+        ]]
+    else timesig = ''
+    end
+    if self.nostaffsymbol then
+        staff = [[
+            \context { \Staff \remove "Staff_symbol_engraver" }
+        ]]
+    else staff = ''
+    end
+    self.staff_props = string.format([[%s%s%s%s
+    ]],
+    clef,
+    timing,
+    timesig,
+    staff
+    )
 end
 
 function Score:check_properties()
