@@ -123,11 +123,7 @@ end
 
 local fontdata = fonts.hashes.identifiers
 local function fontinfo(id)
-    local f = fontdata[id]
-    if f then
-        return f
-    end
-    return font.fonts[id]
+    return fontdata[id] or font.fonts[id]
 end
 
 
@@ -242,14 +238,14 @@ function latex.includesystems(filename, protrusion, indent, do_compile)
     local f = io.open(filename..'.tex', 'r')
     local texoutput = f:read('*a')
     f:close()
-    f = io.open(filename..'.count', 'r')
-    local nsystems = tonumber(f:read('*a'))
-    f:close()
-    if nsystems == 1 and protrusion ~= 0 then
-        warn('Only one system, deactivating indentation.')
-        protrusion = protrusion - indent
-    end
     if do_compile then  -- new compilation, update output-systems.tex
+        f = io.open(filename..'.count', 'r')
+        local nsystems = tonumber(f:read('*a'))
+        f:close()
+        if nsystems == 1 and indent then
+            warn('Only one system, deactivating indentation.')
+            protrusion = protrusion - indent
+        end
         texoutput =
             [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
             texoutput:gsub([[\includegraphics{]], string.format(
@@ -494,11 +490,9 @@ function Score:is_compiled()
         return lfs.isfile(self.output..'.pdf')
     elseif self.insert == 'systems' then
         local f = io.open(self.output..'-systems.tex')
-        if f then
-            local head = f:read("*line")
-            return not (head == "% eof")
-        else return false
-        end
+        if not f then return false end
+        local head = f:read("*line")
+        return not (head == "% eof")
     else
         err('"inline" insertion mode not implemented yet')
     end
@@ -816,6 +810,7 @@ function Score:_protrusion()
     if protrusion then return protrusion
     elseif self.protrusion then
         local f = io.open(self.output..'.eps')
+        if not f then return end
         local bbline = ''
         while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
         f:close()
