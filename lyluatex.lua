@@ -368,7 +368,7 @@ function Score:check_properties()
         if self.fragment or self.relative then
             if self.input_file then
                 warn([[
-Fount something incompatible with `fragment`
+Found something incompatible with `fragment`
 (or `relative`). Setting them to false.
                 ]])
             else
