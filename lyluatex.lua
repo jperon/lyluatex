@@ -327,11 +327,7 @@ function Score:calc_properties()
         ]]
     else self.l_staff = ''
     end
-    self.staff_props = string.format([[
-    %s
-    %s
-    %s
-    %s
+    self.staff_props = string.format([[%s%s%s%s
     ]],
     self.l_clef,
     self.l_timing,
