@@ -266,8 +266,8 @@ end
 
 function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
-        ly.verbprint(ly_code:explode('\n'))
         if version then tex.sprint('\\lyVersion{'..version..'}') end
+        ly.verbprint(ly_code:explode('\n'))
         if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
     end
 end
