@@ -12,7 +12,8 @@ local err, warn, info, log = luatexbase.provides_module({
 local md5 = require 'md5'
 local lfs = require 'lfs'
 
-ly = {}
+local ly = {}
+local latex = {}
 
 local FILELIST
 local OPTIONS = {}
@@ -26,6 +27,7 @@ local MXML_OPTIONS = {
     'no-rest-positions',
     'verbose',
 }
+local TEXINFO_OPTIONS = {'doctitle', 'nogettext', 'texidoc'}
 local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
 local LY_HEAD = [[
 %%File header
@@ -70,7 +72,7 @@ local function debug(...)
 end
 
 
-local function contains (table_var, value)
+local function contains(table_var, value)
     for _, v in pairs(table_var) do
         if v == value then return true
         elseif v == 'false' and value == false then return true
@@ -79,7 +81,7 @@ local function contains (table_var, value)
 end
 
 
-local function contains_key (table_var, key)
+local function contains_key(table_var, key)
     for k in pairs(table_var) do
         if k == key then return true end
     end
@@ -87,8 +89,9 @@ end
 
 
 local function convert_unit(value)
-    if not value then return 0 end
-    if value:match('\\') then
+    if not value then return 0
+    elseif value == '' then return false
+    elseif value:match('\\') then
         local n, u = value:match('^%d*%.?%d*'), value:match('%a+')
         if n == '' then n = 1 end
         return tonumber(n) * tex.dimen[u] / tex.sp("1pt")
@@ -122,11 +125,7 @@ end
 
 local fontdata = fonts.hashes.identifiers
 local function fontinfo(id)
-    local f = fontdata[id]
-    if f then
-        return f
-    end
-    return font.fonts[id]
+    return fontdata[id] or font.fonts[id]
 end
 
 
@@ -138,7 +137,7 @@ local function locate(file, includepaths, ext)
         if lfs.isfile(result) then break end
     end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
-    if not result and ext and file:match('.%w+$') ~= ext then return locate(file..ext, includepaths) end
+    if not result and ext and file:match('%.[^%.]+$') ~= ext then return locate(file..ext, includepaths) end
     return result
 end
 
@@ -152,10 +151,10 @@ local function mkdirs(str)
 end
 
 
-local function __genorderedindex( t )
+local function __genorderedindex(t)
     local orderedIndex = {}
     for key in pairs(t) do
-        table.insert( orderedIndex, key )
+        table.insert(orderedIndex, key)
     end
     table.sort( orderedIndex )
     return orderedIndex
@@ -163,7 +162,7 @@ end
 local function __orderednext(t, state)
     local key = nil
     if state == nil then
-        t.__orderedIndex = __genorderedindex( t )
+        t.__orderedIndex = __genorderedindex(t)
         key = t.__orderedIndex[1]
     else
         for i = 1, #t.__orderedIndex do
@@ -197,21 +196,78 @@ local function process_options(k, v)
 end
 
 
-local function set_fullpagestyle(style)
-    if style then
-        tex.sprint('\\includepdfset{pagecommand=\\thispagestyle{'..style..'}}')
-    else
-        tex.sprint('\\includepdfset{pagecommand=}')
-    end
-end
-
-
 local function splitext(str, ext)
     if str:match(".-%..-") then
         local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
         return name
     else
         return str
+    end
+end
+
+
+--[[ =============== Functions that output LaTeX code ===================== ]]
+
+function latex.filename(printfilename, insert, input_file)
+    if printfilename and input_file then
+        if insert == 'fullpage' then
+            warn('`printfilename` ignored with `insert=fullpage`')
+        else
+            local filename = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
+            tex.sprint(filename)
+        end
+    end
+end
+
+function latex.fullpagestyle(style, ppn)
+    local function texoutput(s) tex.print('\\includepdfset{pagecommand='..s..'}') end
+    if style == '' then
+        if ppn then
+            texoutput('\\thispagestyle{empty}')
+        else texoutput('')
+        end
+    else texoutput('\\thispagestyle{'..style..'}')
+    end
+end
+
+function latex.includepdf(pdfname)
+    tex.sprint('\\includepdf[pages=-]{'..pdfname..'}')
+end
+
+function latex.includesystems(filename, protrusion, indent, do_compile)
+    local f = io.open(filename..'.tex', 'r')
+    local texoutput = f:read('*a')
+    f:close()
+    if do_compile then  -- new compilation, update output-systems.tex
+        f = io.open(filename..'.count', 'r')
+        local nsystems = tonumber(f:read('*a'))
+        f:close()
+        if nsystems == 1 and indent then
+            warn('Only one system, deactivating indentation.')
+            protrusion = protrusion - indent
+        end
+        texoutput =
+            [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
+            texoutput:gsub([[\includegraphics{]], string.format(
+                [[\noindent\hspace*{%spt}\includegraphics{%s]],
+                protrusion, dirname(filename)))..
+            [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
+        f = io.open(filename..'.tex', 'w')
+        f:write(texoutput)
+        f:close()
+    end
+    tex.sprint(texoutput:explode('\n'))
+end
+
+function latex.label(label, labelprefix)
+    if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
+end
+
+function latex.verbatim(verbatim, ly_code, intertext, version)
+    if verbatim then
+        ly.verbprint(ly_code:explode('\n'))
+        if version then tex.sprint('\\lyVersion{'..version..'}') end
+        if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
     end
 end
 
@@ -230,54 +286,7 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:calc_properties()
-    -- staff display
-    -- handle meta properties
-    if self.notime then
-        self.notimesig = 'true'
-        self.notiming = 'true'
-    end
-    if self.nostaff then
-        self.nostaffsymbol = 'true'
-        self.notimesig = 'true'
-        -- do *not* suppress timing
-        self.noclef = 'true'
-    end
-    -- set templates
-    if self.noclef then
-        self.l_clef = [[
-            \context { \Staff \remove "Clef_engraver" }
-        ]]
-    else self.l_clef = ''
-    end
-    if self.notiming then
-        self.l_timing = [[
-            \context { \Score timing = ##f }
-        ]]
-    else self.l_timing = ''
-    end
-    if self.notimesig then
-        self.l_timesig = [[
-            \context { \Staff \remove "Time_signature_engraver" }
-        ]]
-    else self.l_timesig = ''
-    end
-    if self.nostaffsymbol then
-        self.l_staff = [[
-            \context { \Staff \remove "Staff_symbol_engraver" }
-        ]]
-    else self.l_staff = ''
-    end
-    self.staff_props = string.format([[
-    %s
-    %s
-    %s
-    %s
-    ]],
-    self.l_clef,
-    self.l_timing,
-    self.l_timesig,
-    self.l_staff
-    )
+    self:calc_staff_properties()
     -- relative
     if self.relative then
         if self.relative == '' then
@@ -301,72 +310,59 @@ function Score:calc_properties()
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
     end
+    -- LilyPond version
+    if self.addversion then self.addversion = self:lilypond_version(true) end
+    -- recto-verso
     self.twoside = self:ly_twoside()
     -- temporary file name
     self.output = self:output_filename()
 end
 
-function Score:check_failed_compilation()
-    local debug_msg, doc_debug_msg
-    if self.debug then
-        debug_msg = string.format([[
-Please check the log file
-and the generated LilyPond code in
-%s
-%s
-        ]],
-        self.output..'.log',
-        self.output..'.ly')
-        doc_debug_msg = [[
-A log file and a LilyPond file have been written.\\
-See log for details.]]
-    else
-        debug_msg = [[
-If you need more information
-than the above message,
-please retry with option debug=true.
+function Score:calc_staff_properties()
+    -- handle meta properties
+    if self.notime then
+        self.notimesig = 'true'
+        self.notiming = 'true'
+    end
+    if self.nostaff then
+        self.nostaffsymbol = 'true'
+        self.notimesig = 'true'
+        -- do *not* suppress timing
+        self.noclef = 'true'
+    end
+    -- set templates
+    local clef, timing, timesig, staff
+    if self.noclef then
+        clef = [[
+            \context { \Staff \remove "Clef_engraver" }
         ]]
-        doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
+    else clef = ''
     end
-    if self:is_compiled() then
-        if self.lilypond_error then
-            warn([[
-
-LilyPond reported a failed compilation but
-produced a score. %s
-            ]],
-            debug_msg
-            )
-        end
-        return true
-    else
-        --[[ ensure the score gets recompiled next time --]]
-        self:delete_intermediate_files()
-        if self.showfailed then
-            tex.sprint(string.format([[
-                \begin{quote}
-                \minibox[frame]{LilyPond failed to compile a score.\\
-%s}
-                \end{quote}
-
-                ]],
-                doc_debug_msg))
-            warn([[
-
-LilyPond failed to compile the score.
-%s
-            ]],
-            debug_msg)
-            return false
-        else
-            err([[
-
-LilyPond failed to compile the score.
-%s
-            ]],
-          debug_msg)
-        end
+    if self.notiming then
+        timing = [[
+            \context { \Score timing = ##f }
+        ]]
+    else timing = ''
     end
+    if self.notimesig then
+        timesig = [[
+            \context { \Staff \remove "Time_signature_engraver" }
+        ]]
+    else timesig = ''
+    end
+    if self.nostaffsymbol then
+        staff = [[
+            \context { \Staff \remove "Staff_symbol_engraver" }
+        ]]
+    else staff = ''
+    end
+    self.staff_props = string.format([[%s%s%s%s
+    ]],
+    clef,
+    timing,
+    timesig,
+    staff
+    )
 end
 
 function Score:check_properties()
@@ -387,6 +383,11 @@ function Score:check_properties()
                 'authorized values are "%s"',
                 self[k], k, table.concat(OPTIONS[k], ', ')
             )
+        end
+    end
+    for _, k in pairs(TEXINFO_OPTIONS) do
+        if self[k] then
+            info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
     if self.input_file or self.ly_code:find([[\score]]) then
@@ -489,13 +490,73 @@ function Score:is_compiled()
         return lfs.isfile(self.output..'.pdf')
     elseif self.insert == 'systems' then
         local f = io.open(self.output..'-systems.tex')
-        if f then
-            local head = f:read("*line")
-            return not (head == "% eof")
-        else return false
-        end
+        if not f then return false end
+        local head = f:read("*line")
+        return not (head == "% eof")
     else
         err('"inline" insertion mode not implemented yet')
+    end
+end
+
+function Score:is_compiled_without_error()
+    local debug_msg, doc_debug_msg
+    if self.debug then
+        debug_msg = string.format([[
+Please check the log file
+and the generated LilyPond code in
+%s
+%s
+        ]],
+        self.output..'.log',
+        self.output..'.ly')
+        doc_debug_msg = [[
+A log file and a LilyPond file have been written.\\
+See log for details.]]
+    else
+        debug_msg = [[
+If you need more information
+than the above message,
+please retry with option debug=true.
+        ]]
+        doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
+    end
+    if self:is_compiled() then
+        if self.lilypond_error then
+            warn([[
+
+LilyPond reported a failed compilation but
+produced a score. %s
+            ]],
+            debug_msg
+            )
+        end
+        return true
+    else
+        --[[ ensure the score gets recompiled next time --]]
+        self:delete_intermediate_files()
+        if self.showfailed then
+            tex.sprint(string.format([[
+                \begin{quote}
+                \minibox[frame]{LilyPond failed to compile a score.\\
+%s}
+                \end{quote}
+
+                ]],
+                doc_debug_msg))
+            warn([[
+
+LilyPond failed to compile the score.
+%s
+            ]],
+            debug_msg)
+        else
+            err([[
+
+LilyPond failed to compile the score.
+%s
+            ]],
+          debug_msg)
+        end
     end
 end
 
@@ -569,7 +630,7 @@ function Score:lilypond_cmd()
     return cmd, mode
 end
 
-function Score:lilypond_version()
+function Score:lilypond_version(number)
     local p = io.popen(self.program..' --version', 'r')
     if not p then
       err([[
@@ -581,11 +642,14 @@ function Score:lilypond_version()
     local result = p:read()
     p:close()
     if result and result:match('GNU LilyPond') then
-        info(
-            "Compiling score %s with LilyPond executable '%s'.",
-            self.output, self.program
-        )
-        debug(result)
+        if number then return result:match('%d+%.%d+%.?%d*')
+        else
+            info(
+                "Compiling score %s with LilyPond executable '%s'.",
+                self.output, self.program
+            )
+            debug(result)
+        end
     else
         err([[
         LilyPond could not be started.
@@ -735,25 +799,25 @@ function Score:process()
         self:run_lilypond()
         self:optimize_pdf()
     end
-    self:write_tex(do_compile)
+    self:write_latex(do_compile)
+    if not self.debug then self:delete_intermediate_files() end
 end
 
-function Score:protrusion()
-    --[[
-      Determine the amount of space used to the left of the staff lines
-      and generate a horizontal offset command.
-    --]]
-    local protrusion = ''
-    local f = io.open(self.output..'.eps')
-    --[[ The information we need is in the third line --]]
-    f:read(); f:read()
-    local bb_line = f:read()
-    f:close()
-    local cropped = bb_line:match('%d+')
-    if cropped ~= 0 then
-        protrusion = string.format('\\hspace*{-%spt}', cropped)
+function Score:_protrusion()
+    --[[ Determine the amount of space used to the left of the staff lines
+      and generate a horizontal offset command. ]]
+    local protrusion = convert_unit(self.protrusion)
+    if protrusion then return protrusion
+    elseif self.protrusion then
+        local f = io.open(self.output..'.eps')
+        if not f then return end
+        local bbline = ''
+        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
+        f:close()
+        protrusion = bbline:match('-?%d+')
+        return tonumber(protrusion)
+    else return 0
     end
-    return protrusion
 end
 
 function Score:run_lilypond()
@@ -770,62 +834,22 @@ function Score:run_lilypond()
     self.lilypond_error = not p:close()
 end
 
-function Score:write_tex(do_compile)
-    if self.printfilename and self.input_file then
-        if self.insert == 'fullpage' then
-            warn('`printfilename` ignored with `insert=fullpage`')
-        else
-            local filename = self.input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
-            tex.sprint(filename)
-        end
-    end
-    if self.verbatim then
-        ly.verbprint(self.orig_ly_code:explode('\n'))
-        if self.intertext then
-            tex.print('\\lyIntertext{'..self.intertext..'}\\par')
-        end
-    end
+function Score:write_latex(do_compile)
+    latex.filename(self.printfilename, self.insert, self.input_file)
+    latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext, self.addversion)
     if do_compile then
-        if not self:check_failed_compilation() then return end
+        if not self:is_compiled_without_error() then return end
     end
     --[[ Now we know there is a proper score --]]
-    if self.fullpagestyle == '' then
-        if self['print-page-number'] then
-            set_fullpagestyle('empty')
-        else set_fullpagestyle(nil)
-        end
-    else set_fullpagestyle(self.fullpagestyle)
-    end
-    local label = ''
-    if self.label then label = '\\label{'..self.labelprefix..self.label..'}' end
-    local systems_file = io.open(self.output..'-systems.tex', 'r')
-    if not systems_file then
-        --[[ Fullpage score, use \includepdf ]]
-        tex.sprint(label..'\\includepdf[pages=-]{'..self.output..'}')
-    else
-        --[[ Fragment, use -systems.tex file]]
-        local content = systems_file:read("*all")
-        local texoutput
-        systems_file:close()
-        if do_compile then
-            --[[ new compilation, calculate protrusion
-                 and update -systems.tex file]]
-            local protrusion = self:protrusion()
-            texoutput = content:gsub([[\includegraphics{]],
-                [[\noindent]]..' '..protrusion..[[\includegraphics{]]..dirname(self.output))
-            local f = io.open(self.output..'-systems.tex', 'w')
-            f:write(texoutput)
-            f:close()
-            self:delete_intermediate_files()
-        else
-            -- simply reuse existing -systems.tex file
-            texoutput = content
-        end
-        texoutput = label..
-            [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
-            texoutput..
-            [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
-        tex.sprint(texoutput:explode('\n'))
+    latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
+    latex.label(self.label, self.labelprefix)
+    local systems_file = self.output..'-systems'
+    if not lfs.isfile(systems_file..'.tex') then  -- fullpage score
+        latex.includepdf(self.output)
+    else  -- fragment
+        latex.includesystems(
+            systems_file, self:_protrusion(), convert_unit(self.indent), do_compile
+        )
     end
 end
 

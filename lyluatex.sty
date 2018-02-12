@@ -21,6 +21,7 @@
 \directlua{
   ly = require(kpse.find_file("lyluatex.lua"))
   ly.declare_package_options({
+    ['addversion'] = {'false', 'true', ''},
     ['cleantmp'] = {'false', 'true', ''},
     ['current-font-as-main'] = {'true', 'false', ''},
     ['debug'] = {'false', 'true', ''},
@@ -50,6 +51,8 @@
     ['print-page-number'] = {'false', 'true', ''},
     ['printfilename'] = {'false', 'true', ''},
     ['program'] = {'lilypond'},
+    ['protrusion'] = {'', ly.is_dim},
+    ['noprotrusion'] = {'default', ly.is_neg},
     ['ragged-right'] = {'default', 'true', 'false', ''},
     ['noragged-right'] = {'default', ly.is_neg},
     ['relative'] = {'false', ly.is_num},
@@ -98,11 +101,14 @@
   \directlua{ly.set_property([[#1]], [[#2]])}
 }
 
-% This macro defines how the filename of a score will look like if printed.
+% How the filename of a score will look like (if printed)
 \newcommand{\lyFilename}[1]{\noindent #1\par\bigskip}
 
-% Command to change the appearance of verbatim 'intertext'
+% Appearance of verbatim 'intertext' (if printed)
 \newcommand{\lyIntertext}[1]{\noindent #1\par\bigskip}
+
+% Appearance of LilyPond version (if printed)
+\newcommand{\lyVersion}[1]{\noindent {\footnotesize\emph{(GNU LilyPond #1)}\par}\bigskip}
 
 % Retrieve the current page number for use in the functions
 \def\ly@page{\directlua{ly.PAGE = \thepage}}
