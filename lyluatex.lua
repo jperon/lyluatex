@@ -672,7 +672,7 @@ function Score:ly_indent()
 end
 
 function Score:ly_language()
-    if self.language == '' then return ''
+    if not self.language then return ''
     else return '\\language "'..self.language..'"'
     end
 end
