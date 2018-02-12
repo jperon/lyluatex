@@ -358,7 +358,7 @@ function Score:check_properties()
             info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
-    if self.input_file or self.ly_code:find([[\score]]) then
+    if self.input_file or self.ly_code:find([[\score]]) or self.ly_code:find([[\paper]]) then
         if self.fragment or self.relative then
             if self.input_file then
                 warn([[
