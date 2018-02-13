@@ -28,7 +28,7 @@ local MXML_OPTIONS = {
     'verbose',
 }
 local TEXINFO_OPTIONS = {'doctitle', 'nogettext', 'texidoc'}
-local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
+local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp', 'em', 'ex'}
 local LY_HEAD = [[
 %%File header
 \version "<<<VERSION>>>"
