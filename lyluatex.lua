@@ -288,7 +288,8 @@ function latex.includesystems(filename, range, protrusion, indent)
     else
         print_only = latex.include_only(range)
     end
-    if #print_only == 1 and print_only[1] == "1" and indent then
+    local rsystems = #print_only
+    if rsystems == 1 and print_only[1] == "1" and indent then
         warn([[
 Only one system, deactivating indentation.]])
         protrusion = protrusion - indent
@@ -302,7 +303,7 @@ Only one system, deactivating indentation.]])
         \noindent\hspace*{%spt}\includegraphics{%s}
         ]],
         protrusion, filename..'-'..system)
-        if ly.between_lilypond then
+        if ly.between_lilypond and index < rsystems then
             texoutput = texoutput..string.format([[
             \betweenLilyPondSystem{%s}
             ]], index)
