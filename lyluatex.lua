@@ -269,8 +269,8 @@ end
 
 function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
-        ly.verbprint(ly_code:explode('\n'))
         if version then tex.sprint('\\lyVersion{'..version..'}') end
+        ly.verbprint(ly_code:explode('\n'))
         if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
     end
 end
@@ -643,7 +643,7 @@ function Score:ly_indent()
 end
 
 function Score:ly_language()
-    if self.language == '' then return ''
+    if not self.language then return ''
     else return '\\language "'..self.language..'"'
     end
 end
