@@ -891,9 +891,7 @@ end
 function Score:write_latex(do_compile)
     latex.filename(self.printfilename, self.insert, self.input_file)
     latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext, self.addversion)
-    if do_compile then
-        if not self:is_compiled_without_error() then return end
-    end
+    if do_compile and not self:is_compiled_without_error() then return end
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
