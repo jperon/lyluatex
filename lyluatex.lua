@@ -17,6 +17,10 @@ local latex = {}
 
 local FILELIST
 local OPTIONS = {}
+local DIM_OPTIONS = {
+    'gutter', 'leftgutter', 'rightgutter',
+    'line-width', 'paperwidth', 'paperheight'
+}
 local MXML_OPTIONS = {
     'absolute',
     'language',
@@ -309,14 +313,11 @@ function Score:calc_properties()
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     self.staffsize = staffsize
     -- dimensions that can be given by LaTeX
-    for _, dimension in pairs({
-        'gutter', 'leftgutter', 'rightgutter', 'line-width', 'paperwidth', 'paperheight'
-    }) do
+    for _, dimension in pairs(DIM_OPTIONS) do
         self[dimension] = convert_unit(self[dimension])
     end
     if not self.leftgutter then self.leftgutter = self.gutter end
     if not self.rightgutter then self.rightgutter = self.gutter end
-    print('\n', self.gutter, self.leftgutter, self.rightgutter)
     if self.quote then
         self['line-width'] = self['line-width'] - self.leftgutter - self.rightgutter
     end
