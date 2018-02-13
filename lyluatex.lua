@@ -230,33 +230,39 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
+function latex.parse_num_or_range(range)
+    local num = tonumber(range)
+    if num then return { num } end
+    if not range:match('^%d+%s*-%s*%d+$') then
+        warn([[
+Invalid value '%s' for item
+in list of page ranges. Possible entries:
+- Single number
+- Range (M-N or N-M)
+This item will be skipped!
+      ]], range)
+    return nil
+    end
+    result = {}
+    from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
+    local dir
+    if from <= to then dir = 1 else dir = -1 end
+    for i = from, to, dir do
+        table.insert(result, i)
+    end
+    return result
+end
+
 function latex.include_only(range)
     if range == '' then return false
     elseif tonumber(range) then return { range } end
     local result = {}
-    if range:match('^%d+-%d+$')
-    then
-        from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
-        local dir
-        if from <= to then dir = 1 else dir = -1 end
-        for i = from, to, dir do
-            table.insert(result, i)
-        end
-    else
-        list = range:explode(',')
-        for _, v in pairs(list) do
-            v = v:gsub('^%s', ''):gsub('%s$', '')
-            v = tonumber(v)
-            if v then table.insert(result, v)
-            else
-                warn([[
-Unexpected value '%s' for option 'print-only'.
-Possible entries:
-- single page number
-- page range N-M
-- list of numbers 1,3,4,6 (spaces allowed)
-                ]], range)
-            end
+    local ranges = range:explode(',')
+    for _, r in pairs(ranges) do
+        r = r:gsub('^%s', ''):gsub('%s$', '')
+        loc_range = latex.parse_num_or_range(r)
+        if loc_range then
+            for _, v in pairs(loc_range) do table.insert(result, v) end
         end
     end
     return result
