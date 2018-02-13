@@ -268,6 +268,10 @@ function latex.include_only(range)
     return result
 end
 
+function latex.includeinline(pdfname)
+    tex.sprint('\\includegraphics{'..pdfname..'-1}%')
+end
+
 function latex.includepdf(pdfname, range)
     local print_only = latex.include_only(range)
     if not print_only then print_only = '-'
@@ -896,13 +900,14 @@ function Score:write_latex(do_compile)
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
-    local systems_file = self.output..'-systems'
-    if not lfs.isfile(systems_file..'.tex') then  -- fullpage score
+    if self.insert == 'fullpage' then
         latex.includepdf(self.output, self['print-only'])
-    else  -- fragment
+    elseif self.insert == 'systems' then
         latex.includesystems(
             self.output, self['print-only'], self:_protrusion(), convert_unit(self.indent)
         )
+    else -- inline
+        latex.includeinline(self.output)
     end
 end
 
