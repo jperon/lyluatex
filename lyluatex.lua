@@ -220,7 +220,7 @@ function latex.filename(printfilename, insert, input_file)
 end
 
 function latex.fullpagestyle(style, ppn)
-    local function texoutput(s) tex.print('\\includepdfset{pagecommand='..s..'}') end
+    local function texoutput(s) tex.sprint('\\includepdfset{pagecommand='..s..'}%') end
     if style == '' then
         if ppn then
             texoutput('\\thispagestyle{empty}')
@@ -304,12 +304,12 @@ Only one system, deactivating indentation.]])
     end
     for index, system in pairs(print_only) do
         texoutput = texoutput..string.format([[
-        \noindent\hspace*{%spt}\includegraphics{%s}
+        \noindent\hspace*{%spt}\includegraphics{%s}%%
         ]],
         protrusion, filename..'-'..system)
         if ly.between_lilypond and index < rsystems then
             texoutput = texoutput..string.format([[
-            \betweenLilyPondSystem{%s}
+            \betweenLilyPondSystem{%s}%%
             ]], index)
         else
             texoutput = texoutput..'\n\\par\\bigskip'
@@ -328,8 +328,8 @@ end
 function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
         ly.verbprint(ly_code:explode('\n'))
-        if version then tex.sprint('\\lyVersion{'..version..'}') end
-        if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
+        if version then tex.sprint('\\lyVersion{'..version..'}%%') end
+        if intertext then tex.sprint('\\lyIntertext{'..intertext..'}%%') end
     end
 end
 
