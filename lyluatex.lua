@@ -182,6 +182,42 @@ local function orderedpairs(t)
 end
 
 
+local function parse_num_or_range(range)
+    local num = tonumber(range)
+    if num then return {num} end
+    if not range:match('^%d+%s*-%s*%d+$') then
+        warn([[
+Invalid value '%s' for item
+in list of page ranges. Possible entries:
+- Single number
+- Range (M-N or N-M)
+This item will be skipped!
+      ]], range)
+    return nil
+    end
+    local result = {}
+    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
+    local dir
+    if from <= to then dir = 1 else dir = -1 end
+    for i = from, to, dir do table.insert(result, i) end
+    return result
+end
+
+
+local function range_include_only(range)
+    if range == '' then return false
+    elseif tonumber(range) then return {range} end
+    local result = {}
+    for _, r in pairs(range:explode(',')) do
+        local loc_range = parse_num_or_range(r:gsub('^%s', ''):gsub('%s$', ''))
+        if loc_range then
+            for _, v in pairs(loc_range) do table.insert(result, v) end
+        end
+    end
+    return result
+end
+
+
 local function process_options(k, v)
     if v == 'false' then v = false end
     if ly.is_neg(k) then
@@ -230,45 +266,8 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
-function latex.parse_num_or_range(range)
-    local num = tonumber(range)
-    if num then return { num } end
-    if not range:match('^%d+%s*-%s*%d+$') then
-        warn([[
-Invalid value '%s' for item
-in list of page ranges. Possible entries:
-- Single number
-- Range (M-N or N-M)
-This item will be skipped!
-      ]], range)
-    return nil
-    end
-    local result = {}
-    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
-    local dir
-    if from <= to then dir = 1 else dir = -1 end
-    for i = from, to, dir do
-        table.insert(result, i)
-    end
-    return result
-end
-
-function latex.include_only(range)
-    if range == '' then return false
-    elseif tonumber(range) then return { range } end
-    local result = {}
-    local ranges = range:explode(',')
-    for _, r in pairs(ranges) do
-        local loc_range = latex.parse_num_or_range(r:gsub('^%s', ''):gsub('%s$', ''))
-        if loc_range then
-            for _, v in pairs(loc_range) do table.insert(result, v) end
-        end
-    end
-    return result
-end
-
 function latex.includepdf(pdfname, range)
-    local print_only = latex.include_only(range)
+    local print_only = range_include_only(range)
     if not print_only then print_only = '-'
     else
         print_only = '{'..table.concat(print_only, ',')..'}'
@@ -278,18 +277,26 @@ function latex.includepdf(pdfname, range)
 end
 
 function latex.includesystems(filename, range, protrusion, staffsize, indent)
+    if protrusion then
+        local f = io.open(filename..'.protrusion', 'w')
+        f:write(protrusion)
+        f:close()
+    else
+        local f = io.open(filename..'.protrusion', 'r')
+        protrusion = f:read('*a')
+        f:close()
+    end
     local print_only
     if range == '' then  -- no range given, check available systems
         local f = io.open(filename..'-systems.count', 'r')
         local nsystems = f:read('*a')
         f:close()
-        print_only = latex.include_only('1-'..nsystems)
+        print_only = range_include_only('1-'..nsystems)
     else
-        print_only = latex.include_only(range)
+        print_only = range_include_only(range)
     end
     if #print_only == 1 and print_only[1] == "1" and indent then
-        warn([[
-Only one system, deactivating indentation.]])
+        warn([[Only one system, deactivating indentation.]])
         protrusion = protrusion - indent
     end
     local texoutput = ''
@@ -317,6 +324,7 @@ Only one system, deactivating indentation.]])
     if ly.post_lilypond then
         texoutput = texoutput..'\n\\postLilyPondExample'
     end
+    print('\n', texoutput)
     tex.sprint(texoutput:explode('\n'))
 end
 
@@ -496,7 +504,6 @@ function Score:delete_intermediate_files()
       os.remove(self.output..'-systems.tex')
       os.remove(self.output..'-systems.texi')
       os.remove(self.output..'.eps')
-      os.remove(self.output..'.pdf')
       if self.lilypond_error then
           -- ensure score gets recompiled next time
           os.remove(self.output..'-systems.tex')
@@ -550,7 +557,7 @@ function Score:is_compiled()
     if self.insert == 'fullpage' then
         return lfs.isfile(self.output..'.pdf')
     elseif self.insert == 'systems' then
-        local f = io.open(self.output..'-systems.tex')
+        local f = io.open(self.output..'-systems.count')
         if not f then return false end
         local head = f:read("*line")
         return not (head == "% eof")
@@ -908,8 +915,7 @@ function Score:write_latex(do_compile)
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
-    local systems_file = self.output..'-systems'
-    if not lfs.isfile(systems_file..'.tex') then  -- fullpage score
+    if not lfs.isfile(self.output..'-systems.count') then  -- fullpage score
         latex.includepdf(self.output, self['print-only'])
     else  -- fragment
         latex.includesystems(
