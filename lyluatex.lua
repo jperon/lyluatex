@@ -545,13 +545,11 @@ end
 function Score:is_compiled()
     if self.insert == 'fullpage' then
         return lfs.isfile(self.output..'.pdf')
-    elseif self.insert == 'systems' then
+    else
         local f = io.open(self.output..'-systems.tex')
         if not f then return false end
         local head = f:read("*line")
         return not (head == "% eof")
-    else
-        err('"inline" insertion mode not implemented yet')
     end
 end
 
@@ -647,15 +645,10 @@ function Score:header()
                 ppn, ly.PAGE, self:margins()
 	    )
         )
-    elseif self.insert == 'systems' then
+    else
 	header = header:gsub(
 	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
 	    [[<<<PAPER>>>]], '')
-    else
-        header = header:gsub(
-        [[<<<PREAMBLE>>>]], [[#(ly:set-option 'preview #t)]]):gsub(
-        [[<<<PAPER>>>]], '')
-        err('"inline" insertion mode not implemented yet')
     end
     return header
 end
