@@ -182,38 +182,25 @@ local function orderedpairs(t)
 end
 
 
-local function parse_num_or_range(range)
+local function range_parse(range, nsystems)
     local num = tonumber(range)
     if num then return {num} end
+    if range:sub(-1) == '-' then range = range..nsystems end
     if not range:match('^%d+%s*-%s*%d+$') then
         warn([[
 Invalid value '%s' for item
 in list of page ranges. Possible entries:
 - Single number
-- Range (M-N or N-M)
+- Range (M-N or N-M or, with `insert=systems`, N-)
 This item will be skipped!
       ]], range)
-    return nil
+      return
     end
     local result = {}
     local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
     local dir
     if from <= to then dir = 1 else dir = -1 end
     for i = from, to, dir do table.insert(result, i) end
-    return result
-end
-
-
-local function range_include_only(range)
-    if range == '' then return false
-    elseif tonumber(range) then return {range} end
-    local result = {}
-    for _, r in pairs(range:explode(',')) do
-        local loc_range = parse_num_or_range(r:gsub('^%s', ''):gsub('%s$', ''))
-        if loc_range then
-            for _, v in pairs(loc_range) do table.insert(result, v) end
-        end
-    end
     return result
 end
 
@@ -267,13 +254,10 @@ function latex.fullpagestyle(style, ppn)
 end
 
 function latex.includepdf(pdfname, range)
-    local print_only = range_include_only(range)
-    if not print_only then print_only = '-'
-    else
-        print_only = '{'..table.concat(print_only, ',')..'}'
-    end
     tex.sprint(string.format(
-        [[\includepdf[pages=%s]{%s}]], print_only, pdfname))
+        [[\includepdf[pages={%s}]{%s}]],
+        table.concat(range, ','), pdfname)
+    )
 end
 
 function latex.includesystems(filename, range, protrusion, staffsize, indent)
@@ -286,16 +270,7 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
         protrusion = f:read('*a')
         f:close()
     end
-    local print_only
-    if range == '' then  -- no range given, check available systems
-        local f = io.open(filename..'-systems.count', 'r')
-        local nsystems = f:read('*a')
-        f:close()
-        print_only = range_include_only('1-'..nsystems)
-    else
-        print_only = range_include_only(range)
-    end
-    if #print_only == 1 and print_only[1] == "1" and indent then
+    if #range == 1 and range[1] == "1" and indent then
         warn([[Only one system, deactivating indentation.]])
         protrusion = protrusion - indent
     end
@@ -303,7 +278,8 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
     if ly.pre_lilypond then
         texoutput = texoutput..'\\preLilyPondExample'
     end
-    for index, system in pairs(print_only) do
+    for index, system in pairs(range) do
+        if not lfs.isfile(filename..'-'..system..'.pdf') then break end
         texoutput = texoutput..string.format([[
         \noindent\hspace*{%spt}\includegraphics{%s}
         ]],
@@ -891,6 +867,22 @@ function Score:_protrusion()
     end
 end
 
+function Score:_range()
+    local nsystems = ''
+    local f = io.open(self.output..'-systems.count', 'r')
+    if f then nsystems = f:read('*a') f:close() end
+    if self['print-only'] == '' then self['print-only'] = '1-'..nsystems end
+    if tonumber(self['print-only']) then return {self['print-only']} end
+    local result = {}
+    for _, r in pairs(self['print-only']:explode(',')) do
+        local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+        if range then
+            for _, v in pairs(range) do table.insert(result, v) end
+        end
+    end
+    return result
+end
+
 function Score:run_lilypond()
     mkdirs(dirname(self.output))
     self:lilypond_version()
@@ -915,11 +907,11 @@ function Score:write_latex(do_compile)
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
     if not lfs.isfile(self.output..'-systems.count') then  -- fullpage score
-        latex.includepdf(self.output, self['print-only'])
+        latex.includepdf(self.output, self:_range())
     else  -- fragment
         latex.includesystems(
-            self.output, self['print-only'], self:_protrusion(),
-            self.staffsize, convert_unit(self.indent), do_compile
+            self.output, self:_range(), self:_protrusion(),
+            self.staffsize, convert_unit(self.indent)
         )
     end
 end
