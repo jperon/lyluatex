@@ -182,29 +182,6 @@ local function orderedpairs(t)
 end
 
 
-local function range_parse(range, nsystems)
-    local num = tonumber(range)
-    if num then return {num} end
-    if range:sub(-1) == '-' then range = range..nsystems end
-    if not range:match('^%d+%s*-%s*%d+$') then
-        warn([[
-Invalid value '%s' for item
-in list of page ranges. Possible entries:
-- Single number
-- Range (M-N or N-M or, with `insert=systems`, N-)
-This item will be skipped!
-      ]], range)
-      return
-    end
-    local result = {}
-    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
-    local dir
-    if from <= to then dir = 1 else dir = -1 end
-    for i = from, to, dir do table.insert(result, i) end
-    return result
-end
-
-
 local function process_options(k, v)
     if v == 'false' then v = false end
     if ly.is_neg(k) then
@@ -216,6 +193,33 @@ local function process_options(k, v)
         end
     end
     return k, v
+end
+
+
+local function range_parse(range, nsystems)
+    local num = tonumber(range)
+    if num then return {num} end
+    -- if nsystems is set, we have insert=systems
+    if range:sub(-1) == '-' then range = range..nsystems end
+    if not range:match('^%d+%s*-%s*%d*$') then
+        warn([[
+Invalid value '%s' for item
+in list of page ranges. Possible entries:
+- Single number
+- Range (M-N, N-M or N-)
+This item will be skipped!
+      ]], range)
+      return
+    end
+    local result = {}
+    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
+    if to then
+        local dir
+        if from <= to then dir = 1 else dir = -1 end
+        for i = from, to, dir do table.insert(result, i) end
+        return result
+    else return {range}  -- N- with insert=fullpage
+    end
 end
 
 
