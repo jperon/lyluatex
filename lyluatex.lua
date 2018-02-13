@@ -277,7 +277,7 @@ function latex.includepdf(pdfname, range)
         [[\includepdf[pages=%s]{%s}]], print_only, pdfname))
 end
 
-function latex.includesystems(filename, range, protrusion, indent)
+function latex.includesystems(filename, range, protrusion, staffsize, indent)
     local print_only
     if range == '' then  -- no range given, check available systems
         local f = io.open(filename..'-systems.count', 'r')
@@ -306,7 +306,12 @@ Only one system, deactivating indentation.]])
             \betweenLilyPondSystem{%s}
             ]], index)
         else
-            texoutput = texoutput..'\n\\par\\bigskip'
+            texoutput = texoutput..string.format([[
+\par\vspace{%spt plus %spt minus %spt}
+            ]],
+            staffsize / 4,
+            staffsize / 12,
+            staffsize / 16)
         end
     end
     if ly.post_lilypond then
@@ -908,7 +913,8 @@ function Score:write_latex(do_compile)
         latex.includepdf(self.output, self['print-only'])
     else  -- fragment
         latex.includesystems(
-            self.output, self['print-only'], self:_protrusion(), convert_unit(self.indent), do_compile
+            self.output, self['print-only'], self:_protrusion(),
+            self.staffsize, convert_unit(self.indent), do_compile
         )
     end
 end
