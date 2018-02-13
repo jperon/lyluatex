@@ -243,8 +243,8 @@ This item will be skipped!
       ]], range)
     return nil
     end
-    result = {}
-    from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
+    local result = {}
+    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
     local dir
     if from <= to then dir = 1 else dir = -1 end
     for i = from, to, dir do
@@ -259,8 +259,7 @@ function latex.include_only(range)
     local result = {}
     local ranges = range:explode(',')
     for _, r in pairs(ranges) do
-        r = r:gsub('^%s', ''):gsub('%s$', '')
-        loc_range = latex.parse_num_or_range(r)
+        local loc_range = latex.parse_num_or_range(r:gsub('^%s', ''):gsub('%s$', ''))
         if loc_range then
             for _, v in pairs(loc_range) do table.insert(result, v) end
         end
@@ -278,10 +277,10 @@ function latex.includepdf(pdfname, range)
         [[\includepdf[pages=%s]{%s}]], print_only, pdfname))
 end
 
-function latex.includesystems(filename, range, protrusion, indent, do_compile)
+function latex.includesystems(filename, range, protrusion, indent)
     local print_only
     if range == '' then  -- no range given, check available systems
-        f = io.open(filename..'-systems.count', 'r')
+        local f = io.open(filename..'-systems.count', 'r')
         local nsystems = f:read('*a')
         f:close()
         print_only = latex.include_only('1-'..nsystems)
