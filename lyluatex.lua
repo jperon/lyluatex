@@ -210,8 +210,8 @@ end
 
 function latex.filename(printfilename, insert, input_file)
     if printfilename and input_file then
-        if insert == 'fullpage' then
-            warn('`printfilename` ignored with `insert=fullpage`')
+        if insert == 'fullpage' or insert == 'inline' then
+            warn('`printfilename` only works with `insert=systems`')
         else
             local filename = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
             tex.sprint(filename)
