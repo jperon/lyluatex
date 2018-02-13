@@ -324,7 +324,6 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
     if ly.post_lilypond then
         texoutput = texoutput..'\n\\postLilyPondExample'
     end
-    print('\n', texoutput)
     tex.sprint(texoutput:explode('\n'))
 end
 
