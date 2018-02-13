@@ -1,13 +1,17 @@
 \documentclass{scrartcl}
 
 \usepackage{lyluatex}
+\usepackage{fontspec}
+\usepackage{libertine}
+\usepackage{lilyglyphs}
 \begin{document}
 
 
 With the \texttt{insert=inline} option it is simple to insert arbitrary
 notational fragments in the
-\lilypond[insert=inline,nostaff,staffsize=12]{ e'8 d'16 e' }
+\lilypond[insert=inline,voffset=-1pt, nostaff,staffsize=12]{ e'8 d'16 e' }
 continuous text of a document.
+This is a \lilyDynamics{f} extension to the \lilyglyphs\ package.
 
 
 \end{document}

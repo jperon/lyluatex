@@ -268,8 +268,10 @@ function latex.include_only(range)
     return result
 end
 
-function latex.includeinline(pdfname)
-    tex.sprint('\\includegraphics{'..pdfname..'-1}%')
+function latex.includeinline(pdfname, voffset)
+    tex.sprint(string.format([[
+\raisebox{%s}{\includegraphics{%s-1.pdf}}
+]], voffset, pdfname))
 end
 
 function latex.includepdf(pdfname, range)
@@ -835,7 +837,8 @@ end
 
 local HASHIGNORE = {
   'cleantmp',
-  'print-only'
+  'print-only',
+  'voffset'
 }
 function Score:output_filename()
     local properties = ''
@@ -907,7 +910,7 @@ function Score:write_latex(do_compile)
             self.output, self['print-only'], self:_protrusion(), convert_unit(self.indent)
         )
     else -- inline
-        latex.includeinline(self.output)
+        latex.includeinline(self.output, self.voffset)
     end
 end
 
