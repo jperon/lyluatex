@@ -835,10 +835,14 @@ function Score:optimize_pdf()
     end
 end
 
+local HASHIGNORE = {
+  'cleantmp',
+  'print-only'
+}
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
-        if k ~= 'cleantmp' and self[k] and type(self[k]) ~= 'function' then
+        if (not contains(HASHIGNORE, k)) and  self[k] and type(self[k]) ~= 'function' then
             properties = properties..'_'..k..'_'..self[k]
         end
     end
