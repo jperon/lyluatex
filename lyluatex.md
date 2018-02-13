@@ -403,13 +403,22 @@ scores.  However, by default all these options inherit their values from the
 the values for these options.
 
 \lyOption{papersize}{default}
-Not implemented yet
+By default the LilyPond score will have the same paper size as the text
+document, but it is possible to override this with the \option{papersize}
+option.  It accepts any paper sizes that are predefined in LilyPond^[see the
+manual page at
+[http://lilypond.org/doc/v2.18/Documentation/notation/predefined-paper-sizes](http://lilypond.org/doc/v2.18/Documentation/notation/predefined-paper-sizes)],
+it is not possible to use custom paper sizes.
 
 \lyOption{paperwidth}{\cmd{paperwidth}}
 
 \lyOption{paperheight}{\cmd{paperheight}}
 
 \lyOption{twoside}{default}
+
+\lyIssue{Note:}
+If \option{papersize} is set, any values of \option{paperheight} and
+\option{paperwidth} are ignored.
 
 
 ### Alignment {#alignment}
