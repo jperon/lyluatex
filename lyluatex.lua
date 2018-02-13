@@ -210,7 +210,7 @@ end
 
 function latex.filename(printfilename, insert, input_file)
     if printfilename and input_file then
-        if insert == 'fullpage' or insert == 'inline' then
+        if insert ~= 'systems' then
             warn('`printfilename` only works with `insert=systems`')
         else
             local filename = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
@@ -383,6 +383,8 @@ function Score:calc_properties()
 end
 
 function Score:calc_staff_properties()
+    -- preset for bare notation symbols in inline images
+    if self.insert == 'bare-inline' then self.nostaff = 'true' end
     -- handle meta properties
     if self.notime then
         self.notimesig = 'true'
