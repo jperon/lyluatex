@@ -270,7 +270,7 @@ valid values are \option{systems} (default), \option{fullpage}, and
 \lyMargin{\texttt{insert=systems}}
 With this default option each score is compiled as a sequence of PDF files
 representing one system each. By default the systems are separated by a
-`\linebreak` and form one paragraph together.
+paragraph and a \cmd{bigskip}.
 
 \lyCmd{betweenLilyPondSystem}
 However, if a macro \cmd{betweenLilyPondSystem} is defined it will be expanded
@@ -293,6 +293,16 @@ If either of these macros is defined it will be expanded immediately before or
 after the score.  This may for example be used to wrap the example in
 environments, but usually it will make more sense to use the
 \option{musicexamples} integration (see [musicexamples](#musicexamples)).
+
+\lyIssue{Note:}
+If a score contains only one system or only the first system of a score is
+included through \option{print-only=1} and at the same time the \option{indent}
+option is used then the indent is suppressed and a warning issued.  This
+suppression is performed *after* the score has been generated, so there is a
+small margin of error where this may produce undesirable results: if a score is
+just too long to fit on one system due to indentation but would have been
+engraved on one system *without* indent.
+
 
 ### Fullpage
 
@@ -330,23 +340,19 @@ continuous text, has not been implemented yet.
 With the option \option{print-only} it is possible to choose which pages or
 systems of a score will be included in the document.  This can for example be
 used to comment on individual parts of a score without having to specify them --
-potentially redundantly -- as separate scores.
+potentially redundantly -- as separate scores.  Another use case is printing a
+selection of scores from a PDF containing multiple scores, such as a song book
+for example.
 
-The selection of systems/pages can be specified as
+Depending on the setting of the \option{insert} option this will affect systems
+or pages.  The selection of systems/pages can be specified as
 
 * `<empty>` (default): include the whole score
 * a single number: include a single page/system
 * a range of numbers: include a range of pages/systems  
   `{M-N}` or `{N-M}` (to print backwards)
-* a comma-separated list of numbers  
-  `{A,B,C, D, E}` (in arbitrary order)
-
-If only the first system of a score is printed and the \option{indent} option is
-used then the indent is suppressed and a warning issued.  This suppression is
-performed *after* the score has been generated, so there is a small margin of
-error where this may provide undesirable results: if a score is just too long to
-fit on one system due to indentation but would have been engraved on one system
-*without* indent.
+* a comma-separated list of numbers or ranges  
+  `{A,B , C,D-E, F, C- B}` (freely mixed, in arbitrary order)
 
 \lyIssue{Note:}
 It is the user's responsibility to only request pages/systems that are actually
