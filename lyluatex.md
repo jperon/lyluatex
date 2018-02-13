@@ -324,6 +324,33 @@ options means that LilyPond does *not* print page numbers while
 This option, which is intended to insert musical notation inline in the
 continuous text, has not been implemented yet.
 
+### Choosing Systems/Pages
+
+\lyOption{print-only}{}
+With the option \option{print-only} it is possible to choose which pages or
+systems of a score will be included in the document.  This can for example be
+used to comment on individual parts of a score without having to specify them --
+potentially redundantly -- as separate scores.
+
+The selection of systems/pages can be specified as
+
+* `<empty>` (default): include the whole score
+* a single number: include a single page/system
+* a range of numbers: include a range of pages/systems  
+  `{M-N}` or `{N-M}` (to print backwards)
+* a comma-separated list of numbers  
+  `{A,B,C, D, E}` (in arbitrary order)
+
+If only the first system of a score is printed and the \option{indent} option is
+used then the indent is suppressed and a warning issued.  This suppression is
+performed *after* the score has been generated, so there is a small margin of
+error where this may provide undesirable results: if a score is just too long to
+fit on one system due to indentation but would have been engraved on one system
+*without* indent.
+
+\lyIssue{Note:}
+It is the user's responsibility to only request pages/systems that are actually
+present in the score, otherwise \LaTeX\ will raise an error.
 
 ## Score Layout
 
