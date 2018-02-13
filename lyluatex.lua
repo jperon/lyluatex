@@ -45,6 +45,7 @@ local LY_HEAD = [[
 }
 \paper{
     <<<PAPER>>>
+    <<<PAPERSIZE>>>
     two-sided = ##<<<TWOSIDE>>>
     line-width = <<<LINEWIDTH>>>\pt
     <<<INDENT>>>
@@ -231,8 +232,10 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
-function latex.includepdf(pdfname)
-    tex.sprint('\\includepdf[pages=-]{'..pdfname..'}')
+function latex.includepdf(pdfname, papersize)
+    local noautoscale = ''
+    if papersize then noautoscale = ',noautoscale' end
+    tex.sprint('\\includepdf[pages=-'..noautoscale..']{'..pdfname..'}')
 end
 
 function latex.includesystems(filename, protrusion, indent, do_compile)
@@ -313,8 +316,6 @@ function Score:calc_properties()
     end
     -- LilyPond version
     if self.addversion then self.addversion = self:lilypond_version(true) end
-    -- recto-verso
-    self.twoside = self:ly_twoside()
     -- temporary file name
     self.output = self:output_filename()
 end
@@ -331,39 +332,6 @@ function Score:calc_staff_properties()
         -- do *not* suppress timing
         self.noclef = 'true'
     end
-    -- set templates
-    local clef, timing, timesig, staff
-    if self.noclef then
-        clef = [[
-            \context { \Staff \remove "Clef_engraver" }
-        ]]
-    else clef = ''
-    end
-    if self.notiming then
-        timing = [[
-            \context { \Score timing = ##f }
-        ]]
-    else timing = ''
-    end
-    if self.notimesig then
-        timesig = [[
-            \context { \Staff \remove "Time_signature_engraver" }
-        ]]
-    else timesig = ''
-    end
-    if self.nostaffsymbol then
-        staff = [[
-            \context { \Staff \remove "Staff_symbol_engraver" }
-        ]]
-    else staff = ''
-    end
-    self.staff_props = string.format([[%s%s%s%s
-    ]],
-    clef,
-    timing,
-    timesig,
-    staff
-    )
 end
 
 function Score:check_properties()
@@ -391,12 +359,18 @@ function Score:check_properties()
             info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
-    if self.input_file or self.ly_code:find([[\score]]) then
+    if (self.input_file or
+        self.ly_code:find([[\book]]) or
+        self.ly_code:find([[\header]]) or
+        self.ly_code:find([[\layout]]) or
+        self.ly_code:find([[\paper]]) or
+        self.ly_code:find([[\score]])
+    ) then
         if self.fragment or self.relative then
             if self.input_file then
                 warn([[
-You may not set `fragment` (or `relative`)
-with \lilypondfile. Setting them to false.
+Found something incompatible with `fragment`
+(or `relative`). Setting them to false.
                 ]])
             else
                 warn([[
@@ -563,15 +537,16 @@ end
 
 function Score:header()
     local header = LY_HEAD:gsub(
-        [[<<<VERSION>>>]], self['ly-version']):gsub(
-        [[<<<LANGUAGE>>>]], self:ly_language()):gsub(
-        [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
-        [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
-        [[<<<INDENT>>>]], self:ly_indent()):gsub(
-        [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
         [[<<<FONTS>>>]], self:fonts()):gsub(
-        [[<<<STAFFPROPS>>>]], self.staff_props):gsub(
-        [[<<<TWOSIDE>>>]], self.twoside)
+        [[<<<INDENT>>>]], self:ly_indent()):gsub(
+        [[<<<LANGUAGE>>>]], self.ly_language()):gsub(
+        [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
+        [[<<<PAPERSIZE>>>]], self:ly_papersize()):gsub(
+        [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
+        [[<<<STAFFPROPS>>>]], self:ly_staffprops()):gsub(
+        [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
+        [[<<<TWOSIDE>>>]], self:ly_twoside()):gsub(
+        [[<<<VERSION>>>]], self['ly-version'])
     if self.insert == 'fullpage' then
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
@@ -589,7 +564,7 @@ function Score:header()
                 print-first-page-number = ##t
                 first-page-number = %s
                 %s]],
-                ppn, ly.PAGE, self:margins()
+                ppn, ly.PAGE, self:ly_margins()
 	    )
         )
     elseif self.insert == 'systems' then
@@ -662,12 +637,8 @@ function Score:lilypond_version(number)
 end
 
 function Score:ly_indent()
-    if self.indent == '' then
-        if self.insert == 'fullpage' then return ''
-        else return [[ indent = 0\cm ]]
-        end
-    else
-        return [[indent = ]]..convert_unit(self.indent)..[[\pt]]
+    if self.indent == '' and self.insert == 'fullpage' then return ''
+    else return [[indent = ]]..(convert_unit(self.indent) or 0)..[[\pt]]
     end
 end
 
@@ -677,18 +648,7 @@ function Score:ly_language()
     end
 end
 
-function Score:ly_raggedright()
-    if self['ragged-right'] == 'default' then return ''
-    elseif self['ragged-right'] then return 'ragged-right = ##t'
-    else return 'ragged-right = ##f'
-    end
-end
-
-function Score:ly_twoside()
-    if self.twoside then return 't' else return 'f' end
-end
-
-function Score:margins()
+function Score:ly_margins()
     local tex_top = self['extra-top-margin'] + convert_unit((
         tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
         tex.dimen.headheight + tex.dimen.headsep
@@ -754,6 +714,45 @@ function Score:margins()
             self.fullpagealign
         )
     end
+end
+
+function Score:ly_papersize()
+    if self.papersize then return '#(set-paper-size "'..self.papersize..'")'
+    else return ''
+    end
+end
+
+function Score:ly_raggedright()
+    if self['ragged-right'] == 'default' then return ''
+    elseif self['ragged-right'] then return 'ragged-right = ##t'
+    else return 'ragged-right = ##f'
+    end
+end
+
+function Score:ly_twoside()
+    if self.twoside then return 't' else return 'f' end
+end
+
+function Score:ly_staffprops()
+    local clef, timing, timesig, staff = '', '', '', ''
+    if self.noclef then
+        clef = [[\context { \Staff \remove "Clef_engraver" }
+        ]]
+    end
+    if self.notiming then
+        timing = [[\context { \Score timing = ##f }
+        ]]
+    end
+    if self.notimesig then
+        timesig = [[\context { \Staff \remove "Time_signature_engraver" }
+        ]]
+    end
+    if self.nostaffsymbol then
+        staff = [[\context { \Staff \remove "Staff_symbol_engraver" }
+        ]]
+    end
+    return string.format([[%s%s%s%s
+    ]], clef, timing, timesig, staff)
 end
 
 function Score:optimize_pdf()
@@ -853,7 +852,7 @@ function Score:write_latex(do_compile)
     latex.label(self.label, self.labelprefix)
     local systems_file = self.output..'-systems'
     if not lfs.isfile(systems_file..'.tex') then  -- fullpage score
-        latex.includepdf(self.output)
+        latex.includepdf(self.output, self.papersize)
     else  -- fragment
         latex.includesystems(
             systems_file, self:_protrusion(), convert_unit(self.indent), do_compile
