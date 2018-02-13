@@ -278,7 +278,7 @@ function latex.includepdf(pdfname, range)
         [[\includepdf[pages=%s]{%s}]], print_only, pdfname))
 end
 
-function latex.includesystems(filename, range, protrusion, indent, do_compile)
+function latex.includesystems(filename, range, protrusion, indent)
     local print_only
     if range == '' then  -- no range given, check available systems
         f = io.open(filename..'-systems.count', 'r')
@@ -900,7 +900,7 @@ function Score:write_latex(do_compile)
         latex.includepdf(self.output, self['print-only'])
     else  -- fragment
         latex.includesystems(
-            self.output, self['print-only'], self:_protrusion(), convert_unit(self.indent), do_compile
+            self.output, self['print-only'], self:_protrusion(), convert_unit(self.indent)
         )
     end
 end
