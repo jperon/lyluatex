@@ -126,7 +126,7 @@
 % *current* font for optional use.
 \newcommand{\ly@currentfonts}{%
 \begingroup%
-    \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}
+    \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}%
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
@@ -166,7 +166,7 @@
   ly.set_property('twoside', '\ly@istwosided')
   #1
   ly.newpage_if_fullpage()
-}
+}%
 \ly@resetunits%
 \ly@page%
 \ly@currentfonts%
