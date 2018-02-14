@@ -372,7 +372,7 @@ function Score:calc_properties()
     -- staffsize
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = font_default_staffsize() end
-    if self.insert == 'inline' then
+    if self.insert == 'inline' or self.insert == 'bare-inline' then
         local inline_staffsize = tonumber(self['inline-staffsize'])
         if inline_staffsize == 0 then inline_staffsize = staffsize / 1.5 end
         staffsize = inline_staffsize
