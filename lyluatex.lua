@@ -17,6 +17,10 @@ local latex = {}
 
 local FILELIST
 local OPTIONS = {}
+local DIM_OPTIONS = {
+    'gutter', 'leftgutter', 'rightgutter',
+    'line-width', 'paperwidth', 'paperheight'
+}
 local MXML_OPTIONS = {
     'absolute',
     'language',
@@ -32,6 +36,7 @@ local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp', 'em', '
 local LY_HEAD = [[
 %%File header
 \version "<<<VERSION>>>"
+<<<LANGUAGE>>>
 
 <<<PREAMBLE>>>
 
@@ -44,6 +49,7 @@ local LY_HEAD = [[
 }
 \paper{
     <<<PAPER>>>
+    <<<PAPERSIZE>>>
     two-sided = ##<<<TWOSIDE>>>
     line-width = <<<LINEWIDTH>>>\pt
     <<<INDENT>>>
@@ -183,7 +189,15 @@ end
 
 
 local function process_options(k, v)
+    -- aliases
+    if OPTIONS[k] and OPTIONS[k][2] == ly.is_alias then
+        if OPTIONS[k][1] == v then return
+        else k = OPTIONS[k][1]
+        end
+    end
+    -- boolean
     if v == 'false' then v = false end
+    -- negation (for example, noindent is the negation of indent)
     if ly.is_neg(k) then
         if v ~= nil and v ~= 'default' then
             k = k:gsub('^no(.*)', '%1')
@@ -193,6 +207,33 @@ local function process_options(k, v)
         end
     end
     return k, v
+end
+
+
+local function range_parse(range, nsystems)
+    local num = tonumber(range)
+    if num then return {num} end
+    -- if nsystems is set, we have insert=systems
+    if range:sub(-1) == '-' then range = range..nsystems end
+    if not range:match('^%d+%s*-%s*%d*$') then
+        warn([[
+Invalid value '%s' for item
+in list of page ranges. Possible entries:
+- Single number
+- Range (M-N, N-M or N-)
+This item will be skipped!
+      ]], range)
+      return
+    end
+    local result = {}
+    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
+    if to then
+        local dir
+        if from <= to then dir = 1 else dir = -1 end
+        for i = from, to, dir do table.insert(result, i) end
+        return result
+    else return {range}  -- N- with insert=fullpage
+    end
 end
 
 
@@ -230,91 +271,55 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
-function latex.parse_num_or_range(range)
-    local num = tonumber(range)
-    if num then return { num } end
-    if not range:match('^%d+%s*-%s*%d+$') then
-        warn([[
-Invalid value '%s' for item
-in list of page ranges. Possible entries:
-- Single number
-- Range (M-N or N-M)
-This item will be skipped!
-      ]], range)
-    return nil
-    end
-    result = {}
-    from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
-    local dir
-    if from <= to then dir = 1 else dir = -1 end
-    for i = from, to, dir do
-        table.insert(result, i)
-    end
-    return result
-end
-
-function latex.include_only(range)
-    if range == '' then return false
-    elseif tonumber(range) then return { range } end
-    local result = {}
-    local ranges = range:explode(',')
-    for _, r in pairs(ranges) do
-        r = r:gsub('^%s', ''):gsub('%s$', '')
-        loc_range = latex.parse_num_or_range(r)
-        if loc_range then
-            for _, v in pairs(loc_range) do table.insert(result, v) end
-        end
-    end
-    return result
-end
-
 function latex.includeinline(pdfname, voffset)
     tex.sprint(string.format([[
 \raisebox{%s}{\includegraphics{%s-1.pdf}}
 ]], voffset, pdfname))
 end
 
-function latex.includepdf(pdfname, range)
-    local print_only = latex.include_only(range)
-    if not print_only then print_only = '-'
-    else
-        print_only = '{'..table.concat(print_only, ',')..'}'
-    end
+function latex.includepdf(pdfname, range, papersize)
+    local noautoscale = ''
+    if papersize then noautoscale = 'noautoscale' end
     tex.sprint(string.format(
-        [[\includepdf[pages=%s]{%s}]], print_only, pdfname))
-end
+        [[\includepdf[pages={%s},%s]{%s}]],
+        table.concat(range, ','), noautoscale, pdfname)
+    )end
 
-function latex.includesystems(filename, range, protrusion, indent)
-    local print_only
-    if range == '' then  -- no range given, check available systems
-        f = io.open(filename..'-systems.count', 'r')
-        local nsystems = f:read('*a')
+function latex.includesystems(filename, range, protrusion, staffsize, indent)
+    if protrusion then
+        local f = io.open(filename..'.protrusion', 'w')
+        f:write(protrusion)
         f:close()
-        print_only = latex.include_only('1-'..nsystems)
     else
-        print_only = latex.include_only(range)
+        local f = io.open(filename..'.protrusion', 'r')
+        protrusion = f:read('*a')
+        f:close()
     end
-    local rsystems = #print_only
-    if rsystems == 1 and print_only[1] == "1" and indent then
-        warn([[
-Only one system, deactivating indentation.]])
+    if #range == 1 and range[1] == "1" and indent then
+        warn([[Only one system, deactivating indentation.]])
         protrusion = protrusion - indent
     end
     local texoutput = ''
     if ly.pre_lilypond then
         texoutput = texoutput..'\\preLilyPondExample'
     end
-    for index, system in pairs(print_only) do
+    for index, system in pairs(range) do
+        if not lfs.isfile(filename..'-'..system..'.pdf') then break end
         texoutput = texoutput..string.format([[
         \noindent\hspace*{%spt}\includegraphics{%s}%%
         ]],
         protrusion, filename..'-'..system)
-        if ly.between_lilypond and index < rsystems then
+        if ly.between_lilypond and index < #range then
             texoutput = texoutput..string.format([[
             \betweenLilyPondSystem{%s}%%
             ]], index)
         else
-            texoutput = texoutput..'\n\\par\\bigskip'
+            texoutput = texoutput..string.format([[
+\par\vspace{%spt plus %spt minus %spt}
+            ]],
+            staffsize / 4,
+            staffsize / 12,
+            staffsize / 16)
         end
     end
     if ly.post_lilypond then
@@ -329,9 +334,9 @@ end
 
 function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
+        if version then tex.sprint('\\lyVersion{'..version..'}') end
         ly.verbprint(ly_code:explode('\n'))
-        if version then tex.sprint('\\lyVersion{'..version..'}%%') end
-        if intertext then tex.sprint('\\lyIntertext{'..intertext..'}%%') end
+        if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
     end
 end
 
@@ -364,8 +369,13 @@ function Score:calc_properties()
     if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
     self.staffsize = staffsize
     -- dimensions that can be given by LaTeX
-    for _, dimension in pairs({'line-width', 'paperwidth', 'paperheight'}) do
+    for _, dimension in pairs(DIM_OPTIONS) do
         self[dimension] = convert_unit(self[dimension])
+    end
+    if not self.leftgutter then self.leftgutter = self.gutter end
+    if not self.rightgutter then self.rightgutter = self.gutter end
+    if self.quote then
+        self['line-width'] = self['line-width'] - self.leftgutter - self.rightgutter
     end
     -- dimensions specific to LilyPond
     self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
@@ -376,8 +386,6 @@ function Score:calc_properties()
     end
     -- LilyPond version
     if self.addversion then self.addversion = self:lilypond_version(true) end
-    -- recto-verso
-    self.twoside = self:ly_twoside()
     -- temporary file name
     self.output = self:output_filename()
 end
@@ -396,39 +404,6 @@ function Score:calc_staff_properties()
         -- do *not* suppress timing
         self.noclef = 'true'
     end
-    -- set templates
-    local clef, timing, timesig, staff
-    if self.noclef then
-        clef = [[
-            \context { \Staff \remove "Clef_engraver" }
-        ]]
-    else clef = ''
-    end
-    if self.notiming then
-        timing = [[
-            \context { \Score timing = ##f }
-        ]]
-    else timing = ''
-    end
-    if self.notimesig then
-        timesig = [[
-            \context { \Staff \remove "Time_signature_engraver" }
-        ]]
-    else timesig = ''
-    end
-    if self.nostaffsymbol then
-        staff = [[
-            \context { \Staff \remove "Staff_symbol_engraver" }
-        ]]
-    else staff = ''
-    end
-    self.staff_props = string.format([[%s%s%s%s
-    ]],
-    clef,
-    timing,
-    timesig,
-    staff
-    )
 end
 
 function Score:check_properties()
@@ -456,12 +431,19 @@ function Score:check_properties()
             info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
-    if self.input_file or self.ly_code:find([[\score]]) then
+    if (self.input_file or
+        self.ly_code:find([[^%s*\]]) or
+        self.ly_code:find([[\book]]) or
+        self.ly_code:find([[\header]]) or
+        self.ly_code:find([[\layout]]) or
+        self.ly_code:find([[\paper]]) or
+        self.ly_code:find([[\score]])
+    ) then
         if self.fragment or self.relative then
             if self.input_file then
                 warn([[
-You may not set `fragment` (or `relative`)
-with \lilypondfile. Setting them to false.
+Found something incompatible with `fragment`
+(or `relative`). Setting them to false.
                 ]])
             else
                 warn([[
@@ -501,7 +483,6 @@ function Score:delete_intermediate_files()
       os.remove(self.output..'-systems.tex')
       os.remove(self.output..'-systems.texi')
       os.remove(self.output..'.eps')
-      os.remove(self.output..'.pdf')
       if self.lilypond_error then
           -- ensure score gets recompiled next time
           os.remove(self.output..'-systems.tex')
@@ -626,14 +607,16 @@ end
 
 function Score:header()
     local header = LY_HEAD:gsub(
-        [[<<<VERSION>>>]], self['ly-version']):gsub(
-        [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
-        [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
-        [[<<<INDENT>>>]], self:ly_indent()):gsub(
-        [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
         [[<<<FONTS>>>]], self:fonts()):gsub(
-        [[<<<STAFFPROPS>>>]], self.staff_props):gsub(
-        [[<<<TWOSIDE>>>]], self.twoside)
+        [[<<<INDENT>>>]], self:ly_indent()):gsub(
+        [[<<<LANGUAGE>>>]], self:ly_language()):gsub(
+        [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
+        [[<<<PAPERSIZE>>>]], self:ly_papersize()):gsub(
+        [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
+        [[<<<STAFFPROPS>>>]], self:ly_staffprops()):gsub(
+        [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
+        [[<<<TWOSIDE>>>]], self:ly_twoside()):gsub(
+        [[<<<VERSION>>>]], self['ly-version'])
     if self.insert == 'fullpage' then
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
@@ -651,7 +634,7 @@ function Score:header()
                 print-first-page-number = ##t
                 first-page-number = %s
                 %s]],
-                ppn, ly.PAGE, self:margins()
+                ppn, ly.PAGE, self:ly_margins()
 	    )
         )
     else
@@ -719,27 +702,18 @@ function Score:lilypond_version(number)
 end
 
 function Score:ly_indent()
-    if self.indent == '' then
-        if self.insert == 'fullpage' then return ''
-        else return [[ indent = 0\cm ]]
-        end
-    else
-        return [[indent = ]]..convert_unit(self.indent)..[[\pt]]
+    if self.indent == '' and self.insert == 'fullpage' then return ''
+    else return [[indent = ]]..(convert_unit(self.indent) or 0)..[[\pt]]
     end
 end
 
-function Score:ly_raggedright()
-    if self['ragged-right'] == 'default' then return ''
-    elseif self['ragged-right'] then return 'ragged-right = ##t'
-    else return 'ragged-right = ##f'
+function Score:ly_language()
+    if not self.language then return ''
+    else return '\\language "'..self.language..'"'
     end
 end
 
-function Score:ly_twoside()
-    if self.twoside then return 't' else return 'f' end
-end
-
-function Score:margins()
+function Score:ly_margins()
     local tex_top = self['extra-top-margin'] + convert_unit((
         tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
         tex.dimen.headheight + tex.dimen.headsep
@@ -807,6 +781,45 @@ function Score:margins()
     end
 end
 
+function Score:ly_papersize()
+    if self.papersize then return '#(set-paper-size "'..self.papersize..'")'
+    else return ''
+    end
+end
+
+function Score:ly_raggedright()
+    if self['ragged-right'] == 'default' then return ''
+    elseif self['ragged-right'] then return 'ragged-right = ##t'
+    else return 'ragged-right = ##f'
+    end
+end
+
+function Score:ly_twoside()
+    if self.twoside then return 't' else return 'f' end
+end
+
+function Score:ly_staffprops()
+    local clef, timing, timesig, staff = '', '', '', ''
+    if self.noclef then
+        clef = [[\context { \Staff \remove "Clef_engraver" }
+        ]]
+    end
+    if self.notiming then
+        timing = [[\context { \Score timing = ##f }
+        ]]
+    end
+    if self.notimesig then
+        timesig = [[\context { \Staff \remove "Time_signature_engraver" }
+        ]]
+    end
+    if self.nostaffsymbol then
+        staff = [[\context { \Staff \remove "Staff_symbol_engraver" }
+        ]]
+    end
+    return string.format([[%s%s%s%s
+    ]], clef, timing, timesig, staff)
+end
+
 function Score:optimize_pdf()
     if self['optimize-pdf'] then
         local pdf2ps, ps2pdf, path
@@ -870,8 +883,10 @@ end
 function Score:_protrusion()
     --[[ Determine the amount of space used to the left of the staff lines
       and generate a horizontal offset command. ]]
+    local gutter = 0
+    if self.quote then gutter = self.leftgutter end
     local protrusion = convert_unit(self.protrusion)
-    if protrusion then return protrusion
+    if protrusion then return protrusion + gutter
     elseif self.protrusion then
         local f = io.open(self.output..'.eps')
         if not f then return end
@@ -879,9 +894,25 @@ function Score:_protrusion()
         while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
         f:close()
         protrusion = bbline:match('-?%d+')
-        return tonumber(protrusion)
-    else return 0
+        return tonumber(protrusion) + gutter
+    else return gutter
     end
+end
+
+function Score:_range()
+    local nsystems = ''
+    local f = io.open(self.output..'-systems.count', 'r')
+    if f then nsystems = f:read('*a') f:close() end
+    if self['print-only'] == '' then self['print-only'] = '1-'..nsystems end
+    if tonumber(self['print-only']) then return {self['print-only']} end
+    local result = {}
+    for _, r in pairs(self['print-only']:explode(',')) do
+        local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+        if range then
+            for _, v in pairs(range) do table.insert(result, v) end
+        end
+    end
+    return result
 end
 
 function Score:run_lilypond()
@@ -906,10 +937,11 @@ function Score:write_latex(do_compile)
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
     if self.insert == 'fullpage' then
-        latex.includepdf(self.output, self['print-only'])
+        latex.includepdf(self.output, self:_range(), self.papersize)
     elseif self.insert == 'systems' then
         latex.includesystems(
-            self.output, self['print-only'], self:_protrusion(), convert_unit(self.indent)
+            self.output, self:_range(), self:_protrusion(),
+            self.staffsize, convert_unit(self.indent)
         )
     else -- inline
         latex.includeinline(self.output, self.voffset)
@@ -1029,9 +1061,10 @@ function ly.file_musicxml(input_file, options)
     local xmlopts = ''
     for _, opt in pairs(MXML_OPTIONS) do
         if options[opt] ~= nil then
-            if options[opt] then xmlopts = xmlopts..' --'..opt end
-            if options[opt] ~= 'true' and options[opt] ~= 'false' and options[opt] ~= '' then
-                xmlopts = xmlopts..' '..options[opt]
+            if options[opt] then xmlopts = xmlopts..' --'..opt
+                if options[opt] ~= 'true' and options[opt] ~= '' then
+                    xmlopts = xmlopts..' '..options[opt]
+                end
             end
         elseif Score[opt] then xmlopts = xmlopts..' --'..opt
         end
@@ -1067,11 +1100,11 @@ function ly.get_option(opt)
 end
 
 
-function ly.is_dim (k, v)
-    if v == '' or
-        v == false or
-        tonumber(v)
-        then return true end
+function ly.is_alias() end
+
+
+function ly.is_dim(k, v)
+    if v == '' or v == false or tonumber(v) then return true end
     local n, sl, u = v:match('^%d*%.?%d*'), v:match('\\'), v:match('%a+')
     -- a value of number - backslash - length is a dimension
     -- invalid input will be prevented in by the LaTeX parser already
@@ -1116,7 +1149,11 @@ function ly.set_local_options(opts)
         local k, v = process_options(
             opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
         )
-        if k then options[k] = v end
+        if k then
+            if options[k] then err('Option %s is set two times for the same score.', k)
+            else options[k] = v
+            end
+        end
     end
     return options
 end
