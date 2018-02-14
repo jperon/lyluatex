@@ -135,6 +135,11 @@ local function fontinfo(id)
 end
 
 
+local function font_default_staffsize()
+    return fontinfo(font.current()).size/39321.6
+end
+
+
 local function locate(file, includepaths, ext)
     local result
     for _, d in ipairs(extract_includepaths(includepaths)) do
@@ -366,7 +371,12 @@ function Score:calc_properties()
     end
     -- staffsize
     local staffsize = tonumber(self.staffsize)
-    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
+    if staffsize == 0 then staffsize = font_default_staffsize() end
+    if self.insert == 'inline' then
+        local inline_staffsize = tonumber(self['inline-staffsize'])
+        if inline_staffsize == 0 then inline_staffsize = staffsize / 1.5 end
+        staffsize = inline_staffsize
+    end
     self.staffsize = staffsize
     -- dimensions that can be given by LaTeX
     for _, dimension in pairs(DIM_OPTIONS) do
