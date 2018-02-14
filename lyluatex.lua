@@ -424,7 +424,6 @@ function Score:check_properties()
         end
     end
     if (self.input_file or
-        self.ly_code:find([[^%s*\]]) or
         self.ly_code:find([[\book]]) or
         self.ly_code:find([[\header]]) or
         self.ly_code:find([[\layout]]) or
