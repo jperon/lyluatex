@@ -108,12 +108,7 @@ end
 
 
 local function dirname(str)
-    if str:match(".-/.-") then
-        local name = string.gsub(str, "(.*/)(.*)", "%1")
-        return name
-    else
-        return ''
-    end
+    return str:gsub("(.*/)(.*)", "%1") or ''
 end
 
 
