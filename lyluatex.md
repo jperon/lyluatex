@@ -868,6 +868,22 @@ then the \LaTeX\ compilation will stop with an error.  If on the other hand
 \option{showfailed} is set to `true` only a warning is issued and a box with an
 informative text is typeset into the resulting document.
 
+## MusicXML options
+
+\lyOption{xml2ly}{musicxml2ly}
+This option does the same for `\musicxmlfile`
+as \option{program} for `\lilypondfile`.
+
+\lyOption{language}{}
+\lyOption{absolute, lxml, verbose}{false}
+\lyOption{
+no-articulation-directions, no-beaming, no-page-layout, no-rest-positions
+}{true}
+All those options control the corresponding `musicxml2ly` switches;
+please refer to
+[`musicxml2ly` documentation](http://lilypond.org/doc/v2.18/Documentation/usage/invoking-musicxml2ly)
+for more information.
+
 # Cooperations
 
 ## `musicexamples`{#musicexamples}
