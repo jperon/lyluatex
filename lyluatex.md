@@ -490,6 +490,8 @@ limitaion with LilyPond).
 
 ## Score Options
 
+### Automatic Wrapping of Music Expressions
+
 ### Font Handling
 
 \lyOption{pass-fonts}{false}
