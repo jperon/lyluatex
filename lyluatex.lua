@@ -353,6 +353,7 @@ function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
     self.__index = self
+    o.system_count = nil
     o.input_file = input_file
     o.ly_code = ly_code
     o.orig_ly_code = ly_code
@@ -482,6 +483,20 @@ function Score:content()
     end
 end
 
+function Score:count_systems(force)
+  if force then self.system_count = nil end
+    if not self.system_count then
+        local f = io.open(self.output..'-systems.count', 'r')
+        if not f then
+            self.system_count = 0
+        else
+            self.system_count = tonumber(f:read('*all'))
+            f:close()
+        end
+    end
+    return self.system_count
+end
+
 function Score:delete_intermediate_files()
   local i = io.open(self.output..'-systems.count', 'r')
   if i then
@@ -546,10 +561,7 @@ function Score:is_compiled()
     if self.insert == 'fullpage' then
         return lfs.isfile(self.output..'.pdf')
     else
-        local f = io.open(self.output..'-systems.tex')
-        if not f then return false end
-        local head = f:read("*line")
-        return not (head == "% eof")
+        return self:count_systems(true) ~= 0
     end
 end
 
