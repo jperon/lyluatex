@@ -85,7 +85,15 @@ package^[[https://github.com/uliska/musicexamples](https://github.com/uliska/mus
 `lilypond-book` preprocessor shipping with
 LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
 which means that any documents prepared for use with `lilypond-book` should
-be directly usable with \lyluatex.
+be directly usable with \lyluatex, with some caveats:
+
+- \option{fragment} is the default: see [Automatic wrapping](#autowrap) for
+  more details about this;
+- `\musicxmlfile` has \option{no-articulation-directions},
+  \option{no-beaming}, \option{no-page-layout} and \option{no-rest-positions}
+  set to `true` by default, to increase chances of getting something
+  acceptable. Nevertheless, please read the [note](#musicxml) about this
+  command.
 
 
 \lyCmd{lilypond}
@@ -173,6 +181,8 @@ following order:
 * relative to the current file's directory
 * relative to all given include paths (see [LilyPond Include Paths](#include-paths)))
 * relative to all paths visible to \LaTeX\ (like the package search)
+
+### MusicXML inclusion {#musicxml}
 
 \lyCmd{musicxmlfile}
 Finally there is a command to include scores encoded as
@@ -508,6 +518,19 @@ limitaion with LilyPond).
 ## Score Options
 
 ### Automatic Wrapping of Music Expressions {#autowrap}
+
+\lyOption{fragment}{true}
+With this default option, the input code is wrapped between `{ }`, so that you
+can directly enter simple code, for example:
+
+```
+\lilypond{a' b' c'}
+```
+
+This option will be automatically disabled if a `\book`, `\header`, `\layout`,
+`\paper` or `\score` block is found within the input code; but in some cases,
+it will be necessary to explicitly disable it with \option{fragment=false} or
+its equivalent \option{nofragment}.
 
 ### Font Handling
 
