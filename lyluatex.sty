@@ -32,16 +32,18 @@
     ['extra-bottom-margin'] = {'0', ly.is_dim},
     ['extra-top-margin'] = {'0', ly.is_dim},
     ['fragment'] = {'true', 'false', ''},
+        ['nofragment'] = {'default', ly.is_neg},
     ['fullpagealign'] = {'crop', 'staffline'},
     ['fullpagestyle'] = {''},
     ['gutter'] = {'.4in', ly.is_dim},
         ['exampleindent'] = {'gutter', ly.is_alias},
         ['leftgutter'] = {'', ly.is_dim}, ['rightgutter'] = {'', ly.is_dim},
     ['halign'] = {'', 'left', 'center', 'right'},
+    ['hpadding'] = {'0.75ex', ly.is_dim},
     ['includepaths'] = {'./'},
     ['indent'] = {'', ly.is_dim},
         ['noindent'] = {'default', ly.is_neg},
-    ['insert'] = {'systems', 'fullpage', 'inline'},
+    ['insert'] = {'systems', 'fullpage', 'inline', 'bare-inline'},
     ['intertext'] = {''},
     ['labelprefix'] = {'ly_'},
     ['line-width'] = {[[\linewidth]], ly.is_dim},
@@ -69,9 +71,12 @@
     ['relative'] = {'false', ly.is_num},
     ['showfailed'] = {'false', 'true' ,''},
     ['staffsize'] = {'0', ly.is_dim},
+        ['inline-staffsize'] = {'0', ly.is_dim},
     ['tmpdir'] = {'tmp_ly'},
     ['twoside'] = {'\ly@istwosided', 'false', 'true', ''},
     ['verbatim'] = {'false', 'true', ''},
+    ['voffset'] = {'0pt', ly.is_dim},
+    ['valign'] = {'center', 'top', 'bottom'},
     % MusicXML options
     ['absolute'] = {'false', 'true', ''},
     ['language'] = {'false'},
@@ -129,7 +134,7 @@
 % *current* font for optional use.
 \newcommand{\ly@currentfonts}{%
 \begingroup%
-    \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}
+    \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}%
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
@@ -169,7 +174,7 @@
   ly.set_property('twoside', '\ly@istwosided')
   #1
   ly.newpage_if_fullpage()
-}
+}%
 \ly@resetunits%
 \ly@page%
 \ly@currentfonts%
