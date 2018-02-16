@@ -527,7 +527,8 @@ can directly enter simple code, for example:
 \lilypond{a' b' c'}
 ```
 
-This option will be automatically disabled if a `\book`, `\header`, `\layout`,
+This option cannot be enabled with `\lilypondfile`.
+It will be automatically disabled if a `\book`, `\header`, `\layout`,
 `\paper` or `\score` block is found within the input code; but in some cases,
 it will be necessary to explicitly disable it with \option{fragment=false} or
 its equivalent \option{nofragment}.
