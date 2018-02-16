@@ -244,9 +244,8 @@ end
 
 local function read_bbox(filename, line_width)
     local bbox = {}
-    local f
-    if lfs.isfile(filename..'.bbox') then
-        f = io.open(filename..'.bbox', 'r')
+    local f = io.open(filename..'.bbox', 'r')
+    if f then
         bbox.protrusion = f:read('*l')
         bbox.r_protrusion = f:read('*l')
         bbox.height = f:read('*l')
@@ -261,9 +260,7 @@ local function read_bbox(filename, line_width)
         bbox.r_protrusion = x_2 - line_width
         bbox.height = y_2 - y_1
         f = io.open(filename..'.bbox', 'w')
-        f:write(bbox.protrusion..'\n')
-        f:write(bbox.r_protrusion..'\n')
-        f:write(bbox.height..'\n')
+        f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
         f:close()
     end
     return bbox
@@ -304,12 +301,11 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
-function latex.includeinline(pdfname, bbox, valign, hpadding, voffset)
-    local height = bbox.height
+function latex.includeinline(pdfname, height, valign, hpadding, voffset)
     local v_base
     if valign == 'bottom' then v_base = 0
     elseif valign == 'top' then v_base = convert_unit('1em') - height
-    else v_base = height / -2 + convert_unit('1em') / 2
+    else v_base = (convert_unit('1em') - height) / 2
     end
     tex.sprint(string.format([[
 \hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}
@@ -387,9 +383,6 @@ function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
     self.__index = self
-    o.bboxes = nil
-    o.bbox = nil
-    o.system_count = nil
     o.input_file = input_file
     o.ly_code = ly_code
     o.orig_ly_code = ly_code
@@ -520,14 +513,12 @@ function Score:content()
 end
 
 function Score:count_systems(force)
-  if force then self.system_count = nil end
-    if not self.system_count then
+    if force or not self.system_count then
         local f = io.open(self.output..'-systems.count', 'r')
-        if not f then
-            self.system_count = 0
-        else
+        if f then
             self.system_count = tonumber(f:read('*all'))
             f:close()
+        else self.system_count = 0
         end
     end
     return self.system_count
@@ -937,15 +928,11 @@ function Score:process()
     if not self.debug then self:delete_intermediate_files() end
 end
 
-function Score:bbox(system)
-    if not self.bboxes
-    then
-         -- TODO: Error? Warning? Can't happen (has already been checked)?
-        if not self:is_compiled() then return end
+function Score:_bbox(system)
+    if not self.bboxes then
         self.bboxes = {}
-        local last_system = self:count_systems()
         self.bbox = read_bbox(self.output, self['line-width'])
-        for i = 1, last_system do
+        for i = 1, self:count_systems() do
             table.insert(self.bboxes, read_bbox(self.output..'-'..i, self['line-width']))
         end
     end
@@ -1018,13 +1005,13 @@ function Score:write_latex(do_compile)
             self.staffsize, convert_unit(self.indent)
         )
     else -- inline
-        if self:count_systems() > 1
-        then
+        if self:count_systems() > 1 then
             warn([[Score with more than one system included inline.
 This will probably cause bad output.]])
         end
-        local bbox = self:bbox(1)
-        latex.includeinline(self.output, bbox, self.valign, self.hpadding, self.voffset)
+        latex.includeinline(
+            self.output, self:_bbox(1).height, self.valign, self.hpadding, self.voffset
+        )
     end
 end
 
