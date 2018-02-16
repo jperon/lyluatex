@@ -22,9 +22,13 @@
   ly = require(kpse.find_file("lyluatex.lua"))
   ly.declare_package_options({
     ['addversion'] = {'false', 'true', ''},
+    ['caption'] = {''},
+        ['captionbefore'] = {'false', 'true', ''},
     ['cleantmp'] = {'false', 'true', ''},
     ['current-font-as-main'] = {'true', 'false', ''},
     ['debug'] = {'false', 'true', ''},
+    ['environment'] = {''},
+        ['env-opts'] = {''},
     ['extra-bottom-margin'] = {'0', ly.is_dim},
     ['extra-top-margin'] = {'0', ly.is_dim},
     ['fragment'] = {'true', 'false', ''},
@@ -33,6 +37,7 @@
     ['gutter'] = {'.4in', ly.is_dim},
         ['exampleindent'] = {'gutter', ly.is_alias},
         ['leftgutter'] = {'', ly.is_dim}, ['rightgutter'] = {'', ly.is_dim},
+    ['halign'] = {'', 'left', 'center', 'right'},
     ['includepaths'] = {'./'},
     ['indent'] = {'', ly.is_dim},
         ['noindent'] = {'default', ly.is_neg},

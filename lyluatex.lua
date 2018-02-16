@@ -291,6 +291,7 @@ function latex.includesystems(score)
     local protrusion = score:_protrusion()
     local staffsize = score.staffsize
     local indent = score.indent
+    local halign = score.halign
     if protrusion then
         local f = io.open(filename..'.protrusion', 'w')
         f:write(protrusion)
@@ -308,12 +309,19 @@ function latex.includesystems(score)
     if ly.pre_lilypond then
         texoutput = texoutput..'\\preLilyPondExample'
     end
+    local left_fill = '\\hfill'
+    local right_fill = '\\hfill'
+    if halign == 'left' then left_fill = '' end
+    if halign == 'right' then right_fill = '' end
     for index, system in pairs(range) do
         if not lfs.isfile(filename..'-'..system..'.pdf') then break end
         texoutput = texoutput..string.format([[
-        \noindent\hspace*{%spt}\includegraphics{%s}
+        \noindent\hspace*{%spt}%s\includegraphics{%s}%s
         ]],
-        protrusion, filename..'-'..system)
+        protrusion,
+        left_fill,
+        filename..'-'..system,
+        right_fill)
         if ly.between_lilypond then
             texoutput = texoutput..string.format([[
             \betweenLilyPondSystem{%s}
@@ -360,6 +368,30 @@ function latex.verbatim(score)
     end
 end
 
+function latex.wrap_figure(systems, score)
+    if score.environment == '' then return systems end
+    local b_caption = ''
+    local a_caption = ''
+    if score.captionbefore then
+        b_caption = string.format([[\caption{%s}
+]], score.caption)
+    else
+        a_caption = string.format([[\caption{%s}
+]], score.caption)
+    end
+    return string.format([[
+\begin{%s}[%s]
+%s%s%s
+\end{%s}
+]],
+    score.environment,
+    score['env-opts'],
+    b_caption,
+    systems,
+    a_caption,
+    score.environment)
+end
+
 
 --[[ =============================== Classes =============================== ]]
 
@@ -374,8 +406,27 @@ function Score:new(ly_code, options, input_file)
     return o
 end
 
+function Score:calc_environment()
+    -- caption implies environment
+    if self.caption ~= '' and self.environment == ''
+    then
+        self.environment = 'figure'
+    end
+    if self.environment ~= '' and self['env-opts'] == ''
+    then
+        self['env-opts'] = 'tbp'
+    end
+    -- horizontal alignment
+    if self.halign == '' then
+        if self.environment == '' then self.halign = 'left'
+        else self.halign = 'center'
+        end
+    end
+end
+
 function Score:calc_properties()
     self:calc_staff_properties()
+    self:calc_environment()
     -- relative
     if self.relative then
         if self.relative == '' then
