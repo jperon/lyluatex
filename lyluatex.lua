@@ -418,27 +418,20 @@ function Score:check_properties()
             info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
-    if (self.input_file or
-        self.ly_code:find([[\book]]) or
-        self.ly_code:find([[\header]]) or
-        self.ly_code:find([[\layout]]) or
-        self.ly_code:find([[\paper]]) or
-        self.ly_code:find([[\score]])
-    ) then
-        if self.fragment or self.relative then
-            if self.input_file then
+    if self.fragment or self.relative then
+        if (self.input_file or
+            self.ly_code:find([[\book]]) or
+            self.ly_code:find([[\header]]) or
+            self.ly_code:find([[\layout]]) or
+            self.ly_code:find([[\paper]]) or
+            self.ly_code:find([[\score]])
+        ) then
                 warn([[
 Found something incompatible with `fragment`
 (or `relative`). Setting them to false.
                 ]])
-            else
-                warn([[
-Found a \score block: setting `fragment`
-and `relative` to false.
-                ]])
-            end
-            self.fragment = false
-            self.relative = false
+                self.fragment = false
+                self.relative = false
         end
     end
 end
@@ -539,7 +532,7 @@ Please check the log file
 and the generated LilyPond code in
 %s
 %s
-        ]],
+]],
         self.output..'.log',
         self.output..'.ly')
         doc_debug_msg = [[
@@ -550,8 +543,16 @@ See log for details.]]
 If you need more information
 than the above message,
 please retry with option debug=true.
-        ]]
+]]
         doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
+    end
+    if self.fragment or self.relative then
+        local frag_msg = '\n'..[[
+As the input code has been automatically wrapped
+with a music expression, you may try repeating
+with the `nofragment` option.]]
+        debug_msg = debug_msg..frag_msg
+        doc_debug_msg = doc_debug_msg..frag_msg
     end
     if self:is_compiled() then
         if self.lilypond_error then
@@ -559,7 +560,7 @@ please retry with option debug=true.
 
 LilyPond reported a failed compilation but
 produced a score. %s
-            ]],
+]],
             debug_msg
             )
         end
@@ -574,20 +575,20 @@ produced a score. %s
 %s}
                 \end{quote}
 
-                ]],
+]],
                 doc_debug_msg))
             warn([[
 
 LilyPond failed to compile the score.
 %s
-            ]],
+]],
             debug_msg)
         else
             err([[
 
 LilyPond failed to compile the score.
 %s
-            ]],
+]],
           debug_msg)
         end
     end
