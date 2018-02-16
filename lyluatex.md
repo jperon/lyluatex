@@ -418,7 +418,14 @@ By default, single-system scores will not be justified but printed at their
 justified.
 With this option set to true, all systems are printed at their natural width;
 with this option set to false, all systems are justified (even for
-single-system scores).
+single-system scores). \option{noragged-right} is equivalent to
+\option{raggedright=false}.
+
+\lyOption{indent}{}
+Defines indentation of first system (same as LilyPond's `indent`).
+By default, with \option{insert=fullpage}, scores are indented;
+otherwise, they aren't.
+\option{noindent} is equivalent to \option{indent=0pt}.
 
 \lyOption{quote}{false}
 This option, which is there for compatibility with `lilypond-book`,
