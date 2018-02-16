@@ -523,7 +523,7 @@ limitaion with LilyPond).
 With this default option, the input code is wrapped between `{ }`, so that you
 can directly enter simple code, for example:
 
-```
+```TeX
 \lilypond{a' b' c'}
 ```
 
