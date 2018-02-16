@@ -490,7 +490,7 @@ limitaion with LilyPond).
 
 ## Score Options
 
-### Automatic Wrapping of Music Expressions
+### Automatic Wrapping of Music Expressions {#autowrap}
 
 ### Font Handling
 
@@ -562,6 +562,28 @@ Note that there is no option to suppress key signatures because since a key
 signature is not *implicitly* printed. *If* there should be the need to *have* a
 key signature and at the same time suppress it, it's reasonable to expect this
 to be explicitly done in the LilyPond code.
+
+### Relative or Absolute Pitches {#relative}
+
+By default LilyPond input is parsed as-is with regard to pitches.  That means
+pitches are treated as absolute pitches except if the music is wrapped in a
+\cmd{relative} clause.
+
+\lyOption{relative}{0}
+
+With the \option{relative} option set the LilyPond input is parsed in *relative*
+mode, with the option value specifying the starting pitch. Zero (or an empty
+value) takes the “middle C” as the origin, positive integers refer to the number
+of octaves upwards, negative integers to downward octaves.
+
+\lyIssue{Note:}
+This deviates from LilyPond's usual behaviour: in LilyPond the “natural” `c`
+corresponds to C3 in MIDI terminology, while `relative=0` refers to C4 instead.
+This is in accordance with the use in lilypond-book.
+
+\lyIssue{Note:}
+\option{relative} is only allowed when the content is automatically wrapped in
+a music expression (as described in [Automatic Wrapping](#autowrap)).
 
 ### Input Language {#language}
 
