@@ -373,10 +373,24 @@ function latex.label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
 end
 
+ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
 function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
         if version then tex.sprint('\\lyVersion{'..version..'}') end
-        ly.verbprint(ly_code:explode('\n'))
+        local content = table.concat(ly_code:explode('\n'), '\n'):gsub(
+          '.*%%%s*begin verbatim', ''):gsub(
+          '%%%s*end verbatim.*', '')
+        --[[ We unfortunately need an external file,
+             as verbatim environments are quite special. ]]
+        local fname = ly.get_option('tmpdir')..'/verb.tex'
+        local f = io.open(fname, 'w')
+        f:write(
+            ly.verbenv[1]..'\n'..
+            content..
+            '\n'..ly.verbenv[2]:gsub([[\end {]], [[\end{]])..'\n'
+        )
+        f:close()
+        tex.sprint('\\input{'..fname..'}')
         if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
     end
 end
@@ -1242,25 +1256,6 @@ end
 function ly.set_property(k, v)
     k, v = process_options(k, v)
     if k then Score[k] = v end
-end
-
-
-ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
-function ly.verbprint(lines)
-    local content = table.concat(lines, '\n'):gsub(
-      '.*%%%s*begin verbatim', ''):gsub(
-      '%%%s*end verbatim.*', '')
-    --[[ We unfortunately need an external file,
-         as verbatim environments are quite special. ]]
-    local fname = ly.get_option('tmpdir')..'/verb.tex'
-    local f = io.open(fname, 'w')
-    f:write(
-        ly.verbenv[1]..'\n'..
-        content..
-        '\n'..ly.verbenv[2]:gsub([[\end {]], [[\end{]])..'\n'
-    )
-    f:close()
-    tex.sprint('\\input{'..fname..'}')
 end
 
 
