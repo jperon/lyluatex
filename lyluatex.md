@@ -454,11 +454,39 @@ If \option{papersize} is set, any values of \option{paperheight} and
 
 #### Vertical Alignment of Fullpage Scores
 
+\lyOption{fullpagealign}{crop|staffline}
+
+Controls how the top and bottom margins of a score are calculated. With `crop`
+LilyPond's `margin` paper variables are simply set to those of the  
+\LaTeX\ document, while `staffsize` pursues a different approach that makes the
+outermost *stafflines* align with the margin of the text's type area.
+
+With `crop` the pages may look somewhat uneven because the top and bottom
+systems are often pushed inside the page because the *extremal* score items are
+aligned to the text.  With `staffsize` on the other hand it may happen that
+score items protrude too much into the vertical margins.
+
+\lyIssue{NOTE:}
+
+The `staffsize` option is highly experimental and has to be used with care.
+While positioning the extremal staves works perfectly the approach may confuse
+LilyPond's overall spacing algorithms. The `stretchability` parameters of
+`top-system-spacing`, `top-markup-spacing`, and `last-bottom-spacing` are forced
+to `0`, which seems to “unbalance” the mutual stretches of vertical spacing.
+When scores appear compressed it is possible to experiment with (a combination
+of) explicitly setting `max-systems-per-page`, `page-count`, or -- if everything
+else fails -- by including manual page breaks in the score.
+
 \lyOption{extra-bottom-margin}{0}
 
 \lyOption{extra-top-margin}{0}
 
-\lyOption{fullpagealign}{staffline}
+These options may be used to add (or remove) some space to the vertical margins
+of fullpage scores.  This can be used to create a vertical “indent” or to adjust
+for scores with unusually large vertical protrusion. *Note:* This setting
+affects a whole score and can't be applied to individual pages (which is a
+limitaion with LilyPond).
+
 
 ## Score Options
 
