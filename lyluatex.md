@@ -496,6 +496,17 @@ If \option{papersize} is set, any values of \option{paperheight} and
 
 ### Alignment {#alignment}
 
+#### Horizontal Alignment of System-by-System Scores
+
+\lyOption{halign}{left|center|right}
+Control the paragraph alignment of system-by-system scores.
+
+\lyIssue{Note:}
+The default alignment depends on whether a score is wrapped in an environment or
+not: within an environment \option{halign} is set to `center`, without an
+environment to `left` if no alignment is specified explicitly. See
+[Environments](#environments) for details about the wrapping in environments.
+
 #### Protrusion
 
 #### Vertical Alignment of Fullpage Scores
