@@ -252,37 +252,45 @@ end
 
 --[[ =============== Functions that output LaTeX code ===================== ]]
 
-function latex.filename(printfilename, insert, input_file)
-    if printfilename and input_file then
-        if insert == 'fullpage' then
+function latex.filename(score)
+    if score.printfilename and score.input_file then
+        if score.insert == 'fullpage' then
             warn('`printfilename` ignored with `insert=fullpage`')
         else
-            local filename = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
+            local filename = score.input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
             tex.sprint(filename)
         end
     end
 end
 
-function latex.fullpagestyle(style, ppn)
+function latex.fullpagestyle(score)
     local function texoutput(s) tex.print('\\includepdfset{pagecommand='..s..'}') end
-    if style == '' then
-        if ppn then
+    if score.fullpagestyle == '' then
+        if score['print-page-number'] then
             texoutput('\\thispagestyle{empty}')
         else texoutput('')
         end
-    else texoutput('\\thispagestyle{'..style..'}')
+    else texoutput('\\thispagestyle{'..score.fullpagestyle..'}')
     end
 end
 
-function latex.includepdf(pdfname, range, papersize)
+function latex.includepdf(score)
+    if score.caption ~= '' then warn([[Captions are not supported with
+fullpage scores.]]) end
     local noautoscale = ''
-    if papersize then noautoscale = 'noautoscale' end
+    if score.papersize then noautoscale = 'noautoscale' end
     tex.sprint(string.format(
         [[\includepdf[pages={%s},%s]{%s}]],
-        table.concat(range, ','), noautoscale, pdfname)
-    )end
+        table.concat(range, ','), noautoscale, score.pdfname)
+    )
+end
 
-function latex.includesystems(filename, range, protrusion, staffsize, indent)
+function latex.includesystems(score)
+    local filename = score.output
+    local range = score:_range()
+    local protrusion = score:_protrusion()
+    local staffsize = score.staffsize
+    local indent = score.indent
     if protrusion then
         local f = io.open(filename..'.protrusion', 'w')
         f:write(protrusion)
@@ -322,18 +330,19 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
     if ly.post_lilypond then
         texoutput = texoutput..'\n\\postLilyPondExample'
     end
-    tex.sprint(texoutput:explode('\n'))
+    tex.sprint(latex.wrap_figure(texoutput, score))
 end
 
-function latex.label(label, labelprefix)
-    if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
+function latex.label(score)
+    if score.label then tex.sprint('\\label{'..
+        score.labelprefix..score.label..'}%%') end
 end
 
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
-function latex.verbatim(verbatim, ly_code, intertext, version)
-    if verbatim then
-        if version then tex.sprint('\\lyVersion{'..version..'}') end
-        local content = table.concat(ly_code:explode('\n'), '\n'):gsub(
+function latex.verbatim(score)
+    if score.verbatim then
+        if score.version then tex.sprint('\\lyVersion{'..score.version..'}') end
+        local content = table.concat(score.ly_code:explode('\n'), '\n'):gsub(
           '.*%%%s*begin verbatim', ''):gsub(
           '%%%s*end verbatim.*', '')
         --[[ We unfortunately need an external file,
@@ -347,7 +356,7 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
         )
         f:close()
         tex.sprint('\\input{'..fname..'}')
-        if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
+        if score.intertext then tex.sprint('\\lyIntertext{'..score.intertext..'}') end
     end
 end
 
@@ -942,21 +951,18 @@ function Score:run_lilypond()
 end
 
 function Score:write_latex(do_compile)
-    latex.filename(self.printfilename, self.insert, self.input_file)
-    latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext, self.addversion)
+    latex.filename(self)
+    latex.verbatim(self)
     if do_compile then
         if not self:is_compiled_without_error() then return end
     end
     --[[ Now we know there is a proper score --]]
-    latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
-    latex.label(self.label, self.labelprefix)
+    latex.fullpagestyle(self)
+    latex.label(self)
     if not lfs.isfile(self.output..'-systems.count') then  -- fullpage score
-        latex.includepdf(self.output, self:_range(), self.papersize)
+        latex.includepdf(self)
     else  -- fragment
-        latex.includesystems(
-            self.output, self:_range(), self:_protrusion(),
-            self.staffsize, self.indent
-        )
+        latex.includesystems(self)
     end
 end
 
