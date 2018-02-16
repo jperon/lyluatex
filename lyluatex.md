@@ -653,6 +653,10 @@ verbatim (but still used for engraving the score).  If after that `% end
 verbatim` is found then the remainder of the input will be skipped too,
 otherwise the code is printed to the end.
 
+\lyOption{addversion}{false}
+If \option{addversion} is set the LilyPond version used to compile the current
+score is printed before the verbatim input code.
+
 \lyOption{intertext}{}
 If \option{intertext} is set to a string its value will be printed between the
 verbatim code and the score.
