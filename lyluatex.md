@@ -374,9 +374,9 @@ or pages.  The selection of systems/pages can be specified as
 
 * `<empty>` (default): include the whole score
 * a single number: include a single page/system
-* a range of numbers: include a range of pages/systems  
+* a range of numbers: include a range of pages/systems
   `{M-N}` or `{N-M}` (to print backwards)
-* a comma-separated list of numbers or ranges  
+* a comma-separated list of numbers or ranges
   `{A,B , C,D-E, F, C- B}` (freely mixed, in arbitrary order)
 
 \lyIssue{Note:}
@@ -420,6 +420,18 @@ With this option set to true, all systems are printed at their natural width;
 with this option set to false, all systems are justified (even for
 single-system scores).
 
+\lyOption{quote}{false}
+This option, which is there for compatibility with `lilypond-book`,
+reduces line length of a music snippet by $2×0.4\,in$ and puts the output into
+a quotation block.
+The value $0.4\,in$ can be controlled with following options.
+
+\lyOption{gutter, leftgutter, rightgutter, exampleindent}{$0.4\,in$}
+\option{leftgutter} control the supplementary left margin of a “quoted” score,
+\option{rightgutter} the right margin. If not set, they're automatically set
+to \option{gutter} value; \option{exampleindent} is an alias for
+\option{gutter} (for compatibility with `lilypond-book`).
+
 #### Fullpage
 
 There are several options that can change the basic page layout of full-page
@@ -455,7 +467,7 @@ If \option{papersize} is set, any values of \option{paperheight} and
 \lyOption{fullpagealign}{crop|staffline}
 
 Controls how the top and bottom margins of a score are calculated. With `crop`
-LilyPond's `margin` paper variables are simply set to those of the  
+LilyPond's `margin` paper variables are simply set to those of the
 \LaTeX\ document, while `staffsize` pursues a different approach that makes the
 outermost *stafflines* align with the margin of the text's type area.
 
