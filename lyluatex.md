@@ -330,20 +330,35 @@ options means that LilyPond does *not* print page numbers while
 
 ### Inline
 
-\lyOption{insert=inline|bare-inline}
-
-With \option{insert=inline} or \option{insert=bare-inline} scores can be included *within* paragraphs.
+\lyMargin{\texttt{insert=inline|bare-inline}}
+With \option{insert=inline} or \option{insert=bare-inline} scores can be
+included *within* paragraphs. They are basically the same with regard to the
+inclusion, but `bare-inline`  implicitly sets the \option{nostaff} option to
+suppress staff symbol, time signature and clef.
 
 \lyOption{inline-staffsize}{default}
+By default the staff size of inline scores is determined as 2/3 of the default
+staff size of regular scores, so the effective size of an inline score will
+depend both on the text's font size and the current \option{staffsize} setting.
+The \option{inline-staffsize} option sets an absolute staffsize in `pt`
+(omitting the “`pt`”).
 
 \lyOption{valign}{center}
+Controls the vertical alignment of the score against the current line of text.
+The default value `center` will align the vertical center of the image to the
+baseline of the text.  `top` will align the top edge of the image with the
+X-height of the text (actually: `1em` above the baseline). `bottom` aligns the
+bottom of the image with the text baseline.
+
+*Note:* The alignment works with the edges of the *image file*, there is no
+notion of an “optical” center or aligning with the staff lines.
 
 \lyOption{voffset}{0pt}
+Can be used to *add* a vertical offset to the automatic alignment.
 
 \lyOption{hpadding}{0.75ex}
-
-
-
+Inserts some space to the left and right of the included score (except at line
+start or end).
 
 
 ### Choosing Systems/Pages
