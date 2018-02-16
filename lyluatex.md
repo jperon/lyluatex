@@ -830,6 +830,13 @@ remove scores needed by *other* documents. Therefore \lyluatex\ will read *all*
 `<documentname>.list` files and only remove scores that are not referenced by
 *any* list file.
 
+### PDF optimization
+
+\lyOption{optimize-pdf}{false}
+If set to `true`, each included pdf will be optimized by `ghostscript` before
+inclusion. It's set to `false` by default, because it's time consuming,
+and it loses information about the fonts.
+
 ### Handling LilyPond Failures{#lilypond-failures}
 
 Compiling a score with LilyPond can produce several types of problems which will
