@@ -805,7 +805,9 @@ If LilyPond reports an error and \option{debug} is set to `true` then
 output to a `.ly` and a `.log` file in the temporary directory. The file names
 are printed to the console for easy reference.  Otherwise only a general warning
 will be issued.  This will happen regardless of whether a score file is produced
-or not.
+or not.  In addition \lyluatex\ will usually delete intermediate files that are
+not useful for later compilations but keep them all when \option{debug} is
+active.
 
 \lyOption{showfailed}{false}
 
