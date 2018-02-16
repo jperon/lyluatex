@@ -19,7 +19,7 @@ local FILELIST
 local OPTIONS = {}
 local DIM_OPTIONS = {
     'gutter', 'leftgutter', 'rightgutter',
-    'line-width', 'paperwidth', 'paperheight'
+    'line-width', 'paperwidth', 'paperheight', 'voffset', 'hpadding'
 }
 local MXML_OPTIONS = {
     'absolute',
@@ -304,8 +304,7 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
-function latex.includeinline(pdfname, bbox, valign, voffset)
-    voffset = convert_unit(voffset)
+function latex.includeinline(pdfname, bbox, valign, hpadding, voffset)
     local height = bbox.height
     local v_base
     if valign == 'bottom' then v_base = 0
@@ -313,8 +312,8 @@ function latex.includeinline(pdfname, bbox, valign, voffset)
     else v_base = height / -2
     end
     tex.sprint(string.format([[
-\raisebox{%spt}{\includegraphics{%s-1.pdf}}
-]], v_base + voffset, pdfname))
+\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}
+]], hpadding, v_base + voffset, pdfname, hpadding))
 end
 
 function latex.includepdf(pdfname, range, papersize)
@@ -909,6 +908,7 @@ end
 
 local HASHIGNORE = {
   'cleantmp',
+  'hpadding',
   'print-only',
   'voffset'
 }
@@ -1024,7 +1024,7 @@ function Score:write_latex(do_compile)
 This will probably cause bad output.]])
         end
         local bbox = self:bbox(1)
-        latex.includeinline(self.output, bbox, self.valign, self.voffset)
+        latex.includeinline(self.output, bbox, self.valign, self.hpadding, self.voffset)
     end
 end
 
