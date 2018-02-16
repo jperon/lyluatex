@@ -18,8 +18,16 @@ local latex = {}
 local FILELIST
 local OPTIONS = {}
 local DIM_OPTIONS = {
-    'gutter', 'leftgutter', 'rightgutter',
-    'line-width', 'paperwidth', 'paperheight'
+    'extra-bottom-margin',
+    'extra-top-margin',
+    'gutter',
+    'indent',
+    'leftgutter',
+    'rightgutter',
+    'line-width',
+    'paperwidth',
+    'paperheight',
+    'protrusion'
 }
 local MXML_OPTIONS = {
     'absolute',
@@ -366,9 +374,6 @@ function Score:calc_properties()
     if self.quote then
         self['line-width'] = self['line-width'] - self.leftgutter - self.rightgutter
     end
-    -- dimensions specific to LilyPond
-    self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
-    self['extra-bottom-margin'] = convert_unit(self['extra-bottom-margin'])
     -- score fonts
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
@@ -697,7 +702,7 @@ end
 
 function Score:ly_indent()
     if self.indent == '' and self.insert == 'fullpage' then return ''
-    else return [[indent = ]]..(convert_unit(self.indent) or 0)..[[\pt]]
+    else return [[indent = ]]..(self.indent or 0)..[[\pt]]
     end
 end
 
@@ -878,7 +883,7 @@ function Score:_protrusion()
       and generate a horizontal offset command. ]]
     local gutter = 0
     if self.quote then gutter = self.leftgutter end
-    local protrusion = convert_unit(self.protrusion)
+    local protrusion = self.protrusion
     if protrusion then return protrusion + gutter
     elseif self.protrusion then
         local f = io.open(self.output..'.eps')
@@ -936,7 +941,7 @@ function Score:write_latex(do_compile)
     else  -- fragment
         latex.includesystems(
             self.output, self:_range(), self:_protrusion(),
-            self.staffsize, convert_unit(self.indent)
+            self.staffsize, self.indent
         )
     end
 end
