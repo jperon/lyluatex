@@ -330,9 +330,21 @@ options means that LilyPond does *not* print page numbers while
 
 ### Inline
 
-\lyMargin{\texttt{insert=inline}}
-This option, which is intended to insert musical notation inline in the
-continuous text, has not been implemented yet.
+\lyOption{insert=inline|bare-inline}
+
+With \option{insert=inline} or \option{insert=bare-inline} scores can be included *within* paragraphs.
+
+\lyOption{inline-staffsize}{default}
+
+\lyOption{valign}{center}
+
+\lyOption{voffset}{0pt}
+
+\lyOption{hpadding}{0.75ex}
+
+
+
+
 
 ### Choosing Systems/Pages
 
