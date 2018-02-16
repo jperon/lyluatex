@@ -19,7 +19,7 @@ local FILELIST
 local OPTIONS = {}
 local DIM_OPTIONS = {
     'gutter', 'leftgutter', 'rightgutter',
-    'line-width', 'paperwidth', 'paperheight'
+    'line-width', 'paperwidth', 'paperheight', 'voffset', 'hpadding'
 }
 local MXML_OPTIONS = {
     'absolute',
@@ -32,7 +32,7 @@ local MXML_OPTIONS = {
     'verbose',
 }
 local TEXINFO_OPTIONS = {'doctitle', 'nogettext', 'texidoc'}
-local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp'}
+local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp', 'em', 'ex'}
 local LY_HEAD = [[
 %%File header
 \version "<<<VERSION>>>"
@@ -127,6 +127,11 @@ end
 local fontdata = fonts.hashes.identifiers
 local function fontinfo(id)
     return fontdata[id] or font.fonts[id]
+end
+
+
+local function font_default_staffsize()
+    return fontinfo(font.current()).size/39321.6
 end
 
 
@@ -232,6 +237,31 @@ This item will be skipped!
 end
 
 
+local function read_bbox(filename, line_width)
+    local bbox = {}
+    local f = io.open(filename..'.bbox', 'r')
+    if f then
+        bbox.protrusion = f:read('*l')
+        bbox.r_protrusion = f:read('*l')
+        bbox.height = f:read('*l')
+        f:close()
+    else
+        local bbline = ''
+        f = io.open(filename..'.eps', 'r')
+        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
+        f:close()
+        local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+        bbox.protrusion = x_1
+        bbox.r_protrusion = x_2 - line_width
+        bbox.height = y_2 - y_1
+        f = io.open(filename..'.bbox', 'w')
+        f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
+        f:close()
+    end
+    return bbox
+end
+
+
 local function splitext(str, ext)
     if str:match(".-%..-") then
         local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
@@ -246,8 +276,8 @@ end
 
 function latex.filename(printfilename, insert, input_file)
     if printfilename and input_file then
-        if insert == 'fullpage' then
-            warn('`printfilename` ignored with `insert=fullpage`')
+        if insert ~= 'systems' then
+            warn('`printfilename` only works with `insert=systems`')
         else
             local filename = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
             tex.sprint(filename)
@@ -256,7 +286,7 @@ function latex.filename(printfilename, insert, input_file)
 end
 
 function latex.fullpagestyle(style, ppn)
-    local function texoutput(s) tex.print('\\includepdfset{pagecommand='..s..'}') end
+    local function texoutput(s) tex.sprint('\\includepdfset{pagecommand='..s..'}%') end
     if style == '' then
         if ppn then
             texoutput('\\thispagestyle{empty}')
@@ -264,6 +294,17 @@ function latex.fullpagestyle(style, ppn)
         end
     else texoutput('\\thispagestyle{'..style..'}')
     end
+end
+
+function latex.includeinline(pdfname, height, valign, hpadding, voffset)
+    local v_base
+    if valign == 'bottom' then v_base = 0
+    elseif valign == 'top' then v_base = convert_unit('1em') - height
+    else v_base = (convert_unit('1em') - height) / 2
+    end
+    tex.sprint(string.format([[
+\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}
+]], hpadding, v_base + voffset, pdfname, hpadding))
 end
 
 function latex.includepdf(pdfname, range, papersize)
@@ -295,12 +336,12 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
     for index, system in pairs(range) do
         if not lfs.isfile(filename..'-'..system..'.pdf') then break end
         texoutput = texoutput..string.format([[
-        \noindent\hspace*{%spt}\includegraphics{%s}
+        \noindent\hspace*{%spt}\includegraphics{%s}%%
         ]],
         protrusion, filename..'-'..system)
-        if ly.between_lilypond then
+        if ly.between_lilypond and index < #range then
             texoutput = texoutput..string.format([[
-            \betweenLilyPondSystem{%s}
+            \betweenLilyPondSystem{%s}%%
             ]], index)
         else
             texoutput = texoutput..string.format([[
@@ -355,7 +396,12 @@ function Score:calc_properties()
     end
     -- staffsize
     local staffsize = tonumber(self.staffsize)
-    if staffsize == 0 then staffsize = fontinfo(font.current()).size/39321.6 end
+    if staffsize == 0 then staffsize = font_default_staffsize() end
+    if self.insert == 'inline' or self.insert == 'bare-inline' then
+        local inline_staffsize = tonumber(self['inline-staffsize'])
+        if inline_staffsize == 0 then inline_staffsize = staffsize / 1.5 end
+        staffsize = inline_staffsize
+    end
     self.staffsize = staffsize
     -- dimensions that can be given by LaTeX
     for _, dimension in pairs(DIM_OPTIONS) do
@@ -380,6 +426,8 @@ function Score:calc_properties()
 end
 
 function Score:calc_staff_properties()
+    -- preset for bare notation symbols in inline images
+    if self.insert == 'bare-inline' then self.nostaff = 'true' end
     -- handle meta properties
     if self.notime then
         self.notimesig = 'true'
@@ -451,11 +499,21 @@ function Score:content()
     end
 end
 
+function Score:count_systems(force)
+    if force or not self.system_count then
+        local f = io.open(self.output..'-systems.count', 'r')
+        if f then
+            self.system_count = tonumber(f:read('*all'))
+            f:close()
+        else self.system_count = 0
+        end
+    end
+    return self.system_count
+end
+
 function Score:delete_intermediate_files()
-  local i = io.open(self.output..'-systems.count', 'r')
-  if i then
-      local n = tonumber(i:read('*all'))
-      i:close()
+  if self.insert ~= 'fullpage' then
+      local n = self:count_systems()
       for j = 1, n, 1 do
           os.remove(self.output..'-'..j..'.eps')
       end
@@ -514,13 +572,8 @@ end
 function Score:is_compiled()
     if self.insert == 'fullpage' then
         return lfs.isfile(self.output..'.pdf')
-    elseif self.insert == 'systems' then
-        local f = io.open(self.output..'-systems.count')
-        if not f then return false end
-        local head = f:read("*line")
-        return not (head == "% eof")
     else
-        err('"inline" insertion mode not implemented yet')
+        return self:count_systems(true) ~= 0
     end
 end
 
@@ -626,15 +679,10 @@ function Score:header()
                 ppn, ly.PAGE, self:ly_margins()
 	    )
         )
-    elseif self.insert == 'systems' then
+    else
 	header = header:gsub(
 	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
 	    [[<<<PAPER>>>]], '')
-    else
-        header = header:gsub(
-        [[<<<PREAMBLE>>>]], [[#(ly:set-option 'preview #t)]]):gsub(
-        [[<<<PAPER>>>]], '')
-        err('"inline" insertion mode not implemented yet')
     end
     return header
 end
@@ -846,7 +894,9 @@ end
 
 local HASHIGNORE = {
   'cleantmp',
-  'print-only'
+  'hpadding',
+  'print-only',
+  'voffset'
 }
 function Score:output_filename()
     local properties = ''
@@ -871,6 +921,19 @@ function Score:process()
     end
     self:write_latex(do_compile)
     if not self.debug then self:delete_intermediate_files() end
+end
+
+function Score:_bbox(system)
+    if not self.bboxes then
+        self.bboxes = {}
+        self.bbox = read_bbox(self.output, self['line-width'])
+        for i = 1, self:count_systems() do
+            table.insert(self.bboxes, read_bbox(self.output..'-'..i, self['line-width']))
+        end
+    end
+    if not system then return self.bbox
+    else return self.bboxes[system]
+    end
 end
 
 function Score:_protrusion()
@@ -925,18 +988,24 @@ end
 function Score:write_latex(do_compile)
     latex.filename(self.printfilename, self.insert, self.input_file)
     latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext, self.addversion)
-    if do_compile then
-        if not self:is_compiled_without_error() then return end
-    end
+    if do_compile and not self:is_compiled_without_error() then return end
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
-    if not lfs.isfile(self.output..'-systems.count') then  -- fullpage score
+    if self.insert == 'fullpage' then
         latex.includepdf(self.output, self:_range(), self.papersize)
-    else  -- fragment
+    elseif self.insert == 'systems' then
         latex.includesystems(
             self.output, self:_range(), self:_protrusion(),
             self.staffsize, convert_unit(self.indent)
+        )
+    else -- inline
+        if self:count_systems() > 1 then
+            warn([[Score with more than one system included inline.
+This will probably cause bad output.]])
+        end
+        latex.includeinline(
+            self.output, self:_bbox(1).height, self.valign, self.hpadding, self.voffset
         )
     end
 end
