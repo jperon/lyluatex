@@ -108,12 +108,7 @@ end
 
 
 local function dirname(str)
-    if str:match(".-/.-") then
-        local name = string.gsub(str, "(.*/)(.*)", "%1")
-        return name
-    else
-        return ''
-    end
+    return str:gsub("(.*/)(.*)", "%1") or ''
 end
 
 
@@ -210,6 +205,33 @@ local function process_options(k, v)
 end
 
 
+local function range_parse(range, nsystems)
+    local num = tonumber(range)
+    if num then return {num} end
+    -- if nsystems is set, we have insert=systems
+    if range:sub(-1) == '-' then range = range..nsystems end
+    if not range:match('^%d+%s*-%s*%d*$') then
+        warn([[
+Invalid value '%s' for item
+in list of page ranges. Possible entries:
+- Single number
+- Range (M-N, N-M or N-)
+This item will be skipped!
+      ]], range)
+      return
+    end
+    local result = {}
+    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
+    if to then
+        local dir
+        if from <= to then dir = 1 else dir = -1 end
+        for i = from, to, dir do table.insert(result, i) end
+        return result
+    else return {range}  -- N- with insert=fullpage
+    end
+end
+
+
 local function splitext(str, ext)
     if str:match(".-%..-") then
         local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
@@ -244,33 +266,53 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
-function latex.includepdf(pdfname, papersize)
+function latex.includepdf(pdfname, range, papersize)
     local noautoscale = ''
-    if papersize then noautoscale = ',noautoscale' end
-    tex.sprint('\\includepdf[pages=-'..noautoscale..']{'..pdfname..'}')
-end
+    if papersize then noautoscale = 'noautoscale' end
+    tex.sprint(string.format(
+        [[\includepdf[pages={%s},%s]{%s}]],
+        table.concat(range, ','), noautoscale, pdfname)
+    )end
 
-function latex.includesystems(filename, protrusion, indent, do_compile)
-    local f = io.open(filename..'.tex', 'r')
-    local texoutput = f:read('*a')
-    f:close()
-    if do_compile then  -- new compilation, update output-systems.tex
-        f = io.open(filename..'.count', 'r')
-        local nsystems = tonumber(f:read('*a'))
+function latex.includesystems(filename, range, protrusion, staffsize, indent)
+    if protrusion then
+        local f = io.open(filename..'.protrusion', 'w')
+        f:write(protrusion)
         f:close()
-        if nsystems == 1 and indent then
-            warn('Only one system, deactivating indentation.')
-            protrusion = protrusion - indent
+    else
+        local f = io.open(filename..'.protrusion', 'r')
+        protrusion = f:read('*a')
+        f:close()
+    end
+    if #range == 1 and range[1] == "1" and indent then
+        warn([[Only one system, deactivating indentation.]])
+        protrusion = protrusion - indent
+    end
+    local texoutput = ''
+    if ly.pre_lilypond then
+        texoutput = texoutput..'\\preLilyPondExample'
+    end
+    for index, system in pairs(range) do
+        if not lfs.isfile(filename..'-'..system..'.pdf') then break end
+        texoutput = texoutput..string.format([[
+        \noindent\hspace*{%spt}\includegraphics{%s}
+        ]],
+        protrusion, filename..'-'..system)
+        if ly.between_lilypond then
+            texoutput = texoutput..string.format([[
+            \betweenLilyPondSystem{%s}
+            ]], index)
+        else
+            texoutput = texoutput..string.format([[
+\par\vspace{%spt plus %spt minus %spt}
+            ]],
+            staffsize / 4,
+            staffsize / 12,
+            staffsize / 16)
         end
-        texoutput =
-            [[\ifx\preLilyPondExample\undefined\else\expandafter\preLilyPondExample\fi]]..
-            texoutput:gsub([[\includegraphics{]], string.format(
-                [[\noindent\hspace*{%spt}\includegraphics{%s]],
-                protrusion, dirname(filename)))..
-            [[\ifx\postLilyPondExample\undefined\else\expandafter\postLilyPondExample\fi]]
-        f = io.open(filename..'.tex', 'w')
-        f:write(texoutput)
-        f:close()
+    end
+    if ly.post_lilypond then
+        texoutput = texoutput..'\n\\postLilyPondExample'
     end
     tex.sprint(texoutput:explode('\n'))
 end
@@ -377,25 +419,18 @@ function Score:check_properties()
             info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
-    if (self.input_file or
-        self.ly_code:find([[\book]]) or
-        self.ly_code:find([[\header]]) or
-        self.ly_code:find([[\layout]]) or
-        self.ly_code:find([[\paper]]) or
-        self.ly_code:find([[\score]])
-    ) then
-        if self.fragment or self.relative then
-            if self.input_file then
-                warn([[
+    if self.fragment or self.relative then
+        if (self.input_file or
+            self.ly_code:find([[\book]]) or
+            self.ly_code:find([[\header]]) or
+            self.ly_code:find([[\layout]]) or
+            self.ly_code:find([[\paper]]) or
+            self.ly_code:find([[\score]])
+        ) then
+            warn([[
 Found something incompatible with `fragment`
 (or `relative`). Setting them to false.
-                ]])
-            else
-                warn([[
-Found a \score block: setting `fragment`
-and `relative` to false.
-                ]])
-            end
+            ]])
             self.fragment = false
             self.relative = false
         end
@@ -425,10 +460,9 @@ function Score:delete_intermediate_files()
       for j = 1, n, 1 do
           os.remove(self.output..'-'..j..'.eps')
       end
-      os.remove(self.output..'-systems.count')
+      os.remove(self.output..'-systems.tex')
       os.remove(self.output..'-systems.texi')
       os.remove(self.output..'.eps')
-      os.remove(self.output..'.pdf')
       if self.lilypond_error then
           -- ensure score gets recompiled next time
           os.remove(self.output..'-systems.tex')
@@ -482,7 +516,7 @@ function Score:is_compiled()
     if self.insert == 'fullpage' then
         return lfs.isfile(self.output..'.pdf')
     elseif self.insert == 'systems' then
-        local f = io.open(self.output..'-systems.tex')
+        local f = io.open(self.output..'-systems.count')
         if not f then return false end
         local head = f:read("*line")
         return not (head == "% eof")
@@ -499,7 +533,7 @@ Please check the log file
 and the generated LilyPond code in
 %s
 %s
-        ]],
+]],
         self.output..'.log',
         self.output..'.ly')
         doc_debug_msg = [[
@@ -510,8 +544,16 @@ See log for details.]]
 If you need more information
 than the above message,
 please retry with option debug=true.
-        ]]
+]]
         doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
+    end
+    if self.fragment or self.relative then
+        local frag_msg = '\n'..[[
+As the input code has been automatically wrapped
+with a music expression, you may try repeating
+with the `nofragment` option.]]
+        debug_msg = debug_msg..frag_msg
+        doc_debug_msg = doc_debug_msg..frag_msg
     end
     if self:is_compiled() then
         if self.lilypond_error then
@@ -519,7 +561,7 @@ please retry with option debug=true.
 
 LilyPond reported a failed compilation but
 produced a score. %s
-            ]],
+]],
             debug_msg
             )
         end
@@ -534,20 +576,20 @@ produced a score. %s
 %s}
                 \end{quote}
 
-                ]],
+]],
                 doc_debug_msg))
             warn([[
 
 LilyPond failed to compile the score.
 %s
-            ]],
+]],
             debug_msg)
         else
             err([[
 
 LilyPond failed to compile the score.
 %s
-            ]],
+]],
           debug_msg)
         end
     end
@@ -557,7 +599,7 @@ function Score:header()
     local header = LY_HEAD:gsub(
         [[<<<FONTS>>>]], self:fonts()):gsub(
         [[<<<INDENT>>>]], self:ly_indent()):gsub(
-        [[<<<LANGUAGE>>>]], self.ly_language()):gsub(
+        [[<<<LANGUAGE>>>]], self:ly_language()):gsub(
         [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
         [[<<<PAPERSIZE>>>]], self:ly_papersize()):gsub(
         [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
@@ -803,10 +845,14 @@ function Score:optimize_pdf()
     end
 end
 
+local HASHIGNORE = {
+  'cleantmp',
+  'print-only'
+}
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
-        if k ~= 'cleantmp' and self[k] and type(self[k]) ~= 'function' then
+        if (not contains(HASHIGNORE, k)) and  self[k] and type(self[k]) ~= 'function' then
             properties = properties..'_'..k..'_'..self[k]
         end
     end
@@ -847,6 +893,22 @@ function Score:_protrusion()
     end
 end
 
+function Score:_range()
+    local nsystems = ''
+    local f = io.open(self.output..'-systems.count', 'r')
+    if f then nsystems = f:read('*a') f:close() end
+    if self['print-only'] == '' then self['print-only'] = '1-'..nsystems end
+    if tonumber(self['print-only']) then return {self['print-only']} end
+    local result = {}
+    for _, r in pairs(self['print-only']:explode(',')) do
+        local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+        if range then
+            for _, v in pairs(range) do table.insert(result, v) end
+        end
+    end
+    return result
+end
+
 function Score:run_lilypond()
     mkdirs(dirname(self.output))
     self:lilypond_version()
@@ -870,12 +932,12 @@ function Score:write_latex(do_compile)
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
-    local systems_file = self.output..'-systems'
-    if not lfs.isfile(systems_file..'.tex') then  -- fullpage score
-        latex.includepdf(self.output, self.papersize)
+    if not lfs.isfile(self.output..'-systems.count') then  -- fullpage score
+        latex.includepdf(self.output, self:_range(), self.papersize)
     else  -- fragment
         latex.includesystems(
-            systems_file, self:_protrusion(), convert_unit(self.indent), do_compile
+            self.output, self:_range(), self:_protrusion(),
+            self.staffsize, convert_unit(self.indent)
         )
     end
 end
