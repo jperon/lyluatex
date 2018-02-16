@@ -278,22 +278,19 @@ valid values are \option{systems} (default), \option{fullpage}, and
 \lyMargin{\texttt{insert=systems}}
 With this default option each score is compiled as a sequence of PDF files
 representing one system each. By default the systems are separated by a
-paragraph and a \cmd{bigskip}.
+paragraph and a variable skip depending on the staffsize.
 
 \lyCmd{betweenLilyPondSystem}
 However, if a macro \cmd{betweenLilyPondSystem} is defined it will be expanded
 between each system. This macro must accept one argument, which will be the
 number of systems already printed in the score (‘1’ after the first system).
-With this information it is possible to resond individually to systems (e.\,g.
+With this information it is possible to respond individually to systems (e.\,g.
 “print a horizontal rule after each third system”).  But a more typical use case
-is to insert some vertical glue space between the systems, ignoring the system
-count:
+is to insert different space between the systems or using simple line breaks
+while ignoring the system count:
 
 ```tex
-\newcommand{\betweenLilyPondSystem}[1]{%
-
-\medskip
-}
+\newcommand{\betweenLilyPondSystem}[1]{\linebreak}
 ```
 
 \lyCmd{preLilyPondExample, \cmd{postLilyPondExample}}
@@ -311,6 +308,28 @@ small margin of error where this may produce undesirable results: if a score is
 just too long to fit on one system due to indentation but would have been
 engraved on one system *without* indent.
 
+#### Wrapping Scores in Environments {#environments}
+
+\lyluatex\ provides a convenient interface to wrap system-by-system scores in
+environments.
+
+\lyOption{environment}{}
+\lyOption{env-opts}{}
+If \option{environment} is set to a non-empty string the score will be wrapped
+in an environment of that name.  If \option{env-opts} is also set this will be
+used as the optional argument for the environment, usually to specify the
+placement of the environment.
+
+\lyOption{caption}{}
+\lyOption{captionbefore}{false}
+If a \option{caption} is set it is placed before or after the score, depending
+on the value of \option{captionbefore}.
+
+\lyIssue{Note:}
+If \option{caption} is set but \option{environment} is *not* then the score will
+implicitly be wrapped in a \option{figure} environment. If \option{environment}
+is set but no \option{env-opts} then `tbp` is used as a default positioning
+parameter.
 
 ### Fullpage
 
