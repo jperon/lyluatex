@@ -426,12 +426,12 @@ function Score:check_properties()
             self.ly_code:find([[\paper]]) or
             self.ly_code:find([[\score]])
         ) then
-                warn([[
+            warn([[
 Found something incompatible with `fragment`
 (or `relative`). Setting them to false.
-                ]])
-                self.fragment = false
-                self.relative = false
+            ]])
+            self.fragment = false
+            self.relative = false
         end
     end
 end
