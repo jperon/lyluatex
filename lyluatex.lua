@@ -395,6 +395,12 @@ function Score:calc_properties()
             self.relative = tonumber(self.relative)
         end
     end
+    -- default insertion mode
+    if self.insert == '' then
+        if ly.state == 'cmd' then self.insert = 'inline'
+        else self.insert = 'systems'
+        end
+    end
     -- staffsize
     local staffsize = tonumber(self.staffsize)
     if staffsize == 0 then staffsize = font_default_staffsize() end
