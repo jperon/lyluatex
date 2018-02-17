@@ -1209,20 +1209,24 @@ end
 
 function ly.set_local_options(opts)
     local options = {}
-    local a, b, c, d
-    opts = opts:gsub(' }}}', '}}}')
-    while true do
-        a, b = opts:find('%w[^=]+=', d)
-        c, d = opts:find('{{{[^=]*}}}', d)
-        if not b or not d then break end
-        local k, v = process_options(
-            opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
-        )
+    local next_opt = opts:gmatch('([^,]*)')  -- iterator over options
+    local opt = next_opt()
+    while opt do
+        local k, v = opt:match('([^=]+)=?(.*)')
         if k then
+            if v and v:sub(1) == '{' then  -- handle keys with {multiple, values}
+                local vs = ''
+                while not vs:sub(-1) == '}' do
+                    vs = next_opt()
+                    v = v..','..vs
+                end
+            end
+            k, v = process_options(k:gsub('^%s', ''), v:gsub('^%s', ''))
             if options[k] then err('Option %s is set two times for the same score.', k)
             else options[k] = v
             end
         end
+        opt = next_opt()
     end
     return options
 end

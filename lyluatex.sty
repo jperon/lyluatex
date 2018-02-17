@@ -6,7 +6,6 @@
 \RequirePackage{xkeyval}
 \RequirePackage{graphicx}
 \RequirePackage{minibox}
-\RequirePackage{keycommand}
 \RequirePackage{environ}
 \RequirePackage{currfile}
 \RequirePackage{pdfpages}
@@ -19,7 +18,7 @@
 % Options
 \catcode`-=11
 \directlua{
-  ly = require(kpse.find_file("lyluatex.lua"))
+  ly = require("lyluatex.lua")
   ly.declare_package_options({
     ['addversion'] = {'false', 'true', ''},
     ['cleantmp'] = {'false', 'true', ''},
@@ -161,7 +160,7 @@
 
 % Main commands
 % Score processing
-\newcommand{\ly@compilescore}[1]{%
+\newcommand*{\ly@compilescore}[1]{%
 \ly@setunits%
 \ly@checkprepost%
 \directlua{
@@ -177,16 +176,16 @@
 }
 
 % Inclusion of a .ly file
-\newkeycommand*\includely[][options][1]{%
+\newcommand*\includely[2][]{%
   \ly@compilescore{ly.file(
-    '\luatexluaescapestring{#1}', [[\commandkey{options}]]
+    '\luatexluaescapestring{#2}', [[#1]]
   )}%
 }
 
 % Inclusion of a musicxml file
-\newkeycommand*\musicxmlfile[][options][1]{%
+\newcommand*\musicxmlfile[2][]{%
   \ly@compilescore{ly.file_musicxml(
-    '\luatexluaescapestring{#1}', [[\commandkey{options}]]
+    '\luatexluaescapestring{#2}', [[#1]]
   )}
 }
 
@@ -195,7 +194,7 @@
 \NewEnviron{ly@compilely}{%
   \ly@compilescore{ly.fragment(
     '\luatexluaescapestring{\unexpanded\expandafter{\BODY}}',
-    [[\commandkey{options}]]
+    [[\options]]
   )}%
 }
 
@@ -208,11 +207,12 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newkeycommand{\lily}[][options][1]{%
+\newcommand*{\lily}[2][]{%
+\edef\options{#1}
 \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
 \directlua{ly.state = 'cmd'}
 \begin{ly@compilely}%
-#1
+#2
 \end{ly@compilely}%
 \let\repeat\ly@oldrepeat%
 }
@@ -220,12 +220,14 @@
 \newcommand\lyscorebegin[1]{\directlua{ly.env_begin('#1')}}
 \newcommand\lyscoreend{\directlua{ly.env_end()}}
 
-\newkeyenvironment{ly}[][options]{%
-\directlua{ly.state = 'env'}
+\newenvironment{ly}[1][]{%
+\edef\options{#1}%
+\typeout\options%
+\directlua{ly.state = 'env'}%
 \lyscorebegin{\@currenvir}
 }{%
 \lyscoreend%
-\ly@compilescore{ly.fragment(ly.score_content, [[\commandkey{options}]])}%
+\ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
 }
 
 % Commands for compatibility with lilypond-book
