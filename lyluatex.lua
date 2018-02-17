@@ -1214,7 +1214,7 @@ function ly.set_local_options(opts)
     while true do
         a, b = opts:find('%w[^=]+=', d)
         c, d = opts:find('{{{[^=]*}}}', d)
-        if not d then break end
+        if not b or not d then break end
         local k, v = process_options(
             opts:sub(a, b - 1), opts:sub(c + 3, d - 3)
         )
