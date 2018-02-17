@@ -331,8 +331,9 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
     end
     local texoutput = ''
     if ly.pre_lilypond then
-        texoutput = texoutput..'\\preLilyPondExample'
+        texoutput = texoutput..'\\preLilyPondExample\n'
     end
+    texoutput = texoutput..'\\par\n'
     for index, system in pairs(range) do
         if not lfs.isfile(filename..'-'..system..'.pdf') then break end
         texoutput = texoutput..string.format([[
