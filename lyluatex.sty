@@ -38,7 +38,7 @@
     ['includepaths'] = {'./'},
     ['indent'] = {'', ly.is_dim},
         ['noindent'] = {'default', ly.is_neg},
-    ['insert'] = {'systems', 'fullpage', 'inline', 'bare-inline'},
+    ['insert'] = {'', 'systems', 'fullpage', 'inline', 'bare-inline'},
     ['intertext'] = {''},
     ['labelprefix'] = {'ly_'},
     ['line-width'] = {[[\linewidth]], ly.is_dim},
@@ -210,6 +210,7 @@
 % Parametrized command and environment for included LilyPond fragment
 \newkeycommand{\lily}[][options][1]{%
 \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
+\directlua{ly.state = 'cmd'}
 \begin{ly@compilely}%
 #1
 \end{ly@compilely}%
@@ -220,6 +221,7 @@
 \newcommand\lyscoreend{\directlua{ly.env_end()}}
 
 \newkeyenvironment{ly}[][options]{%
+\directlua{ly.state = 'env'}
 \lyscorebegin{\@currenvir}
 }{%
 \lyscoreend%

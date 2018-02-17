@@ -331,8 +331,9 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
     end
     local texoutput = ''
     if ly.pre_lilypond then
-        texoutput = texoutput..'\\preLilyPondExample'
+        texoutput = texoutput..'\\preLilyPondExample\n'
     end
+    texoutput = texoutput..'\\par\n'
     for index, system in pairs(range) do
         if not lfs.isfile(filename..'-'..system..'.pdf') then break end
         texoutput = texoutput..string.format([[
@@ -392,6 +393,12 @@ function Score:calc_properties()
             self.relative = 1
         else
             self.relative = tonumber(self.relative)
+        end
+    end
+    -- default insertion mode
+    if self.insert == '' then
+        if ly.state == 'cmd' then self.insert = 'inline'
+        else self.insert = 'systems'
         end
     end
     -- staffsize
