@@ -2,10 +2,17 @@
 \usepackage[pass-fonts, debug]{lyluatex}
 
 \newcommand\mylily[2][1]{\lily[inline-staffsize=10, #1]{#2}}
-\newenvironment{lilyenv}[1][]{%
-  \ly[insert=fullpage, #1]%
+
+\newenvironment{lyfigure}[2][]{%
+\edef\mycaption{#2}
+\figure
+\center
+  \ly[#1]%
 }{%
-  \endly%
+  \endly
+  \caption{\mycaption}
+\endcenter
+\endfigure
 }
 
 %% TODO: understand how to wrap:
@@ -16,9 +23,9 @@
 
 Ceci est \mylily[voffset=10pt]{a' b' c''} un test.
 
-\begin{lilyenv}[]
+\begin{lyfigure}[test]{caption}
 a' b' c
 d' e' f
-\end{lilyenv}
+\end{lyfigure}
 
 \end{document}
