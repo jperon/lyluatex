@@ -21,14 +21,13 @@ local DIM_OPTIONS = {
     'extra-bottom-margin',
     'extra-top-margin',
     'gutter',
-    'hpadding'
+    'hpadding',
     'indent',
     'leftgutter',
     'line-width',
     'rightgutter',
     'paperwidth',
     'paperheight',
-    'protrusion'
     'voffset',
 }
 local MXML_OPTIONS = {
@@ -969,7 +968,7 @@ function Score:_protrusion()
       and generate a horizontal offset command. ]]
     local gutter = 0
     if self.quote then gutter = self.leftgutter end
-    local protrusion = self.protrusion
+    local protrusion = convert_unit(self.protrusion)
     if protrusion then return protrusion + gutter
     elseif self.protrusion then
         local f = io.open(self.output..'.eps')
