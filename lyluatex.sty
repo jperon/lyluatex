@@ -18,7 +18,7 @@
 % Options
 \catcode`-=11
 \directlua{
-  ly = require("lyluatex.lua")
+  ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")
   ly.declare_package_options({
     ['addversion'] = {'false', 'true', ''},
     ['cleantmp'] = {'false', 'true', ''},
