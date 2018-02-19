@@ -408,6 +408,25 @@ function Score:new(ly_code, options, input_file)
     return o
 end
 
+function Score:bbox(system)
+    if system
+    then
+        if not self.bboxes then
+            self.bboxes = {}
+            for i = 1, self:count_systems() do
+                table.insert(self.bboxes, read_bbox(self.output..'-'..i, self['line-width']))
+            end
+        end
+        return self.bboxes[system]
+    else
+        if not self.bbox
+        then
+            self.bbox = read_bbox(self.output, self['line-width'])
+        end
+        return self.bbox
+    end
+end
+
 function Score:calc_properties()
     self:calc_staff_properties()
     -- relative
@@ -948,19 +967,6 @@ function Score:process()
     end
     self:write_latex(do_compile)
     if not self.debug then self:delete_intermediate_files() end
-end
-
-function Score:_bbox(system)
-    if not self.bboxes then
-        self.bboxes = {}
-        self.bbox = read_bbox(self.output, self['line-width'])
-        for i = 1, self:count_systems() do
-            table.insert(self.bboxes, read_bbox(self.output..'-'..i, self['line-width']))
-        end
-    end
-    if not system then return self.bbox
-    else return self.bboxes[system]
-    end
 end
 
 function Score:_protrusion()
