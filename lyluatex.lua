@@ -18,8 +18,17 @@ local latex = {}
 local FILELIST
 local OPTIONS = {}
 local DIM_OPTIONS = {
-    'gutter', 'leftgutter', 'rightgutter',
-    'line-width', 'paperwidth', 'paperheight', 'voffset', 'hpadding'
+    'extra-bottom-margin',
+    'extra-top-margin',
+    'gutter',
+    'hpadding',
+    'indent',
+    'leftgutter',
+    'line-width',
+    'rightgutter',
+    'paperwidth',
+    'paperheight',
+    'voffset',
 }
 local MXML_OPTIONS = {
     'absolute',
@@ -363,10 +372,24 @@ function latex.label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
 end
 
+ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
 function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
         if version then tex.sprint('\\lyVersion{'..version..'}') end
-        ly.verbprint(ly_code:explode('\n'))
+        local content = table.concat(ly_code:explode('\n'), '\n'):gsub(
+          '.*%%%s*begin verbatim', ''):gsub(
+          '%%%s*end verbatim.*', '')
+        --[[ We unfortunately need an external file,
+             as verbatim environments are quite special. ]]
+        local fname = ly.get_option('tmpdir')..'/verb.tex'
+        local f = io.open(fname, 'w')
+        f:write(
+            ly.verbenv[1]..'\n'..
+            content..
+            '\n'..ly.verbenv[2]:gsub([[\end {]], [[\end{]])..'\n'
+        )
+        f:close()
+        tex.sprint('\\input{'..fname..'}')
         if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
     end
 end
@@ -419,9 +442,6 @@ function Score:calc_properties()
     if self.quote then
         self['line-width'] = self['line-width'] - self.leftgutter - self.rightgutter
     end
-    -- dimensions specific to LilyPond
-    self['extra-top-margin'] = convert_unit(self['extra-top-margin'])
-    self['extra-bottom-margin'] = convert_unit(self['extra-bottom-margin'])
     -- score fonts
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
@@ -752,7 +772,7 @@ end
 
 function Score:ly_indent()
     if self.indent == '' and self.insert == 'fullpage' then return ''
-    else return [[indent = ]]..(convert_unit(self.indent) or 0)..[[\pt]]
+    else return [[indent = ]]..(self.indent or 0)..[[\pt]]
     end
 end
 
@@ -1004,7 +1024,7 @@ function Score:write_latex(do_compile)
     elseif self.insert == 'systems' then
         latex.includesystems(
             self.output, self:_range(), self:_protrusion(),
-            self.staffsize, convert_unit(self.indent)
+            self.staffsize, self.indent
         )
     else -- inline
         if self:count_systems() > 1 then
@@ -1235,25 +1255,6 @@ end
 function ly.set_property(k, v)
     k, v = process_options(k, v)
     if k then Score[k] = v end
-end
-
-
-ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
-function ly.verbprint(lines)
-    local content = table.concat(lines, '\n'):gsub(
-      '.*%%%s*begin verbatim', ''):gsub(
-      '%%%s*end verbatim.*', '')
-    --[[ We unfortunately need an external file,
-         as verbatim environments are quite special. ]]
-    local fname = ly.get_option('tmpdir')..'/verb.tex'
-    local f = io.open(fname, 'w')
-    f:write(
-        ly.verbenv[1]..'\n'..
-        content..
-        '\n'..ly.verbenv[2]:gsub([[\end {]], [[\end{]])..'\n'
-    )
-    f:close()
-    tex.sprint('\\input{'..fname..'}')
 end
 
 
