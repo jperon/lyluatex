@@ -146,13 +146,22 @@ local function font_default_staffsize()
 end
 
 
-function margin_bottom()
+local function margin_bottom(tex_top)
     return convert_unit(tex.dimen.paperheight..'sp') -
     (tex_top + convert_unit(tex.dimen.textheight..'sp'))
 end
 
 
-function margin_left()
+local function margin_inner()
+    return convert_unit((
+        tex.sp('1in') +
+        tex.dimen.oddsidemargin +
+        tex.dimen.hoffset
+      )..'sp')
+end
+
+
+local function margin_left()
     local odd = ly.PAGE % 2 == 1
     if odd then return margin_inner()
     else return convert_unit((tex.dimen.paperwidth -
@@ -162,16 +171,7 @@ function margin_left()
 end
 
 
-function margin_inner()
-    return convert_unit((
-        tex.sp('1in') +
-        tex.dimen.oddsidemargin +
-        tex.dimen.hoffset
-      )..'sp')
-end
-
-
-function margin_right()
+local function margin_right()
     local odd = ly.PAGE % 2 == 1
     print(odd)
     if odd then return convert_unit((tex.dimen.paperwidth -
@@ -182,7 +182,7 @@ function margin_right()
 end
 
 
-function margin_top()
+local function margin_top()
     return convert_unit((
         tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
         tex.dimen.headheight + tex.dimen.headsep
@@ -202,7 +202,7 @@ local function locate(file, includepaths, ext)
 end
 
 
-function max(a, b)
+local function max(a, b)
     if a > b then return a else return b end
 end
 
@@ -310,7 +310,8 @@ end
 local function parse_bbox(filename, line_width)
     local bbox = {}
     local bbline = ''
-    f = io.open(filename..'.eps', 'r')
+    print(filename)
+    local f = io.open(filename..'.eps', 'r')
     while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
     f:close()
     local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
@@ -891,7 +892,7 @@ end
 
 function Score:ly_margins()
     local tex_top = self['extra-top-margin'] + margin_top()
-    local tex_bottom = self['extra-bottom-margin'] + margin_bottom()
+    local tex_bottom = self['extra-bottom-margin'] + margin_bottom(tex_top)
     local inner = margin_inner()
     if self.fullpagealign == 'crop' then
         return string.format([[
@@ -1043,8 +1044,9 @@ function Score:process()
     self:check_protrusion(read_bbox)
     local do_compile = not self:is_compiled()
     if do_compile then
+        self.ly_code = self:header()..self:content()
         repeat
-            self:run_lilypond(self:header()..self:content())
+            self:run_lilypond()
         until not self:check_protrusion(parse_bbox)
         self:optimize_pdf()
     end
@@ -1068,7 +1070,7 @@ function Score:_range()
     return result
 end
 
-function Score:run_lilypond(ly_code)
+function Score:run_lilypond()
     mkdirs(dirname(self.output))
     self:lilypond_version()
     local p = io.popen(self:lilypond_cmd())
@@ -1077,7 +1079,7 @@ function Score:run_lilypond(ly_code)
         f:write(p:read('*a'))
         f:close()
     else
-        p:write(ly_code)
+        p:write(self.ly_code)
     end
     self.lilypond_error = not p:close()
 end
