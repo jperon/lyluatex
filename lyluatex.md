@@ -508,15 +508,21 @@ aligned to the text.  With `staffsize` on the other hand it may happen that
 score items protrude too much into the vertical margins.
 
 \lyIssue{NOTE:}
+The `fullpagealign=staffline` option is highly experimental and has to be used
+with care. While positioning the extremal staves works perfectly the approach
+may confuse LilyPond's overall spacing algorithms. The `stretchability`
+parameters of `top-system-spacing`, `top-markup-spacing`, and
+`last-bottom-spacing` are forced to `0`, which seems to “unbalance” the mutual
+stretches of vertical spacing. When scores appear compressed it is possible to
+experiment with (a combination of) explicitly setting `max-systems-per-page`,
+`page-count`, or -- if everything else fails -- by including manual page breaks
+in the score.
 
-The `staffsize` option is highly experimental and has to be used with care.
-While positioning the extremal staves works perfectly the approach may confuse
-LilyPond's overall spacing algorithms. The `stretchability` parameters of
-`top-system-spacing`, `top-markup-spacing`, and `last-bottom-spacing` are forced
-to `0`, which seems to “unbalance” the mutual stretches of vertical spacing.
-When scores appear compressed it is possible to experiment with (a combination
-of) explicitly setting `max-systems-per-page`, `page-count`, or -- if everything
-else fails -- by including manual page breaks in the score.
+Another issue with \option{fullpagealign=staffline} is that it doesn't work
+properly with \option{print-page-number}.  If these two options are set LilyPond
+will print the page numbers at the top of the paper, without a margin.  But when
+aligning the stafflines to the type area one will usually want to have \LaTeX\
+print the page headers and footers anyway.
 
 \lyOption{extra-bottom-margin}{0}
 
