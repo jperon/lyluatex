@@ -295,10 +295,6 @@ This item will be skipped!
     end
 end
 
-local function get_bbox(filename, line_width)
-    return read_bbox(filename) or parse_bbox(filename, line_width)
-end
-
 local function read_bbox(filename)
     local f = io.open(filename..'.bbox', 'r')
     if f then
@@ -327,6 +323,10 @@ local function parse_bbox(filename, line_width)
     return bbox
 end
 
+-- This has to be *after* read_bbox and parse_bbox, despite sorting
+local function get_bbox(filename, line_width)
+    return read_bbox(filename) or parse_bbox(filename, line_width)
+end
 
 local function splitext(str, ext)
     if str:match(".-%..-") then
@@ -589,7 +589,9 @@ Found something incompatible with `fragment`
 end
 
 function Score:check_protrusion(bbox_func)
+  print("Check protrusion")
     if self.insert ~= 'systems' then return false end
+  print("Inside check protrusion")
     local bbox = bbox_func(self.output, self['line-width'])
     if not bbox then return false end
 
