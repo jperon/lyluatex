@@ -146,6 +146,49 @@ local function font_default_staffsize()
 end
 
 
+function margin_bottom()
+    return convert_unit(tex.dimen.paperheight..'sp') -
+    (tex_top + convert_unit(tex.dimen.textheight..'sp'))
+end
+
+
+function margin_left()
+    local odd = ly.PAGE % 2 == 1
+    if odd then return margin_inner()
+    else return convert_unit((tex.dimen.paperwidth -
+        tex.dimen.textwidth)..'sp') -
+        margin_inner()
+    end
+end
+
+
+function margin_inner()
+    return convert_unit((
+        tex.sp('1in') +
+        tex.dimen.oddsidemargin +
+        tex.dimen.hoffset
+      )..'sp')
+end
+
+
+function margin_right()
+    local odd = ly.PAGE % 2 == 1
+    print(odd)
+    if odd then return convert_unit((tex.dimen.paperwidth -
+        tex.dimen.textwidth)..'sp') -
+        margin_inner()
+    else return margin_inner()
+    end
+end
+
+
+function margin_top()
+    return convert_unit((
+        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
+        tex.dimen.headheight + tex.dimen.headsep
+    )..'sp')
+end
+
 local function locate(file, includepaths, ext)
     local result
     for _, d in ipairs(extract_includepaths(includepaths)) do
@@ -458,6 +501,10 @@ function Score:calc_properties()
         staffsize = inline_staffsize
     end
     self.staffsize = staffsize
+    if self['max-left-protrusion'] == '0' then
+        self['max-left-protrusion'] = margin_left()..'pt' end
+    if self['max-right-protrusion'] == '0' then
+        self['max-right-protrusion'] = margin_right()..'pt' end
     -- dimensions that can be given by LaTeX
     for _, dimension in pairs(DIM_OPTIONS) do
         self[dimension] = convert_unit(self[dimension])
@@ -841,19 +888,9 @@ function Score:ly_language()
 end
 
 function Score:ly_margins()
-    local tex_top = self['extra-top-margin'] + convert_unit((
-        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
-        tex.dimen.headheight + tex.dimen.headsep
-    )..'sp')
-    local tex_bottom = self['extra-bottom-margin'] + (
-        convert_unit(tex.dimen.paperheight..'sp') -
-        (tex_top + convert_unit(tex.dimen.textheight..'sp'))
-    )
-    local inner = convert_unit((
-        tex.sp('1in') +
-        tex.dimen.oddsidemargin +
-        tex.dimen.hoffset
-    )..'sp')
+    local tex_top = self['extra-top-margin'] + margin_top()
+    local tex_bottom = self['extra-bottom-margin'] + margin_bottom()
+    local inner = margin_inner()
     if self.fullpagealign == 'crop' then
         return string.format([[
             top-margin = %s\pt
