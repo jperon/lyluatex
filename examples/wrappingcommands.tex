@@ -1,0 +1,31 @@
+\documentclass[a5paper, fontsize=12pt]{scrbook}
+\usepackage[pass-fonts, debug]{lyluatex}
+
+\newcommand\mylily[2][1]{\lily[inline-staffsize=10, #1]{#2}}
+
+\newenvironment{lyfigure}[2][]{%
+\edef\mycaption{#2}
+\figure
+\center
+  \ly[#1]%
+}{%
+  \endly
+  \caption{\mycaption}
+\endcenter
+\endfigure
+}
+
+%% TODO: understand how to wrap:
+%% - a \newkeycommand within another \newkeycommand;
+%% - a \newkeyenvironment within another \newkeyenvironment.
+
+\begin{document}
+
+Ceci est \mylily[voffset=10pt]{a' b' c''} un test.
+
+\begin{lyfigure}[test]{caption}
+a' b' c
+d' e' f
+\end{lyfigure}
+
+\end{document}
