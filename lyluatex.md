@@ -99,7 +99,7 @@ Very short fragments of LilyPond code can directly be input using the \cmd{lilyp
 \lilypond{ c' d' e' }
 ```
 
-\lilypond{ c' d' e' }
+\lilypond[insert=systems]{ c' d' e' }
 
 Note that the sequence of notes is implicitly wrapped in a LilyPond music expression, but it is also possible to pass a “real” music expression:
 
@@ -107,7 +107,7 @@ Note that the sequence of notes is implicitly wrapped in a LilyPond music expres
 \lilypond{ \relative { c' d e }}
 ```
 
-\lilypond{ \relative { c' d e }}
+\lilypond[insert=systems]{ \relative { c' d e }}
 
 Fragments specified with \cmd{lilypond} are by default inserted as *inline*
 scores like individual characters, while the other types are by default includes
