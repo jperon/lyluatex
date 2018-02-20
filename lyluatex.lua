@@ -25,10 +25,12 @@ local DIM_OPTIONS = {
     'indent',
     'leftgutter',
     'line-width',
+    'max-left-protrusion',
+    'max-right-protrusion',
     'rightgutter',
     'paperwidth',
     'paperheight',
-    'voffset',
+    'voffset'
 }
 local MXML_OPTIONS = {
     'absolute',
@@ -157,6 +159,11 @@ local function locate(file, includepaths, ext)
 end
 
 
+function max(a, b)
+    if a > b then return a else return b end
+end
+
+
 local function mkdirs(str)
     local path = '.'
     for dir in string.gmatch(str, '([^%/]+)') do
@@ -245,28 +252,35 @@ This item will be skipped!
     end
 end
 
+local function get_bbox(filename, line_width)
+    return read_bbox(filename) or parse_bbox(filename, line_width)
+end
 
-local function read_bbox(filename, line_width)
-    local bbox = {}
+local function read_bbox(filename)
     local f = io.open(filename..'.bbox', 'r')
     if f then
+        local bbox = {}
         bbox.protrusion = f:read('*l')
         bbox.r_protrusion = f:read('*l')
         bbox.height = f:read('*l')
         f:close()
-    else
-        local bbline = ''
-        f = io.open(filename..'.eps', 'r')
-        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
-        f:close()
-        local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
-        bbox.protrusion = x_1
-        bbox.r_protrusion = x_2 - line_width
-        bbox.height = y_2 - y_1
-        f = io.open(filename..'.bbox', 'w')
-        f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
-        f:close()
+        return bbox
     end
+end
+
+local function parse_bbox(filename, line_width)
+    local bbox = {}
+    local bbline = ''
+    f = io.open(filename..'.eps', 'r')
+    while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
+    f:close()
+    local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    bbox.protrusion = -x_1
+    bbox.r_protrusion = x_2 - line_width
+    bbox.height = y_2 - y_1
+    f = io.open(filename..'.bbox', 'w')
+    f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
+    f:close()
     return bbox
 end
 
@@ -324,19 +338,11 @@ function latex.includepdf(pdfname, range, papersize)
         table.concat(range, ','), noautoscale, pdfname)
     )end
 
-function latex.includesystems(filename, range, protrusion, staffsize, indent)
-    if protrusion then
-        local f = io.open(filename..'.protrusion', 'w')
-        f:write(protrusion)
-        f:close()
-    else
-        local f = io.open(filename..'.protrusion', 'r')
-        protrusion = f:read('*a')
-        f:close()
-    end
+function latex.includesystems(filename, range, protrusion, gutter, staffsize, indent)
+    local h_offset = -protrusion
     if #range == 1 and range[1] == "1" and indent then
         warn([[Only one system, deactivating indentation.]])
-        protrusion = protrusion - indent
+        h_offset = h_offset - indent
     end
     local texoutput = ''
     if ly.pre_lilypond then
@@ -348,7 +354,7 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
         texoutput = texoutput..string.format([[
         \noindent\hspace*{%spt}\includegraphics{%s}%%
         ]],
-        protrusion, filename..'-'..system)
+        h_offset + gutter, filename..'-'..system)
         if ly.between_lilypond and index < #range then
             texoutput = texoutput..string.format([[
             \betweenLilyPondSystem{%s}%%
@@ -414,14 +420,14 @@ function Score:bbox(system)
         if not self.bboxes then
             self.bboxes = {}
             for i = 1, self:count_systems() do
-                table.insert(self.bboxes, read_bbox(self.output..'-'..i, self['line-width']))
+                table.insert(self.bboxes, get_bbox(self.output..'-'..i, self['line-width']))
             end
         end
         return self.bboxes[system]
     else
         if not self.bbox
         then
-            self.bbox = read_bbox(self.output, self['line-width'])
+            self.bbox = get_bbox(self.output, self['line-width'])
         end
         return self.bbox
     end
@@ -456,11 +462,16 @@ function Score:calc_properties()
     for _, dimension in pairs(DIM_OPTIONS) do
         self[dimension] = convert_unit(self[dimension])
     end
-    if not self.leftgutter then self.leftgutter = self.gutter end
-    if not self.rightgutter then self.rightgutter = self.gutter end
     if self.quote then
+        if not self.leftgutter then self.leftgutter = self.gutter end
+        if not self.rightgutter then self.rightgutter = self.gutter end
         self['line-width'] = self['line-width'] - self.leftgutter - self.rightgutter
+    else
+        self.leftgutter = 0
+        self.rightgutter = 0
     end
+    -- store for comparing protrusion against
+    self.original_lw = self['line-width']
     -- score fonts
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
@@ -527,6 +538,34 @@ Found something incompatible with `fragment`
             self.fragment = false
             self.relative = false
         end
+    end
+end
+
+function Score:check_protrusion(bbox_func)
+    if self.insert ~= 'systems' then return false end
+    local bbox = bbox_func(self.output, self['line-width'])
+    if not bbox then return false end
+
+    -- Determine offset due to left protrusion
+    local h_offset = max(bbox.protrusion - self['max-left-protrusion'], 0)
+    self.protrusion = bbox.protrusion - h_offset
+
+    -- Check if stafflines protrude into the right margin after offsetting
+    local line_extent = h_offset + self['line-width']
+    local shorten_line = max(line_extent - self.original_lw, 0)
+    -- Check if image protrudes over max-right-protrusion
+    local available = self.original_lw + self['max-right-protrusion']
+    local total_extent = line_extent + bbox.r_protrusion
+    local shorten_protrusion = max(total_extent - available, 0)
+    local shorten = max(shorten_line, shorten_protrusion)
+    if shorten > 0
+    then
+        self['line-width'] = self['line-width'] - shorten
+        -- recalculate hash to reflect the reduced line-width
+        self.output = self:output_filename()
+        return true
+    else
+        return false
     end
 end
 
@@ -941,7 +980,10 @@ end
 local HASHIGNORE = {
   'cleantmp',
   'hpadding',
+  'max-left-protrusion',
+  'max-right-protrusion',
   'print-only',
+  'valign',
   'voffset'
 }
 function Score:output_filename()
@@ -959,33 +1001,16 @@ end
 function Score:process()
     self:check_properties()
     self:calc_properties()
+    self:check_protrusion(read_bbox)
     local do_compile = not self:is_compiled()
     if do_compile then
-        self.ly_code = self:header()..self:content()
-        self:run_lilypond()
+        repeat
+            self:run_lilypond(self:header()..self:content())
+        until not self:check_protrusion(parse_bbox)
         self:optimize_pdf()
     end
     self:write_latex(do_compile)
     if not self.debug then self:delete_intermediate_files() end
-end
-
-function Score:_protrusion()
-    --[[ Determine the amount of space used to the left of the staff lines
-      and generate a horizontal offset command. ]]
-    local gutter = 0
-    if self.quote then gutter = self.leftgutter end
-    local protrusion = convert_unit(self.protrusion)
-    if protrusion then return protrusion + gutter
-    elseif self.protrusion then
-        local f = io.open(self.output..'.eps')
-        if not f then return end
-        local bbline = ''
-        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
-        f:close()
-        protrusion = bbline:match('-?%d+')
-        return tonumber(protrusion) + gutter
-    else return gutter
-    end
 end
 
 function Score:_range()
@@ -1004,7 +1029,7 @@ function Score:_range()
     return result
 end
 
-function Score:run_lilypond()
+function Score:run_lilypond(ly_code)
     mkdirs(dirname(self.output))
     self:lilypond_version()
     local p = io.popen(self:lilypond_cmd())
@@ -1013,7 +1038,7 @@ function Score:run_lilypond()
         f:write(p:read('*a'))
         f:close()
     else
-        p:write(self.ly_code)
+        p:write(ly_code)
     end
     self.lilypond_error = not p:close()
 end
@@ -1029,8 +1054,8 @@ function Score:write_latex(do_compile)
         latex.includepdf(self.output, self:_range(), self.papersize)
     elseif self.insert == 'systems' then
         latex.includesystems(
-            self.output, self:_range(), self:_protrusion(),
-            self.staffsize, self.indent
+            self.output, self:_range(), self.protrusion,
+            self.leftgutter, self.staffsize, self.indent
         )
     else -- inline
         if self:count_systems() > 1 then
@@ -1038,7 +1063,7 @@ function Score:write_latex(do_compile)
 This will probably cause bad output.]])
         end
         latex.includeinline(
-            self.output, self:_bbox(1).height, self.valign, self.hpadding, self.voffset
+            self.output, self:bbox(1).height, self.valign, self.hpadding, self.voffset
         )
     end
 end
