@@ -34,10 +34,6 @@ features.
   into the text document
 * Comprehensive configuration of the scores through options which work on global
   or per-score level
-* (Planned: intelligent interaction with other packages such as
-  [musicexamples](https://github.com/uliska/musicexamples),
-  [lilyglyphs](https://github.com/uliska/lilyglyphs) or
-  [scholarLY](https://github.com/openlilylib/scholarLY))
 
 ## Installation
 
@@ -74,11 +70,11 @@ the `.tex` document or in referenced standalone files.  \lyluatex\ will
 automatically take care of compiling the scores if necessary -- making use of an
 intelligent caching mechanism --, and it will match the score's layout to that
 of the text document.  \lyluatex\ will produce PDF image files which are
-automatically included within the current paragraph, in their own paragraphs
-or as full pages, but more sophisticated integrations are possible in combination
-with the `musicexamples`
-package^[[https://github.com/uliska/musicexamples](https://github.com/uliska/musicexamples)]
-(see section [musicexamples](#musicexamples)).
+automatically included within the current paragraph, in their own paragraphs or
+as full pages, but more sophisticated integrations are possible in combination
+with the
+`musicexamples`^[[https://github.com/uliska/musicexamples](https://github.com/uliska/musicexamples)]
+package.
 
 
 \lyluatex\ aims at being an upwards-compatible drop-in replacement for the
@@ -296,8 +292,7 @@ while ignoring the system count:
 \lyCmd{preLilyPondExample, \cmd{postLilyPondExample}}
 If either of these macros is defined it will be expanded immediately before or
 after the score.  This may for example be used to wrap the example in
-environments, but usually it will make more sense to use the
-\option{musicexamples} integration (see [musicexamples](#musicexamples)).
+environments.
 
 \lyIssue{Note:}
 If a score contains only one system or only the first system of a score is
@@ -496,17 +491,6 @@ If \option{papersize} is set, any values of \option{paperheight} and
 
 ### Alignment {#alignment}
 
-#### Horizontal Alignment of System-by-System Scores
-
-\lyOption{halign}{left|center|right}
-Control the paragraph alignment of system-by-system scores.
-
-\lyIssue{Note:}
-The default alignment depends on whether a score is wrapped in an environment or
-not: within an environment \option{halign} is set to `center`, without an
-environment to `left` if no alignment is specified explicitly. See
-[Environments](#environments) for details about the wrapping in environments.
-
 #### Protrusion
 
 #### Vertical Alignment of Fullpage Scores
@@ -676,33 +660,6 @@ since multiple labels will trigger \LaTeX\ errors.
 
 \lyOption{labelprefix}{ly\_}
 Sets the prefix to be prepended to each label.
-
-\lyIssue{Note:}
-When using \option{musicexamples} (see [musicexamples](#musicexamples)) the
-prefix will be hard-coded to `xmp:`.
-
-### Captions {#captions}
-
-\lyOption{caption}{}
-If the \option{caption} option is set then a \cmd{caption} is inserted after the
-score.
-
-\lyOption{captionbefore}{false}
-If \option{captionbefore} is set to `true` then the caption is inserted *before*
-the scores instead of after it.
-
-\lyIssue{Note:}
-It may seem like this option is unnecessary since entering the captions can be
-entered manually just the same.  However, when using `musicexamples` (see
-[musicexamples](#musicexamples)) the score is automatically wrapped in an
-environment and the caption properly applied.
-
-\lyIssue{NOTE:}
-Presumably the caption suffers the same issues as \option{intertext} for
-\option{verbatim}.
-
-\lyIssue{NOTE:}
-Captions haven't been implemented yet.
 
 ### Printing the Filename
 
@@ -937,10 +894,6 @@ All those options control the corresponding `musicxml2ly` switches;
 please refer to
 [`musicxml2ly` documentation](http://lilypond.org/doc/v2.18/Documentation/usage/invoking-musicxml2ly)
 for more information.
-
-# Cooperations
-
-## `musicexamples`{#musicexamples}
 
 # Appendix
 
