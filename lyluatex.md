@@ -303,29 +303,6 @@ small margin of error where this may produce undesirable results: if a score is
 just too long to fit on one system due to indentation but would have been
 engraved on one system *without* indent.
 
-#### Wrapping Scores in Environments {#environments}
-
-\lyluatex\ provides a convenient interface to wrap system-by-system scores in
-environments.
-
-\lyOption{environment}{}
-\lyOption{env-opts}{}
-If \option{environment} is set to a non-empty string the score will be wrapped
-in an environment of that name.  If \option{env-opts} is also set this will be
-used as the optional argument for the environment, usually to specify the
-placement of the environment.
-
-\lyOption{caption}{}
-\lyOption{captionbefore}{false}
-If a \option{caption} is set it is placed before or after the score, depending
-on the value of \option{captionbefore}.
-
-\lyIssue{Note:}
-If \option{caption} is set but \option{environment} is *not* then the score will
-implicitly be wrapped in a \option{figure} environment. If \option{environment}
-is set but no \option{env-opts} then `tbp` is used as a default positioning
-parameter.
-
 ### Fullpage
 
 \lyMargin{\texttt{insert=fullpage}}
