@@ -310,7 +310,6 @@ end
 local function parse_bbox(filename, line_width)
     local bbox = {}
     local bbline = ''
-    print(filename)
     local f = io.open(filename..'.eps', 'r')
     while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
     f:close()
@@ -454,7 +453,6 @@ function Score:new(ly_code, options, input_file)
     self.__index = self
     o.input_file = input_file
     o.ly_code = ly_code
-    o.orig_ly_code = ly_code
     return o
 end
 
@@ -822,11 +820,11 @@ function Score:header()
     return header
 end
 
-function Score:lilypond_cmd()
+function Score:lilypond_cmd(ly_code)
     local input, mode
     if self.debug then
         local f = io.open(self.output..'.ly', 'w')
-        f:write(self.ly_code)
+        f:write(ly_code)
         f:close()
         input = self.output..".ly 2>&1"
         mode = 'r'
@@ -1044,9 +1042,8 @@ function Score:process()
     self:check_protrusion(read_bbox)
     local do_compile = not self:is_compiled()
     if do_compile then
-        self.ly_code = self:header()..self:content()
         repeat
-            self:run_lilypond()
+            self:run_lilypond(self:header()..self:content())
         until not self:check_protrusion(parse_bbox)
         self:optimize_pdf()
     end
@@ -1070,23 +1067,23 @@ function Score:_range()
     return result
 end
 
-function Score:run_lilypond()
+function Score:run_lilypond(ly_code)
     mkdirs(dirname(self.output))
     self:lilypond_version()
-    local p = io.popen(self:lilypond_cmd())
+    local p = io.popen(self:lilypond_cmd(ly_code))
     if self.debug then
         local f = io.open(self.output..".log", 'w')
         f:write(p:read('*a'))
         f:close()
     else
-        p:write(self.ly_code)
+        p:write(ly_code)
     end
     self.lilypond_error = not p:close()
 end
 
 function Score:write_latex(do_compile)
     latex.filename(self.printfilename, self.insert, self.input_file)
-    latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext, self.addversion)
+    latex.verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
     if do_compile and not self:is_compiled_without_error() then return end
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
