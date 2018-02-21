@@ -25,8 +25,6 @@ local DIM_OPTIONS = {
     'indent',
     'leftgutter',
     'line-width',
-    'max-left-protrusion',
-    'max-right-protrusion',
     'rightgutter',
     'paperwidth',
     'paperheight',
@@ -161,22 +159,25 @@ local function margin_inner()
 end
 
 
+local function margin_outer()
+    return convert_unit((
+        tex.dimen.paperwidth -
+        tex.dimen.textwidth)..'sp') -
+        margin_inner()
+end
+
+
 local function margin_left()
     local odd = ly.PAGE % 2 == 1
     if odd then return margin_inner()
-    else return convert_unit((tex.dimen.paperwidth -
-        tex.dimen.textwidth)..'sp') -
-        margin_inner()
+    else return margin_outer()
     end
 end
 
 
 local function margin_right()
     local odd = ly.PAGE % 2 == 1
-    print(odd)
-    if odd then return convert_unit((tex.dimen.paperwidth -
-        tex.dimen.textwidth)..'sp') -
-        margin_inner()
+    if odd then return margin_outer()
     else return margin_inner()
     end
 end
@@ -501,10 +502,14 @@ function Score:calc_properties()
         staffsize = inline_staffsize
     end
     self.staffsize = staffsize
-    if self['max-left-protrusion'] == '0' then
-        self['max-left-protrusion'] = margin_left()..'pt' end
-    if self['max-right-protrusion'] == '0' then
-        self['max-right-protrusion'] = margin_right()..'pt' end
+    if self['max-inner-protrusion'] == '0' then
+        self.max_left_protrusion = margin_left()
+    else self.max_left_protrusion = convert_unit(self['max-inner-protrusion'])
+    end
+    if self['max-outer-protrusion'] == '0' then
+        self.max_right_protrusion = margin_right()
+    else self.max_right_protrusion = convert_unit(self['max-outer-protrusion'])
+    end
     -- dimensions that can be given by LaTeX
     for _, dimension in pairs(DIM_OPTIONS) do
         self[dimension] = convert_unit(self[dimension])
@@ -594,14 +599,14 @@ function Score:check_protrusion(bbox_func)
     if not bbox then return false end
 
     -- Determine offset due to left protrusion
-    local h_offset = max(bbox.protrusion - self['max-left-protrusion'], 0)
+    local h_offset = max(bbox.protrusion - self.max_left_protrusion, 0)
     self.protrusion = bbox.protrusion - h_offset
 
     -- Check if stafflines protrude into the right margin after offsetting
     local line_extent = h_offset + self['line-width']
     local shorten_line = max(line_extent - self.original_lw, 0)
-    -- Check if image protrudes over max-right-protrusion
-    local available = self.original_lw + self['max-right-protrusion']
+    -- Check if image protrudes over max_right_protrusion
+    local available = self.original_lw + self.max_right_protrusion
     local total_extent = line_extent + bbox.r_protrusion
     local shorten_protrusion = max(total_extent - available, 0)
     local shorten = max(shorten_line, shorten_protrusion)
@@ -1014,8 +1019,8 @@ end
 local HASHIGNORE = {
   'cleantmp',
   'hpadding',
-  'max-left-protrusion',
-  'max-right-protrusion',
+  'max-inner-protrusion',
+  'max-outer-protrusion',
   'print-only',
   'valign',
   'voffset'
