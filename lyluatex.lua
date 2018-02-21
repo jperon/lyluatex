@@ -751,7 +751,7 @@ produced a score. %s
         return true
     else
         --[[ ensure the score gets recompiled next time --]]
-        self:delete_intermediate_files()
+        os.execute('rm '..self.output..'*')
         if self.showfailed then
             tex.sprint(string.format([[
                 \begin{quote}
@@ -1030,10 +1030,7 @@ function Score:output_filename()
         end
     end
     local filename = md5.sumhexa(self:flatten_content(self.ly_code)..properties)
-    self:write_to_filelist(filename)
-    local output = self.tmpdir..'/'..filename
-    table.insert(self.output_names, output)
-    return output
+    return self.tmpdir..'/'..filename
 end
 
 function Score:process()
@@ -1048,6 +1045,7 @@ function Score:process()
         self:optimize_pdf()
     end
     self:write_latex(do_compile)
+    self:write_to_filelist()
     if not self.debug then self:delete_intermediate_files() end
 end
 
@@ -1079,6 +1077,7 @@ function Score:run_lilypond(ly_code)
         p:write(ly_code)
     end
     self.lilypond_error = not p:close()
+    if self:is_compiled() then table.insert(self.output_names, self.output) end
 end
 
 function Score:write_latex(do_compile)
@@ -1106,9 +1105,12 @@ This will probably cause bad output.]])
     end
 end
 
-function Score:write_to_filelist(filename)
+function Score:write_to_filelist()
     local f = io.open(FILELIST, 'a')
-    f:write(filename, '\t', self.input_file or '', '\t', self.label or '', '\n')
+    for _, file in pairs(self.output_names) do
+        local _, filename = file:match('(./+)(.*)')
+        f:write(filename, '\t', self.input_file or '', '\t', self.label or '', '\n')
+    end
     f:close()
 end
 
