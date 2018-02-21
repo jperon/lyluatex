@@ -168,16 +168,14 @@ end
 
 
 local function margin_left()
-    local odd = ly.PAGE % 2 == 1
-    if odd then return margin_inner()
+    if ly.is_odd_page() then return margin_inner()
     else return margin_outer()
     end
 end
 
 
 local function margin_right()
-    local odd = ly.PAGE % 2 == 1
-    if odd then return margin_outer()
+    if ly.is_odd_page() then return margin_outer()
     else return margin_inner()
     end
 end
@@ -502,13 +500,26 @@ function Score:calc_properties()
         staffsize = inline_staffsize
     end
     self.staffsize = staffsize
-    if self['max-inner-protrusion'] == '0' then
-        self.max_left_protrusion = margin_left()
-    else self.max_left_protrusion = convert_unit(self['max-inner-protrusion'])
-    end
-    if self['max-outer-protrusion'] == '0' then
-        self.max_right_protrusion = margin_right()
-    else self.max_right_protrusion = convert_unit(self['max-outer-protrusion'])
+    -- left and right max-protrusion
+    local is_odd = ly.is_odd_page()
+    if is_odd then
+        if self['max-inner-protrusion'] == '0' then
+            self.max_left_protrusion = margin_inner()
+        else self.max_left_protrusion =
+            convert_unit(self['max-inner-protrusion']) end
+        if self['max-outer-protrusion'] == '0' then
+            self.max_right_protrusion = margin_outer()
+        else self.max_right_protrusion =
+            convert_unit(self['max-outer-protrusion']) end
+    else
+        if self['max-inner-protrusion'] == '0' then
+            self.max_right_protrusion = margin_inner()
+        else self.max_right_protrusion =
+            convert_unit(self['max-inner-protrusion']) end
+        if self['max-outer-protrusion'] == '0' then
+            self.max_left_protrusion = margin_outer()
+        else self.max_left_protrusion =
+            convert_unit(self['max-outer-protrusion']) end
     end
     -- dimensions that can be given by LaTeX
     for _, dimension in pairs(DIM_OPTIONS) do
@@ -1293,6 +1304,14 @@ end
 
 function ly.is_num(_, v)
     return v == '' or tonumber(v)
+end
+
+
+function ly.is_odd_page()
+  -- TODO: We'll have to improve this
+  -- see https://github.com/jperon/lyluatex/pull/142#issuecomment-367124136
+    local odd = ly.PAGE % 2
+    if odd == 1 then return true else return false end
 end
 
 
