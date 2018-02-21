@@ -451,6 +451,7 @@ function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
     self.__index = self
+    o.output_names = {}
     o.input_file = input_file
     o.ly_code = ly_code
     return o
@@ -646,17 +647,14 @@ end
 
 function Score:delete_intermediate_files()
   if self.insert ~= 'fullpage' then
-      local n = self:count_systems()
-      for j = 1, n, 1 do
-          os.remove(self.output..'-'..j..'.eps')
-      end
-      os.remove(self.output..'-systems.tex')
-      os.remove(self.output..'-systems.texi')
-      os.remove(self.output..'.eps')
-      if self.lilypond_error then
-          -- ensure score gets recompiled next time
-          os.remove(self.output..'-systems.tex')
-          os.remove(self.output..'.pdf')
+      for _, filename in pairs(self.output_names) do
+          local n = self:count_systems()
+          for j = 1, n, 1 do
+              os.remove(filename..'-'..j..'.eps')
+          end
+          os.remove(filename..'-systems.tex')
+          os.remove(filename..'-systems.texi')
+          os.remove(filename..'.eps')
       end
   end
 end
@@ -1033,7 +1031,9 @@ function Score:output_filename()
     end
     local filename = md5.sumhexa(self:flatten_content(self.ly_code)..properties)
     self:write_to_filelist(filename)
-    return self.tmpdir..'/'..filename
+    local output = self.tmpdir..'/'..filename
+    table.insert(self.output_names, output)
+    return output
 end
 
 function Score:process()
