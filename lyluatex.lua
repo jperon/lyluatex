@@ -589,9 +589,7 @@ Found something incompatible with `fragment`
 end
 
 function Score:check_protrusion(bbox_func)
-  print("Check protrusion")
     if self.insert ~= 'systems' then return false end
-  print("Inside check protrusion")
     local bbox = bbox_func(self.output, self['line-width'])
     if not bbox then return false end
 
@@ -607,7 +605,7 @@ function Score:check_protrusion(bbox_func)
     local total_extent = line_extent + bbox.r_protrusion
     local shorten_protrusion = max(total_extent - available, 0)
     local shorten = max(shorten_line, shorten_protrusion)
-    if shorten > 0
+    if shorten >= 1
     then
         self['line-width'] = self['line-width'] - shorten
         -- recalculate hash to reflect the reduced line-width
