@@ -850,7 +850,7 @@ end
 function Score:ly_margins()
     local tex_top = self['extra-top-margin'] + self:tex_margin_top()
     local tex_bottom = self['extra-bottom-margin'] +
-        self:tex_margin_bottom(tex_top)
+        self:tex_margin_bottom()
     local inner = self:tex_margin_inner()
     if self.fullpagealign == 'crop' then
         return string.format([[
@@ -1042,26 +1042,36 @@ function Score:run_lilypond(ly_code)
     if self:is_compiled() then table.insert(self.output_names, self.output) end
 end
 
-function Score:tex_margin_bottom(tex_top)
-    return convert_unit(tex.dimen.paperheight..'sp') -
-    (tex_top + convert_unit(tex.dimen.textheight..'sp'))
+function Score:tex_margin_bottom()
+    if not self._tex_margin_bottom then
+        self._tex_margin_bottom =
+            convert_unit(tex.dimen.paperheight..'sp') -
+            self:tex_margin_top() -
+            convert_unit(tex.dimen.textheight..'sp')
+    end
+    return self._tex_margin_bottom
 end
 
 function Score:tex_margin_inner()
-    return convert_unit((
-        tex.sp('1in') +
-        tex.dimen.oddsidemargin +
-        tex.dimen.hoffset
-      )..'sp')
+    if not self._tex_margin_inner then
+        self._tex_margin_inner =
+            convert_unit((
+              tex.sp('1in') +
+              tex.dimen.oddsidemargin +
+              tex.dimen.hoffset
+            )..'sp')
+    end
+    return self._tex_margin_inner
 end
 
 function Score:tex_margin_outer()
-    return convert_unit((
-        tex.dimen.paperwidth -
-        tex.dimen.textwidth)..'sp') -
-        self:tex_margin_inner()
+    if not self._tex_margin_outer then
+        self._tex_margin_outer =
+            convert_unit((tex.dimen.paperwidth - tex.dimen.textwidth)..'sp') -
+                self:tex_margin_inner()
+    end
+    return self._tex_margin_outer
 end
-
 
 function Score:tex_margin_left()
     if self:is_odd_page() then return self:tex_margin_inner()
@@ -1076,12 +1086,15 @@ function Score:tex_margin_right()
 end
 
 function Score:tex_margin_top()
-    return convert_unit((
-        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
-        tex.dimen.headheight + tex.dimen.headsep
-    )..'sp')
+    if not self._tex_margin_top then
+        self._tex_margin_top =
+            convert_unit((
+                tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
+                tex.dimen.headheight + tex.dimen.headsep
+            )..'sp')
+    end
+    return self._tex_margin_top
 end
-
 
 function Score:write_latex(do_compile)
     latex.filename(self.printfilename, self.insert, self.input_file)
