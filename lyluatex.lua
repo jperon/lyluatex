@@ -146,49 +146,6 @@ local function font_default_staffsize()
 end
 
 
-local function margin_bottom(tex_top)
-    return convert_unit(tex.dimen.paperheight..'sp') -
-    (tex_top + convert_unit(tex.dimen.textheight..'sp'))
-end
-
-
-local function margin_inner()
-    return convert_unit((
-        tex.sp('1in') +
-        tex.dimen.oddsidemargin +
-        tex.dimen.hoffset
-      )..'sp')
-end
-
-
-local function margin_left()
-    local odd = ly.PAGE % 2 == 1
-    if odd then return margin_inner()
-    else return convert_unit((tex.dimen.paperwidth -
-        tex.dimen.textwidth)..'sp') -
-        margin_inner()
-    end
-end
-
-
-local function margin_right()
-    local odd = ly.PAGE % 2 == 1
-    print(odd)
-    if odd then return convert_unit((tex.dimen.paperwidth -
-        tex.dimen.textwidth)..'sp') -
-        margin_inner()
-    else return margin_inner()
-    end
-end
-
-
-local function margin_top()
-    return convert_unit((
-        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
-        tex.dimen.headheight + tex.dimen.headsep
-    )..'sp')
-end
-
 local function locate(file, includepaths, ext)
     local result
     for _, d in ipairs(extract_includepaths(includepaths)) do
@@ -451,6 +408,7 @@ function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
     self.__index = self
+    o.first_page = tex.count['c@page']
     o.output_names = {}
     o.input_file = input_file
     o.ly_code = ly_code
@@ -801,7 +759,7 @@ function Score:header()
                 print-first-page-number = ##t
                 first-page-number = %s
                 %s]],
-                ppn, ly.PAGE, self:ly_margins()
+                ppn, self.first_page, self:ly_margins()
 	    )
         )
     else
@@ -810,6 +768,10 @@ function Score:header()
 	    [[<<<PAPER>>>]], '')
     end
     return header
+end
+
+function Score:is_odd_page()
+    return self.first_page % 2 == 1
 end
 
 function Score:lilypond_cmd(ly_code)
@@ -881,9 +843,10 @@ function Score:ly_language()
 end
 
 function Score:ly_margins()
-    local tex_top = self['extra-top-margin'] + margin_top()
-    local tex_bottom = self['extra-bottom-margin'] + margin_bottom(tex_top)
-    local inner = margin_inner()
+    local tex_top = self['extra-top-margin'] + self:tex_margin_top()
+    local tex_bottom = self['extra-bottom-margin'] +
+        self:tex_margin_bottom(tex_top)
+    local inner = self:tex_margin_inner()
     if self.fullpagealign == 'crop' then
         return string.format([[
             top-margin = %s\pt
@@ -1073,6 +1036,47 @@ function Score:run_lilypond(ly_code)
     self.lilypond_error = not p:close()
     if self:is_compiled() then table.insert(self.output_names, self.output) end
 end
+
+function Score:tex_margin_bottom(tex_top)
+    return convert_unit(tex.dimen.paperheight..'sp') -
+    (tex_top + convert_unit(tex.dimen.textheight..'sp'))
+end
+
+function Score:tex_margin_inner()
+    return convert_unit((
+        tex.sp('1in') +
+        tex.dimen.oddsidemargin +
+        tex.dimen.hoffset
+      )..'sp')
+end
+
+function Score:tex_margin_outer()
+    return convert_unit((
+        tex.dimen.paperwidth -
+        tex.dimen.textwidth)..'sp') -
+        self:tex_margin_inner()
+end
+
+
+function Score:tex_margin_left()
+    if self:is_odd_page() then return self:tex_margin_inner()
+    else return self:tex_margin_outer()
+    end
+end
+
+function Score:tex_margin_right()
+    if self:is_odd_page() then return self:tex_margin_outer()
+    else return self:tex_margin_inner()
+    end
+end
+
+function Score:tex_margin_top()
+    return convert_unit((
+        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
+        tex.dimen.headheight + tex.dimen.headsep
+    )..'sp')
+end
+
 
 function Score:write_latex(do_compile)
     latex.filename(self.printfilename, self.insert, self.input_file)
