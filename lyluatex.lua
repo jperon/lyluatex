@@ -267,6 +267,22 @@ local function read_bbox(filename, line_width)
         f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
         f:close()
     end
+end
+
+local function parse_bbox(filename, line_width)
+    local f = io.open(filename..'.eps', 'r')
+    if not f then return end
+    local bbline = ''
+    while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
+    f:close()
+    local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    local bbox = {}
+    bbox.protrusion = -x_1
+    bbox.r_protrusion = x_2 - line_width
+    bbox.height = y_2 - y_1
+    f = io.open(filename..'.bbox', 'w')
+    f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
+    f:close()
     return bbox
 end
 
@@ -400,6 +416,7 @@ function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
     self.__index = self
+    o.output_names = {}
     o.input_file = input_file
     o.ly_code = ly_code
     o.orig_ly_code = ly_code
@@ -506,6 +523,36 @@ Found something incompatible with `fragment`
             self.fragment = false
             self.relative = false
         end
+    end
+end
+
+function Score:check_protrusion(bbox_func)
+    if self.insert ~= 'systems' then return false end
+    local bbox = bbox_func(self.output, self['line-width'])
+    if not bbox then return false end
+
+    -- Determine offset due to left protrusion
+    local h_offset = max(bbox.protrusion - self['max-left-protrusion'], 0)
+    self.protrusion = bbox.protrusion - h_offset
+
+    -- Check if stafflines protrude into the right margin after offsetting
+    local line_extent = h_offset + self['line-width']
+    local shorten_line = max(line_extent - self.original_lw, 0)
+    -- Check if image protrudes over max-right-protrusion
+    local available = self.original_lw + self['max-right-protrusion']
+    local total_extent = line_extent + bbox.r_protrusion
+    local shorten_protrusion = max(total_extent - available, 0)
+    local shorten = max(shorten_line, shorten_protrusion)
+    if shorten >= 1
+    then
+        self['line-width'] = self['line-width'] - shorten
+        -- recalculate hash to reflect the reduced line-width
+        self.output = self:output_filename()
+        warn([[Compiled score exceeds protrusion limit(s).
+Recompile with smaller line-width.]])
+        return true
+    else
+        return false
     end
 end
 
@@ -781,19 +828,11 @@ function Score:ly_language()
 end
 
 function Score:ly_margins()
-    local tex_top = self['extra-top-margin'] + convert_unit((
-        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
-        tex.dimen.headheight + tex.dimen.headsep
-    )..'sp')
-    local tex_bottom = self['extra-bottom-margin'] + (
-        convert_unit(tex.dimen.paperheight..'sp') -
-        (tex_top + convert_unit(tex.dimen.textheight..'sp'))
-    )
-    local inner = convert_unit((
-        tex.sp('1in') +
-        tex.dimen.oddsidemargin +
-        tex.dimen.hoffset
-    )..'sp')
+    local tex_top = self['extra-top-margin'] + self:tex_margin_top()
+    local tex_bottom = self['extra-bottom-margin'] +
+        self:tex_margin_bottom()
+    local inner = self:tex_margin_inner()
+    local left = self:tex_margin_left()
     if self.fullpagealign == 'crop' then
         return string.format([[
             top-margin = %s\pt
@@ -801,7 +840,7 @@ function Score:ly_margins()
             inner-margin = %s\pt
             left-margin = %s\pt
             ]],
-            tex_top, tex_bottom, inner, inner
+            tex_top, tex_bottom, inner, left
         )
     elseif self.fullpagealign == 'staffline' then
       local top_distance = 4 * tex_top / self.staffsize + 2
@@ -930,12 +969,20 @@ function Score:output_filename()
             properties = properties..'_'..k..'_'..self[k]
         end
     end
+    if self.insert == 'fullpage' then
+        properties = properties..
+            self:tex_margin_top()..
+            self:tex_margin_bottom()..
+            self:tex_margin_left()..
+            self:tex_margin_right()
+    end
     local filename = md5.sumhexa(self:flatten_content(self.ly_code)..properties)
     self:write_to_filelist(filename)
     return self.tmpdir..'/'..filename
 end
 
 function Score:process()
+    self.first_page = tex.count['c@page']
     self:check_properties()
     self:calc_properties()
     local do_compile = not self:is_compiled()

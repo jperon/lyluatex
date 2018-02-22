@@ -120,9 +120,6 @@
 % Appearance of LilyPond version (if printed)
 \newcommand{\lyVersion}[1]{\noindent {\footnotesize\emph{(GNU LilyPond #1)}\par}\bigskip}
 
-% Retrieve the current page number for use in the functions
-\def\ly@page{\directlua{ly.PAGE = \thepage}}
-
 % Retrieve the three main font families (rm, sf, tt)
 % and store them as options. Additionally store the
 % *current* font for optional use.
@@ -170,13 +167,13 @@
   ly.newpage_if_fullpage()
 }%
 \ly@resetunits%
-\ly@page%
 \ly@currentfonts%
 \directlua{ly.score:process()}%
 }
 
 % Inclusion of a .ly file
 \newcommand*\includely[2][]{%
+\directlua{ly.state = 'env'}%
   \ly@compilescore{ly.file(
     '\luatexluaescapestring{#2}', [[#1]]
   )}%
