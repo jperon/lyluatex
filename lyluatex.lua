@@ -25,6 +25,7 @@ local DIM_OPTIONS = {
     'indent',
     'leftgutter',
     'line-width',
+    'max-protrusion',
     'max-left-protrusion',
     'max-right-protrusion',
     'rightgutter',
@@ -463,6 +464,10 @@ function Score:calc_properties()
     for _, dimension in pairs(DIM_OPTIONS) do
         self[dimension] = convert_unit(self[dimension])
     end
+    if not self['max-left-protrusion'] then
+        self['max-left-protrusion'] = self['max-protrusion'] end
+    if not self['max-right-protrusion'] then
+        self['max-right-protrusion'] = self['max-protrusion'] end
     if self.quote then
         if not self.leftgutter then self.leftgutter = self.gutter end
         if not self.rightgutter then self.rightgutter = self.gutter end
