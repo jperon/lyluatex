@@ -993,6 +993,13 @@ function Score:output_filename()
             properties = properties..'_'..k..'_'..self[k]
         end
     end
+    if self.insert == 'fullpage' then
+        properties = properties..
+            self:tex_margin_top()..
+            self:tex_margin_bottom()..
+            self:tex_margin_left()..
+            self:tex_margin_right()
+    end
     local filename = md5.sumhexa(self:flatten_content(self.ly_code)..properties)
     return self.tmpdir..'/'..filename
 end
