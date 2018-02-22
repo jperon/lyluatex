@@ -731,7 +731,7 @@ end
 function Score:header()
     local header = LY_HEAD
     for element in LY_HEAD:gmatch('<<<(%w+)>>>') do
-        header = header:gsub('<<<'..element..'>>>', self['ly_'..element](self))
+        header = header:gsub('<<<'..element..'>>>', self['ly_'..element](self) or '')
     end
     return header
 end
@@ -810,19 +810,17 @@ function Score:ly_fonts()
             self.sffamily,
             self.ttfamily
         )
-    else return '' end
+    end
 end
 
 function Score:ly_indent()
-    if self.indent == '' and self.insert == 'fullpage' then return ''
-    else return [[indent = ]]..(self.indent or 0)..[[\pt]]
+    if not (self.indent == '' and self.insert == 'fullpage') then
+        return [[indent = ]]..(self.indent or 0)..[[\pt]]
     end
 end
 
 function Score:ly_language()
-    if not self.language then return ''
-    else return '\\language "'..self.language..'"'
-    end
+    if self.language then return '\\language "'..self.language..'"' end
 end
 
 function Score:ly_linewidth() return self['line-width'] end
@@ -901,14 +899,11 @@ function Score:ly_paper()
             %s]],
             ppn, self.first_page, self:ly_margins()
 	    )
-    else return ''
     end
 end
 
 function Score:ly_papersize()
-    if self.papersize then return '#(set-paper-size "'..self.papersize..'")'
-    else return ''
-    end
+    if self.papersize then return '#(set-paper-size "'..self.papersize..'")' end
 end
 
 function Score:ly_preamble()
@@ -923,9 +918,10 @@ function Score:ly_preamble()
 end
 
 function Score:ly_raggedright()
-    if self['ragged-right'] == 'default' then return ''
-    elseif self['ragged-right'] then return 'ragged-right = ##t'
-    else return 'ragged-right = ##f'
+    if not self['ragged-right'] == 'default' then
+        if self['ragged-right'] then return 'ragged-right = ##t'
+        else return 'ragged-right = ##f'
+        end
     end
 end
 
