@@ -129,51 +129,51 @@
 % and store them as options. Additionally store the
 % *current* font for optional use.
 \newcommand{\ly@currentfonts}{%
-\begingroup%
+  \begingroup%
     \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}%
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
     \directlua{
-        ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
-        ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
-        ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
+      ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
+      ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
+      ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
     }%
-\endgroup%
+  \endgroup%
 }
 
 \newcommand{\ly@checkprepost}{%
-\ifx\preLilyPondExample\undefined%
-\directlua{ly.pre_lilypond = false}%
-\else%
-\directlua{ly.pre_lilypond = true}%
-\fi%
-\ifx\postLilyPondExample\undefined%
-\directlua{ly.post_lilypond = false}%
-\else%
-\directlua{ly.post_lilypond = true}%
-\fi%
-\ifx\betweenLilyPondSystem\undefined%
-\directlua{ly.between_lilypond = false}%
-\else%
-\directlua{ly.between_lilypond = true}%
-\fi%
+  \ifx\preLilyPondExample\undefined%
+    \directlua{ly.pre_lilypond = false}%
+  \else%
+    \directlua{ly.pre_lilypond = true}%
+  \fi%
+  \ifx\postLilyPondExample\undefined%
+    \directlua{ly.post_lilypond = false}%
+  \else%
+    \directlua{ly.post_lilypond = true}%
+  \fi%
+  \ifx\betweenLilyPondSystem\undefined%
+    \directlua{ly.between_lilypond = false}%
+  \else%
+    \directlua{ly.between_lilypond = true}%
+  \fi%
 }
 
 % Main commands
 % Score processing
 \newcommand*{\ly@compilescore}[1]{%
-\ly@setunits%
-\ly@checkprepost%
-\directlua{
-  ly.set_property('currfiledir', [[\currfiledir]])
-  ly.set_property('twoside', '\ly@istwosided')
-  #1
-  ly.newpage_if_fullpage()
-}%
-\ly@resetunits%
-\ly@currentfonts%
-\directlua{ly.score:process()}%
+  \ly@setunits%
+  \ly@checkprepost%
+  \directlua{
+    ly.set_property('currfiledir', [[\currfiledir]])
+    ly.set_property('twoside', '\ly@istwosided')
+    #1
+    ly.newpage_if_fullpage()
+  }%
+  \ly@resetunits%
+  \ly@currentfonts%
+  \directlua{ly.score:process()}%
 }
 
 % Inclusion of a .ly file
@@ -196,10 +196,10 @@
 \newcommand\lyscorebegin[1]{\directlua{ly.buffenv_begin()}}
 \newcommand\lyscoreend{\directlua{ly.buffenv_end()}}
 \newenvironment{ly@bufferenv}{%
-\lyscorebegin{\@currenvir}
+  \lyscorebegin{\@currenvir}%
 }{%
-\lyscoreend%
-\ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
+  \lyscoreend%
+  \ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
 }
 
 \NewEnviron{ly@compilely}{%
@@ -227,18 +227,20 @@
 }
 
 \newcommand*{\lily}[2][]{%
-\edef\options{#1}%
-\let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
-\directlua{ly.state = 'cmd'}%
-\begin{ly@compilely}%
-#2
-\end{ly@compilely}%
-\let\repeat\ly@oldrepeat%
+  \edef\options{#1}%
+  \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
+  \directlua{ly.state = 'cmd'}%
+  \begin{ly@compilely}%
+    #2
+  \end{ly@compilely}%
+  \let\repeat\ly@oldrepeat%
 }
 
 % Commands for compatibility with lilypond-book
 \let\lilypondfile\includely%
-\protected\def\lilypond{\def\reserved@a{lilypond}%
+\protected\def\lilypond{%
+  \def\reserved@a{lilypond}%
   \ifx\reserved@a\@currenvir\expandafter\ly%
-  \else\expandafter\lily\fi}
+  \else\expandafter\lily\fi%
+}%
 \let\endlilypond\endly
