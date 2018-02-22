@@ -5,25 +5,21 @@
 
 \newenvironment{lyfigure}[2][]{%
 \edef\mycaption{#2}
-\figure
-\center
-  \ly[#1]%
+\begin{figure}
+\begin{center}
+  \begin{lilypond}[#1]%
 }{%
-  \endly
+  \end{lilypond}
   \caption{\mycaption}
-\endcenter
-\endfigure
+\end{center}
+\end{figure}
 }
-
-%% TODO: understand how to wrap:
-%% - a \newkeycommand within another \newkeycommand;
-%% - a \newkeyenvironment within another \newkeyenvironment.
 
 \begin{document}
 
 Ceci est \mylily[voffset=10pt]{a' b' c''} un test.
 
-\begin{lyfigure}[test]{caption}
+\begin{lyfigure}{caption}
 a' b' c
 d' e' f
 \end{lyfigure}
