@@ -587,8 +587,8 @@ print-only=1]
 }
 \end{lilypond}
 
-Note that this is *not* achieved by scaling the \textsc{pdf} file but by
-actually recompiling the score with modified \option{line-width}, thus keeping
+Note that this is not achieved by *scaling* the \textsc{pdf} file but by
+actually *recompiling* the score with modified \option{line-width}, thus keeping
 the correct staffsize.  A warning message will inform about that fact on the
 console and in the log file.
 
@@ -651,18 +651,18 @@ print-only=1]
 
 Controls how the top and bottom margins of a score are calculated. With `crop`
 LilyPond's `margin` paper variables are simply set to those of the
-\LaTeX\ document, while `staffsize` pursues a different approach that makes the
+\LaTeX\ document, while `staffline` pursues a different approach that makes the
 outermost *stafflines* align with the margin of the text's type area.
 
 With `crop` the pages may look somewhat uneven because the top and bottom
 systems are often pushed inside the page because the *extremal* score items are
-aligned to the text.  With `staffsize` on the other hand it may happen that
+aligned to the text.  With `staffline` on the other hand it may happen that
 score items protrude too much into the vertical margins.
 
 \lyIssue{NOTE:}
-The `fullpagealign=staffline` option is highly experimental and has to be used
-with care. While positioning the extremal staves works perfectly the approach
-may confuse LilyPond's overall spacing algorithms. The `stretchability`
+The \option{fullpagealign=staffline} option is highly experimental and has to be
+used with care. While positioning the extremal staves works perfectly the
+approach may confuse LilyPond's overall spacing algorithms. The `stretchability`
 parameters of `top-system-spacing`, `top-markup-spacing`, and
 `last-bottom-spacing` are forced to `0`, which seems to “unbalance” the mutual
 stretches of vertical spacing. When scores appear compressed it is possible to
@@ -673,8 +673,8 @@ in the score.
 Another issue with \option{fullpagealign=staffline} is that it doesn't work
 properly with \option{print-page-number}.  If these two options are set LilyPond
 will print the page numbers at the top of the paper, without a margin.  But when
-aligning the stafflines to the type area one will usually want to have \LaTeX\
-print the page headers and footers anyway.
+aligning the stafflines to the type area one will usually want to have
+\LaTeX\ print the page headers and footers anyway.
 
 \lyOption{extra-bottom-margin}{0}
 
@@ -771,10 +771,10 @@ option).
 \lyOption{nostaff}{false}
 Preset: suppress staff lines, clefs, and time signatures (but do use timing).
 
-Note that there is no option to suppress key signatures because since a key
-signature is not *implicitly* printed. *If* there should be the need to *have* a
-key signature and at the same time suppress it, it's reasonable to expect this
-to be explicitly done in the LilyPond code.
+Note that there is no option to suppress key signatures since a key signature is
+not *implicitly* printed. *If* there should be the need to *have* a key
+signature and at the same time suppress it, it's reasonable to expect this to be
+explicitly done in the LilyPond code.
 
 ### Relative or Absolute Pitches {#relative}
 
@@ -814,7 +814,7 @@ into account.
 
 \lyIssue{Note:}
 It should be obvious but \option{label} can only be used as a *local* option
-since multiple labels will trigger \LaTeX\ errors.
+since multiple identical labels will trigger \LaTeX\ errors.
 
 \lyOption{labelprefix}{ly\_}
 Sets the prefix to be prepended to each label.
@@ -935,7 +935,7 @@ and relative paths are searched for in the following order:
 
 Additionally the list of include paths is passed to LilyPond's include path, so
 they can be used for including files from within the LilyPond code.  Paths
-starting with the tilde will ibe mplicitly expanded to absolute paths in that
+starting with the tilde will implicitly be expanded to absolute paths in that
 process.
 
 ### LilyPond Executable
@@ -1031,9 +1031,9 @@ not useful for later compilations but keep them all when \option{debug} is
 active.
 
 \lyOption{showfailed}{false}
-
 If LilyPond failed to produce a score and \option{showfailed} is set to `false`
-then the \LaTeX\ compilation will stop with an error.  If on the other hand
+then the \LaTeX\ compilation will stop with an error.  This error can be
+skipped, but nothing will be included in the document.  If on the other hand
 \option{showfailed} is set to `true` only a warning is issued and a box with an
 informative text is typeset into the resulting document.
 
