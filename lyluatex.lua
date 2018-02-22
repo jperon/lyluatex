@@ -266,12 +266,13 @@ local function read_bbox(filename)
 end
 
 local function parse_bbox(filename, line_width)
-    local bbox = {}
-    local bbline = ''
     local f = io.open(filename..'.eps', 'r')
+    if not f then return end
+    local bbline = ''
     while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
     f:close()
     local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    local bbox = {}
     bbox.protrusion = -x_1
     bbox.r_protrusion = x_2 - line_width
     bbox.height = y_2 - y_1
