@@ -42,6 +42,9 @@
     ['labelprefix'] = {'ly_'},
     ['line-width'] = {[[\linewidth]], ly.is_dim},
     ['ly-version'] = {'2.18.2'},
+    ['max-protrusion'] = {[[\maxdimen]], ly.is_dim},
+        ['max-left-protrusion'] = {'', ly.is_dim},
+        ['max-right-protrusion'] = {'', ly.is_dim},
     ['noclef'] = {'false', 'true', ''},
     ['nostaff'] = {'false', 'true', ''},
     ['nostaffsymbol'] = {'false', 'true', ''},
@@ -98,12 +101,14 @@
   \let\ly@old@pt\pt\protected\def\pt{pt}%
   \let\ly@old@mm\mm\protected\def\mm{mm}%
   \let\ly@old@cm\cm\protected\def\cm{cm}%
+  \let\ly@old@hfuzz\hfuzz\setlength{\hfuzz}{\maxdimen}
 }
 \newcommand{\ly@resetunits}{%
   \let\in\ly@old@in%
   \let\pt\ly@old@pt%
   \let\mm\ly@old@mm%
   \let\cm\ly@old@cm%
+  \setlength{\hfuzz}{\ly@old@hfuzz}
 }
 
 % Command to change options during the document
