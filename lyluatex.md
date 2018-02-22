@@ -280,10 +280,11 @@ paragraph and a variable skip depending on the staffsize.
 However, if a macro \cmd{betweenLilyPondSystem} is defined it will be expanded
 between each system. This macro must accept one argument, which will be the
 number of systems already printed in the score (‘1’ after the first system).
-With this information it is possible to respond individually to systems (e.\,g.
-“print a horizontal rule after each third system”).  But a more typical use case
-is to insert different space between the systems or using simple line breaks
-while ignoring the system count:
+With this information it is possible to respond individually to systems (e.g.
+“print a horizontal rule after each third system” or “force page breaks after
+the third and seventh system”).  But a more typical use case is to insert
+different space between the systems or using simple line breaks while ignoring
+the system count:
 
 ```tex
 \newcommand{\betweenLilyPondSystem}[1]{\linebreak}
@@ -344,10 +345,10 @@ The \option{inline-staffsize} option sets an absolute staffsize in `pt`
 
 \lyOption{valign}{center}
 Controls the vertical alignment of the score against the current line of text.
-The default value `center` will align the vertical center of the image to the
-baseline of the text.  `top` will align the top edge of the image with the
-X-height of the text (actually: `1em` above the baseline). `bottom` aligns the
-bottom of the image with the text baseline.
+The default value `center` will align the vertical center of the image to a
+virtual line `1/2em` above the baseline of the text.  `top` will align the top
+edge of the image with the X-height of the text (actually: `1em` above the
+baseline). `bottom` aligns the bottom of the image with the text baseline.
 
 *Note:* The alignment works with the edges of the *image file*, there is no
 notion of an “optical” center or aligning with the staff lines.
@@ -395,7 +396,7 @@ options to tweak the layout in detail.
 ### Dimensions
 
 If not stated otherwise dimensions can be given in arbitrary \TeX\ units, e.g.
-`200pt`, `1ex` or `3cm`.
+`200pt`, `1ex` or `3cm` or as \TeX\ lengths, e.g. `0.4\textwidth`.
 
 #### General
 
@@ -415,7 +416,7 @@ LilyPond's own default staff size is `20`.
 \lyOption{ragged-right}{default}
 Set the score to ragged-right systems.
 By default, single-system scores will not be justified but printed at their
-“natural” width, while scores with multiple systems be default wil be
+“natural” width, while scores with multiple systems by default will be
 justified.
 With this option set to true, all systems are printed at their natural width;
 with this option set to false, all systems are justified (even for
