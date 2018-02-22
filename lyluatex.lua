@@ -409,7 +409,6 @@ function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
     self.__index = self
-    o.first_page = tex.count['c@page']
     o.output_names = {}
     o.input_file = input_file
     o.ly_code = ly_code
@@ -854,6 +853,7 @@ function Score:ly_margins()
     local tex_bottom = self['extra-bottom-margin'] +
         self:tex_margin_bottom()
     local inner = self:tex_margin_inner()
+    local left = self:tex_margin_left()
     if self.fullpagealign == 'crop' then
         return string.format([[
             top-margin = %s\pt
@@ -861,7 +861,7 @@ function Score:ly_margins()
             inner-margin = %s\pt
             left-margin = %s\pt
             ]],
-            tex_top, tex_bottom, inner, inner
+            tex_top, tex_bottom, inner, left
         )
     elseif self.fullpagealign == 'staffline' then
       local top_distance = 4 * tex_top / self.staffsize + 2
@@ -998,6 +998,7 @@ function Score:output_filename()
 end
 
 function Score:process()
+    self.first_page = tex.count['c@page']
     self:check_properties()
     self:calc_properties()
     self:check_protrusion(read_bbox)
