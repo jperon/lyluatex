@@ -101,20 +101,18 @@
   \let\ly@old@pt\pt\protected\def\pt{pt}%
   \let\ly@old@mm\mm\protected\def\mm{mm}%
   \let\ly@old@cm\cm\protected\def\cm{cm}%
-  \let\ly@old@hfuzz\hfuzz\setlength{\hfuzz}{\maxdimen}
+  \let\ly@old@hfuzz\hfuzz\setlength{\hfuzz}{\maxdimen}%
 }
 \newcommand{\ly@resetunits}{%
   \let\in\ly@old@in%
   \let\pt\ly@old@pt%
   \let\mm\ly@old@mm%
   \let\cm\ly@old@cm%
-  \setlength{\hfuzz}{\ly@old@hfuzz}
+  \setlength{\hfuzz}{\ly@old@hfuzz}%
 }
 
 % Command to change options during the document
-\newcommand{\lysetoption}[2]{%
-  \directlua{ly.set_property([[#1]], [[#2]])}
-}
+\newcommand{\lysetoption}[2]{\directlua{ly.set_property([[#1]], [[#2]])}}
 
 % How the filename of a score will look like (if printed)
 \newcommand{\lyFilename}[1]{\noindent #1\par\bigskip}
@@ -191,8 +189,17 @@
   )}
 }
 
-% Base environment to include a LilyPond fragment integrated into
+% Base environments to include a LilyPond fragment integrated into
 % the document.
+\newcommand\lyscorebegin[1]{\directlua{ly.buffenv_begin()}}
+\newcommand\lyscoreend{\directlua{ly.buffenv_end()}}
+\newenvironment{ly@bufferenv}{%
+\lyscorebegin{\@currenvir}
+}{%
+\lyscoreend%
+\ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
+}
+
 \NewEnviron{ly@compilely}{%
   \ly@compilescore{ly.fragment(
     '\luatexluaescapestring{\unexpanded\expandafter{\BODY}}',
@@ -209,27 +216,22 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
+\newenvironment{ly}[1][]{%
+  \edef\options{#1}%
+  \directlua{ly.state = 'env'}%
+  \ly@bufferenv
+}{%
+  \endly@bufferenv
+}
+
 \newcommand*{\lily}[2][]{%
-\edef\options{#1}
+\edef\options{#1}%
 \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
-\directlua{ly.state = 'cmd'}
+\directlua{ly.state = 'cmd'}%
 \begin{ly@compilely}%
 #2
 \end{ly@compilely}%
 \let\repeat\ly@oldrepeat%
-}
-
-\newcommand\lyscorebegin[1]{\directlua{ly.env_begin('#1')}}
-\newcommand\lyscoreend{\directlua{ly.env_end()}}
-
-\newenvironment{ly}[1][]{%
-\edef\options{#1}%
-\typeout\options%
-\directlua{ly.state = 'env'}%
-\lyscorebegin{\@currenvir}
-}{%
-\lyscoreend%
-\ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
 }
 
 % Commands for compatibility with lilypond-book

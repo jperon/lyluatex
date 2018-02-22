@@ -1020,6 +1020,7 @@ function Score:process()
             self:run_lilypond(self:header()..self:content())
         until not self:check_protrusion(parse_bbox)
         self:optimize_pdf()
+    else table.insert(self.output_names, self.output)
     end
     self:write_latex(do_compile)
     self:write_to_filelist()
@@ -1148,6 +1149,31 @@ end
 
 --[[ ========================== Public functions ========================== ]]
 
+ly.score_content = {}
+function ly.buffenv_begin()
+    function ly.buffenv(line)
+        table.insert(ly.score_content, line)
+        if line:find([[\end{%w+}]]) then return nil end
+        return ''
+    end
+    ly.score_content = {}
+    luatexbase.add_to_callback(
+        'process_input_buffer',
+        ly.buffenv,
+        'readline'
+    )
+end
+
+
+function ly.buffenv_end()
+    luatexbase.remove_from_callback(
+        'process_input_buffer',
+        'readline'
+    )
+    table.remove(ly.score_content)
+end
+
+
 function ly.clean_tmp_dir()
     local hash, file_is_used
     local hash_list = {}
@@ -1199,33 +1225,6 @@ function ly.declare_package_options(options)
     mkdirs(options.tmpdir[1])
     FILELIST = options.tmpdir[1]..'/'..splitext(status.log_name, 'log')..'.list'
     os.remove(FILELIST)
-end
-
-
-ly.score_content = {}
-function ly.env_begin(envs)
-    function ly.process_buffer(line)
-        table.insert(ly.score_content, line)
-        for _, env in pairs(envs:explode(',')) do
-            if line:find([[\end{]]..env:gsub('^ ', '')..[[}]]) then return nil end
-        end
-        return ''
-    end
-    ly.score_content = {}
-    luatexbase.add_to_callback(
-        'process_input_buffer',
-        ly.process_buffer,
-        'readline'
-    )
-end
-
-
-function ly.env_end()
-    luatexbase.remove_from_callback(
-        'process_input_buffer',
-        'readline'
-    )
-    table.remove(ly.score_content)
 end
 
 
