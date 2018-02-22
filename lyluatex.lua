@@ -206,6 +206,7 @@ end
 
 
 local function process_options(k, v)
+    if not contains_key(OPTIONS, k) then err('Unknown option: '..k) end
     -- aliases
     if OPTIONS[k] and OPTIONS[k][2] == ly.is_alias then
         if OPTIONS[k][1] == v then return
@@ -492,6 +493,8 @@ function Score:calc_properties()
 end
 
 function Score:calc_staff_properties()
+    -- included files cannot be fragments
+    if ly.state == 'file' then self.fragment = false self.relative = false end
     -- preset for bare notation symbols in inline images
     if self.insert == 'bare-inline' then self.nostaff = 'true' end
     -- handle meta properties
@@ -1218,7 +1221,7 @@ function ly.declare_package_options(options)
                 }}%%
             ]],
             k, k))
-            exopt = exopt..k..'='..v[1]..','
+            exopt = exopt..k..'='..(v[1] or '')..','
     end
     tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]])
     tex.sprint([[\ProcessOptionsX]])
