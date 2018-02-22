@@ -327,9 +327,7 @@ function latex.includeinline(pdfname, height, valign, hpadding, voffset)
     elseif valign == 'top' then v_base = convert_unit('1em') - height
     else v_base = (convert_unit('1em') - height) / 2
     end
-    tex.sprint(string.format([[
-\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}
-]], hpadding, v_base + voffset, pdfname, hpadding))
+    tex.sprint(string.format([[\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}]], hpadding, v_base + voffset, pdfname, hpadding))
 end
 
 function latex.includepdf(pdfname, range, papersize)
