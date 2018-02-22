@@ -487,14 +487,8 @@ print-only=1]
 This is also how LilyPond handles margins (and the only option when including
 scores with \option{insert=fullpage}).  However, \lyluatex\ provides a
 configurable limit to guard against excessive protrusion.  By default this is
-set to the current page margins, so protruding elements will not be cut off at
-the page border.
-
-If the protrusion limit kicks in the score will be offset to the right by the
-appropriate amount, and if necessary it will be shortened to accomodate the
-right edge with its individual protrusion limit. \lyluatex\ will automatically
-ensure both that the staff line doesn't exceed the text and that the protruding
-elements don't exceed the limit.
+effectively “disabled” by being set to the length \cmd{maxdimen}, so protruding
+elements may be cut off at the page border:
 
 \begin{lilypond}[nofragment,
 print-only=1]
@@ -505,18 +499,18 @@ print-only=1]
 }
 \end{lilypond}
 
+
+\lyOption{max-dimension}{\cmd{maxdimen}}
 \lyOption{max-left-protrusion}{default}
 \lyOption{max-right-protrusion}{default}
 
-When set to a \TeX\ dimension these options set the protrusion limit.  Note that
-this will only have an effect when the actual protrusion of the score exceeds
-the limit, so it can be understood as a dynamic variant of the \option{quote}
-option.  The following two scores have the same
+These options set the protrusion limit.  If either of the `-left-` or
+`-right-` options is unset then the value will be taken from `max-dimension`.
+Note that this is not a fixed value for the protrusion but a *limit*, so it will
+only have an effect when the actual protrusion of the score exceeds the limit.
+In a way it can be understood as a dynamic variant of the \option{quote} option,
+something like a “fence”.  The following two scores have the same
 \option{max-left-protrusion=1cm}, but only the second is modified.
-
-Note that this is *not* achieved by scaling the \textsc{pdf} file but by
-actually recompiling the score with modified \option{line-width}, thus keeping
-the correct staffsize.
 
 \begin{lilypond}[nofragment,%
 max-left-protrusion=1cm,
@@ -531,14 +525,75 @@ print-only=1]
 print-only=1,
 max-left-protrusion=1cm]
 {
-  \set Staff.instrumentName = "Violin one, with damper"
+  \set Staff.instrumentName = "Violin one"
   c'1 ~ \break c'
 }
 \end{lilypond}
 
-Note further that in the third example the score is short enough to fit on the
+When the protrusion limit kicks in the score will be offset to the right by the
+appropriate amount, and if necessary it will be shortened to accomodate the
+right edge with its individual protrusion limit. \lyluatex\ will automatically
+ensure both that the staff line doesn't exceed the text and that the protruding
+elements don't exceed the limit. The following three scores demonstrate that
+behaviour with \option{max-protrusion=1cm}.
+
+The first score has elements that protrude less than the limit, so nothing is
+modified:
+
+\begin{lilypond}[nofragment,%
+max-protrusion=1cm,
+print-only=1]
+{
+  \set Staff.instrumentName = "Vl. 1"
+  c'1 ~ \break
+  \once \override Score.RehearsalMark.break-visibility = ##(#t #t #t)
+  \mark \default
+  c'
+}
+\end{lilypond}
+
+In the second score the longer instrument name makes the system shift to the
+right. The rehearsal mark still protrudes into the margin but is below the
+threshold. The score will automatically be recompiled with a narrower line width
+to ensure the staff lines don't protrude into the right margin.
+
+\begin{lilypond}[nofragment,%
+max-protrusion=1cm,
+print-only=1]
+{
+  \set Staff.instrumentName = "Violin 1"
+  c'1 ~ \break
+  \once \override Score.RehearsalMark.break-visibility = ##(#t #t #t)
+  \mark \default
+  c'
+}
+\end{lilypond}
+
+In a third score the tie has been tweaked to protrude into the margin and exceed
+the limit.  As a result the score is narrowed even further, also shifting the
+*right* margin.
+
+\begin{lilypond}[nofragment,%
+max-protrusion=1cm,
+print-only=1]
+{
+  \set Staff.instrumentName = "Violin 1"
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(12 . 0)) Tie
+  c'1 ~ \break
+  \once \override Score.RehearsalMark.break-visibility = ##(#t #t #t)
+  \mark \default
+  c'
+}
+\end{lilypond}
+
+Note that this is *not* achieved by scaling the \textsc{pdf} file but by
+actually recompiling the score with modified \option{line-width}, thus keeping
+the correct staffsize.  A warning message will inform about that fact on the
+console and in the log file.
+
+Note further that in the final example the score is short enough to fit on the
 line even with the horizontal offset, so in this case there is no need to
-recompile a shortened version.
+recompile a shortened version:
 
 \begin{lilypond}[nofragment,%
 max-left-protrusion=1cm]
@@ -548,18 +603,18 @@ max-left-protrusion=1cm]
 }
 \end{lilypond}
 
-\lyMargin{Negative max. protrusion}
+\lyMargin{Negative max-protrusion}
 
-The \option{max-left-protrusion} and \option{max-right-protrusion} options can
+The protrusion limits can
 also be set to *negative* lengths, which makes them behave similar to using the
 \option{quote} option.  However, there is a substantial difference between the
 two: using \option{quote} will apply a fixed indent, and the reference will
 again be the staff lines. Any protrusion will be considered from that reference
-point, so protruding elements will protrude into the -- extended -- margins.
+point, so protruding elements will protrude into the margins, starting from the indent.
 Using a negative protrusion limit instead will prevent *any* part of the score
 to exceed that value. Twe following three scores demonstrate the difference: the
-first has \option{gutter=0.4in} while the second has
-\option{max-left-protrusion=-0.4in} set.  The third has the same protrusion
+first has \option{quote, gutter=0.4in} while the second has
+\option{max-protrusion=-0.4in} set.  The third has the same protrusion
 limit as the second but no protruding elements.
 
 \begin{lilypond}[nofragment,%
@@ -572,8 +627,7 @@ print-only=1]
 \end{lilypond}
 
 \begin{lilypond}[nofragment,%
-max-left-protrusion=-0.4in,
-max-right-protrusion=-0.4in,
+max-protrusion=-0.4in,
 print-only=1]
 {
   \set Staff.instrumentName = "Vl. 1"
@@ -582,15 +636,12 @@ print-only=1]
 \end{lilypond}
 
 \begin{lilypond}[nofragment,%
-max-left-protrusion=-0.4in,
-max-right-protrusion=-0.4in,
+max-protrusion=-0.4in,
 print-only=1]
 {
   c'1 ~ \break c'1
 }
 \end{lilypond}
-
-**TODO:** Document when settings relative to the current margins are possible.
 
 
 #### Vertical Alignment of Fullpage Scores
