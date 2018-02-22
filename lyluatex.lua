@@ -47,29 +47,29 @@ local TEXINFO_OPTIONS = {'doctitle', 'nogettext', 'texidoc'}
 local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp', 'em', 'ex'}
 local LY_HEAD = [[
 %%File header
-\version "<<<VERSION>>>"
-<<<LANGUAGE>>>
+\version "<<<version>>>"
+<<<language>>>
 
-<<<PREAMBLE>>>
+<<<preamble>>>
 
 #(define inside-lyluatex #t)
-#(set-global-staff-size <<<STAFFSIZE>>>)
+#(set-global-staff-size <<<staffsize>>>)
 
 \header {
     copyright = ""
     tagline = ##f
 }
 \paper{
-    <<<PAPER>>>
-    <<<PAPERSIZE>>>
-    two-sided = ##<<<TWOSIDE>>>
-    line-width = <<<LINEWIDTH>>>\pt
-    <<<INDENT>>>
-    <<<RAGGEDRIGHT>>>
-    <<<FONTS>>>
+    <<<paper>>>
+    <<<papersize>>>
+    two-sided = ##<<<twoside>>>
+    line-width = <<<linewidth>>>\pt
+    <<<indent>>>
+    <<<raggedright>>>
+    <<<fonts>>>
 }
 \layout{
-    <<<STAFFPROPS>>>
+    <<<staffprops>>>
 }
 
 %%Follows original score
@@ -167,7 +167,7 @@ end
 
 local function mkdirs(str)
     local path = '.'
-    for dir in string.gmatch(str, '([^%/]+)') do
+    for dir in str:gmatch('([^%/]+)') do
         path = path .. '/' .. dir
         lfs.mkdir(path)
     end
@@ -327,7 +327,12 @@ function latex.includeinline(pdfname, height, valign, hpadding, voffset)
     elseif valign == 'top' then v_base = convert_unit('1em') - height
     else v_base = (convert_unit('1em') - height) / 2
     end
-    tex.sprint(string.format([[\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}]], hpadding, v_base + voffset, pdfname, hpadding))
+    tex.sprint(
+        string.format(
+            [[\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}]],
+            hpadding, v_base + voffset, pdfname, hpadding
+        )
+    )
 end
 
 function latex.includepdf(pdfname, range, papersize)
@@ -640,23 +645,6 @@ function Score:flatten_content(ly_code)
     return ly_code
 end
 
-function Score:fonts()
-    if self['pass-fonts'] then
-        return string.format(
-            [[
-        #(define fonts
-          (make-pango-font-tree "%s"
-                                "%s"
-                                "%s"
-                                (/ staff-height pt 20)))
-        ]],
-            self.rmfamily,
-            self.sffamily,
-            self.ttfamily
-        )
-    else return '' end
-end
-
 function Score:is_compiled()
     if self.insert == 'fullpage' then
         return lfs.isfile(self.output..'.pdf')
@@ -736,41 +724,9 @@ LilyPond failed to compile the score.
 end
 
 function Score:header()
-    local header = LY_HEAD:gsub(
-        [[<<<FONTS>>>]], self:fonts()):gsub(
-        [[<<<INDENT>>>]], self:ly_indent()):gsub(
-        [[<<<LANGUAGE>>>]], self:ly_language()):gsub(
-        [[<<<LINEWIDTH>>>]], self['line-width']):gsub(
-        [[<<<PAPERSIZE>>>]], self:ly_papersize()):gsub(
-        [[<<<RAGGEDRIGHT>>>]], self:ly_raggedright()):gsub(
-        [[<<<STAFFPROPS>>>]], self:ly_staffprops()):gsub(
-        [[<<<STAFFSIZE>>>]], self.staffsize):gsub(
-        [[<<<TWOSIDE>>>]], self:ly_twoside()):gsub(
-        [[<<<VERSION>>>]], self['ly-version'])
-    if self.insert == 'fullpage' then
-        local ppn = 'f'
-        if self['print-page-number'] then ppn = 't' end
-        header = header:gsub(
-	    [[<<<PREAMBLE>>>]],
-            string.format(
-                [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
-                self.paperwidth, self.paperheight
-	    )
-	):gsub(
-	    [[<<<PAPER>>>]],
-            string.format(
-		[[#(set-paper-size "lyluatexfmt")
-                print-page-number = ##%s
-                print-first-page-number = ##t
-                first-page-number = %s
-                %s]],
-                ppn, self.first_page, self:ly_margins()
-	    )
-        )
-    else
-	header = header:gsub(
-	    [[<<<PREAMBLE>>>]], [[\include "lilypond-book-preamble.ly"]]):gsub(
-	    [[<<<PAPER>>>]], '')
+    local header = LY_HEAD
+    for element in LY_HEAD:gmatch('<<<(%w+)>>>') do
+        header = header:gsub('<<<'..element..'>>>', self['ly_'..element](self))
     end
     return header
 end
@@ -835,6 +791,23 @@ function Score:lilypond_version(number)
     end
 end
 
+function Score:ly_fonts()
+    if self['pass-fonts'] then
+        return string.format(
+            [[
+        #(define fonts
+          (make-pango-font-tree "%s"
+                                "%s"
+                                "%s"
+                                (/ staff-height pt 20)))
+        ]],
+            self.rmfamily,
+            self.sffamily,
+            self.ttfamily
+        )
+    else return '' end
+end
+
 function Score:ly_indent()
     if self.indent == '' and self.insert == 'fullpage' then return ''
     else return [[indent = ]]..(self.indent or 0)..[[\pt]]
@@ -846,6 +819,10 @@ function Score:ly_language()
     else return '\\language "'..self.language..'"'
     end
 end
+
+function Score:ly_linewidth() return self['line-width'] end
+
+function Score:ly_staffsize() return self.staffsize end
 
 function Score:ly_margins()
     local tex_top = self['extra-top-margin'] + self:tex_margin_top()
@@ -907,9 +884,36 @@ function Score:ly_margins()
     end
 end
 
+function Score:ly_paper()
+    if self.insert == 'fullpage' then
+        local ppn = 'f'
+        if self['print-page-number'] then ppn = 't' end
+        return string.format([[
+            #(set-paper-size "lyluatexfmt")
+            print-page-number = ##%s
+            print-first-page-number = ##t
+            first-page-number = %s
+            %s]],
+            ppn, self.first_page, self:ly_margins()
+	    )
+    else return ''
+    end
+end
+
 function Score:ly_papersize()
     if self.papersize then return '#(set-paper-size "'..self.papersize..'")'
     else return ''
+    end
+end
+
+function Score:ly_preamble()
+    if self.insert == 'fullpage' then
+        return string.format(
+            [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
+            self.paperwidth, self.paperheight
+	    )
+    else
+        return [[\include "lilypond-book-preamble.ly"]]
     end
 end
 
@@ -918,10 +922,6 @@ function Score:ly_raggedright()
     elseif self['ragged-right'] then return 'ragged-right = ##t'
     else return 'ragged-right = ##f'
     end
-end
-
-function Score:ly_twoside()
-    if self.twoside then return 't' else return 'f' end
 end
 
 function Score:ly_staffprops()
@@ -945,6 +945,12 @@ function Score:ly_staffprops()
     return string.format([[%s%s%s%s
     ]], clef, timing, timesig, staff)
 end
+
+function Score:ly_twoside()
+    if self.twoside then return 't' else return 'f' end
+end
+
+function Score:ly_version() return self['ly-version'] end
 
 function Score:optimize_pdf()
     if self['optimize-pdf'] then
