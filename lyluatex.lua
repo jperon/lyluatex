@@ -569,6 +569,8 @@ function Score:check_protrusion(bbox_func)
         self['line-width'] = self['line-width'] - shorten
         -- recalculate hash to reflect the reduced line-width
         self.output = self:output_filename()
+        warn([[Compiled score exceeds protrusion limit(s).
+Recompile with smaller line-width.]])
         return true
     else
         return false
