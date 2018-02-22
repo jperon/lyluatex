@@ -254,40 +254,6 @@ This item will be skipped!
     end
 end
 
-local function read_bbox(filename)
-    local f = io.open(filename..'.bbox', 'r')
-    if f then
-        local bbox = {}
-        bbox.protrusion = f:read('*l')
-        bbox.r_protrusion = f:read('*l')
-        bbox.height = f:read('*l')
-        f:close()
-        return bbox
-    end
-end
-
-local function parse_bbox(filename, line_width)
-    local f = io.open(filename..'.eps', 'r')
-    if not f then return end
-    local bbline = ''
-    while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
-    f:close()
-    local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
-    local bbox = {}
-    bbox.protrusion = -x_1
-    bbox.r_protrusion = x_2 - line_width
-    bbox.height = y_2 - y_1
-    f = io.open(filename..'.bbox', 'w')
-    f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
-    f:close()
-    return bbox
-end
-
--- This has to be *after* read_bbox and parse_bbox, despite sorting
-local function get_bbox(filename, line_width)
-    return read_bbox(filename) or parse_bbox(filename, line_width)
-end
-
 local function splitext(str, ext)
     if str:match(".-%..-") then
         local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
@@ -297,6 +263,42 @@ local function splitext(str, ext)
     end
 end
 
+
+--[[ ================ Bounding box calculations =========================== ]]
+
+local bbox = {}
+function bbox.get(filename, line_width)
+    return bbox.read(filename) or bbox.parse(filename, line_width)
+end
+
+function bbox.read(filename)
+    local f = io.open(filename..'.bbox', 'r')
+    if f then
+        local bb = {}
+        bb.protrusion = f:read('*l')
+        bb.r_protrusion = f:read('*l')
+        bb.height = f:read('*l')
+        f:close()
+        return bb
+    end
+end
+
+function bbox.parse(filename, line_width)
+    local f = io.open(filename..'.eps', 'r')
+    if not f then return end
+    local bbline = ''
+    while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
+    f:close()
+    local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    local bb = {}
+    bb.protrusion = -x_1
+    bb.r_protrusion = x_2 - line_width
+    bb.height = y_2 - y_1
+    f = io.open(filename..'.bbox', 'w')
+    f:write(bb.protrusion..'\n'..bb.r_protrusion..'\n'..bb.height..'\n')
+    f:close()
+    return bb
+end
 
 --[[ =============== Functions that output LaTeX code ===================== ]]
 
@@ -426,14 +428,14 @@ function Score:bbox(system)
         if not self.bboxes then
             self.bboxes = {}
             for i = 1, self:count_systems() do
-                table.insert(self.bboxes, get_bbox(self.output..'-'..i, self['line-width']))
+                table.insert(self.bboxes, bbox.get(self.output..'-'..i, self['line-width']))
             end
         end
         return self.bboxes[system]
     else
         if not self.bbox
         then
-            self.bbox = get_bbox(self.output, self['line-width'])
+            self.bbox = bbox.get(self.output, self['line-width'])
         end
         return self.bbox
     end
@@ -555,19 +557,19 @@ end
 
 function Score:check_protrusion(bbox_func)
     if self.insert ~= 'systems' then return false end
-    local bbox = bbox_func(self.output, self['line-width'])
-    if not bbox then return false end
+    local bb = bbox_func(self.output, self['line-width'])
+    if not bb then return false end
 
     -- Determine offset due to left protrusion
-    local h_offset = max(bbox.protrusion - self['max-left-protrusion'], 0)
-    self.protrusion = bbox.protrusion - h_offset
+    local h_offset = max(bb.protrusion - self['max-left-protrusion'], 0)
+    self.protrusion = bb.protrusion - h_offset
 
     -- Check if stafflines protrude into the right margin after offsetting
     local line_extent = h_offset + self['line-width']
     local shorten_line = max(line_extent - self.original_lw, 0)
     -- Check if image protrudes over max-right-protrusion
     local available = self.original_lw + self['max-right-protrusion']
-    local total_extent = line_extent + bbox.r_protrusion
+    local total_extent = line_extent + bb.r_protrusion
     local shorten_protrusion = max(total_extent - available, 0)
     local shorten = max(shorten_line, shorten_protrusion)
     if shorten >= 1
@@ -1016,12 +1018,12 @@ function Score:process()
     self.first_page = tex.count['c@page']
     self:check_properties()
     self:calc_properties()
-    self:check_protrusion(read_bbox)
+    self:check_protrusion(bbox.read)
     local do_compile = not self:is_compiled()
     if do_compile then
         repeat
             self:run_lilypond(self:header()..self:content())
-        until not self:check_protrusion(parse_bbox)
+        until not self:check_protrusion(bbox.parse)
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
