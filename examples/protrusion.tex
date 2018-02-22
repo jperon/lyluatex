@@ -1,0 +1,150 @@
+\documentclass{scrartcl}
+
+\usepackage{blindtext}
+\usepackage{lyluatex}
+\begin{document}
+
+
+The default behaviour of \texttt{lyluatex} is to align the staff symbol to the
+text width and have any protruding elements (left and right) protrude into the
+margin.
+
+\begin{lilypond}[nofragment,
+%max-left-protrusion=0in,
+%max-right-protrusion=10cm,
+%indent=1cm,%
+print-only=1%
+%quote%
+]
+{
+  \set Staff.instrumentName = "Violin 1"
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(10 . 0)) Tie
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+This protrusion is limited to \texttt{max-left-protrusion} and
+\texttt{max-right-protrusion}.  This setting only takes effect when the
+protruding elements exceed the option value.  In the following score values of
+1cm are set, and the score is shortened in order not to exceed the limit:
+
+\begin{lilypond}[nofragment,
+max-left-protrusion=1cm,
+max-right-protrusion=1cm,
+print-only=1%
+]
+{
+  \set Staff.instrumentName = "Violin 1"
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(10 . 0)) Tie
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+This is no explicit indentation but a dynamic limit, like a “fence”. When the
+protruding elements are narrower than the limit nothing happens -- in the
+following score the limits are still set to 1cm but the elements are shortened
+in the score itself.  Note how the staff symbol now aligns again:
+
+\begin{lilypond}[nofragment,
+  max-left-protrusion=1cm,
+  max-right-protrusion=1cm,
+  print-only=1%
+]
+{
+  \set Staff.instrumentName = "Vl."
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(2 . 0)) Tie
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+\bigskip
+The shortening is achieved by calculating the possible line width and
+recompiling the score with LilyPond.  Note that this is \emph{not} the result of
+a scaling of the image file -- the staff size is identical.
+
+
+\bigskip
+By default, there's no limit, so long protruding elements could be cut off:
+
+\begin{lilypond}[nofragment,
+print-only=1%
+]
+{
+  \set Staff.instrumentName = "Violin 1 with a comment"
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(25 . 0)) Tie
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+Note that while such a long instrument name isn't common musically, it could be
+convenient as a label or margin text.
+
+\bigskip
+
+When used in combination with the \texttt{quote} option the reference is still the staff symbol.  The following three scores have the same quote and maximum protrusion settings: the first doesn't have protruding elements, the second is within the limits and the third applies shortening.
+
+\begin{lilypond}[nofragment,
+max-left-protrusion=0.6cm,
+max-right-protrusion=0.6cm,
+print-only=1,
+quote%
+]
+{
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+\begin{lilypond}[nofragment,
+max-left-protrusion=0.6cm,
+max-right-protrusion=0.6cm,
+print-only=1,
+quote%
+]
+{
+  \set Staff.instrumentName = "Vl."
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(2 . 0)) Tie
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+\begin{lilypond}[nofragment,
+max-left-protrusion=0.6cm,
+max-right-protrusion=0.6cm,
+print-only=1,
+quote%
+]
+{
+  \set Staff.instrumentName = "Violin 1"
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(8 . 0)) Tie
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+It is possible to apply \emph{negative} limits, essentially to the effect of a
+dynamic indentation. This is different from using the \texttt{quote} option
+since it limits the \emph{total} extent of the score rather than specifying the
+indentation of the \emph{staff symbol}:
+
+\begin{lilypond}[nofragment,
+max-left-protrusion=-1.5cm,
+max-right-protrusion=-1.5cm,
+print-only=1,
+]
+{
+  \set Staff.instrumentName = "Violin 1"
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(6 . 0)) Tie
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+\begin{lilypond}[nofragment,
+max-left-protrusion=-1.5cm,
+max-right-protrusion=-1.5cm,
+print-only=1,
+]
+{
+  c'1 ~ \break c'
+}
+\end{lilypond}
+
+\end{document}

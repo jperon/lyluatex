@@ -25,10 +25,13 @@ local DIM_OPTIONS = {
     'indent',
     'leftgutter',
     'line-width',
+    'max-protrusion',
+    'max-left-protrusion',
+    'max-right-protrusion',
     'rightgutter',
     'paperwidth',
     'paperheight',
-    'voffset',
+    'voffset'
 }
 local MXML_OPTIONS = {
     'absolute',
@@ -157,6 +160,11 @@ local function locate(file, includepaths, ext)
 end
 
 
+local function max(a, b)
+    if a > b then return a else return b end
+end
+
+
 local function mkdirs(str)
     local path = '.'
     for dir in string.gmatch(str, '([^%/]+)') do
@@ -245,31 +253,39 @@ This item will be skipped!
     end
 end
 
-
-local function read_bbox(filename, line_width)
-    local bbox = {}
+local function read_bbox(filename)
     local f = io.open(filename..'.bbox', 'r')
     if f then
+        local bbox = {}
         bbox.protrusion = f:read('*l')
         bbox.r_protrusion = f:read('*l')
         bbox.height = f:read('*l')
         f:close()
-    else
-        local bbline = ''
-        f = io.open(filename..'.eps', 'r')
-        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
-        f:close()
-        local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
-        bbox.protrusion = x_1
-        bbox.r_protrusion = x_2 - line_width
-        bbox.height = y_2 - y_1
-        f = io.open(filename..'.bbox', 'w')
-        f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
-        f:close()
+        return bbox
     end
+end
+
+local function parse_bbox(filename, line_width)
+    local f = io.open(filename..'.eps', 'r')
+    if not f then return end
+    local bbline = ''
+    while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
+    f:close()
+    local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    local bbox = {}
+    bbox.protrusion = -x_1
+    bbox.r_protrusion = x_2 - line_width
+    bbox.height = y_2 - y_1
+    f = io.open(filename..'.bbox', 'w')
+    f:write(bbox.protrusion..'\n'..bbox.r_protrusion..'\n'..bbox.height..'\n')
+    f:close()
     return bbox
 end
 
+-- This has to be *after* read_bbox and parse_bbox, despite sorting
+local function get_bbox(filename, line_width)
+    return read_bbox(filename) or parse_bbox(filename, line_width)
+end
 
 local function splitext(str, ext)
     if str:match(".-%..-") then
@@ -311,9 +327,7 @@ function latex.includeinline(pdfname, height, valign, hpadding, voffset)
     elseif valign == 'top' then v_base = convert_unit('1em') - height
     else v_base = (convert_unit('1em') - height) / 2
     end
-    tex.sprint(string.format([[
-\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}
-]], hpadding, v_base + voffset, pdfname, hpadding))
+    tex.sprint(string.format([[\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}]], hpadding, v_base + voffset, pdfname, hpadding))
 end
 
 function latex.includepdf(pdfname, range, papersize)
@@ -324,19 +338,11 @@ function latex.includepdf(pdfname, range, papersize)
         table.concat(range, ','), noautoscale, pdfname)
     )end
 
-function latex.includesystems(filename, range, protrusion, staffsize, indent)
-    if protrusion then
-        local f = io.open(filename..'.protrusion', 'w')
-        f:write(protrusion)
-        f:close()
-    else
-        local f = io.open(filename..'.protrusion', 'r')
-        protrusion = f:read('*a')
-        f:close()
-    end
+function latex.includesystems(filename, range, protrusion, gutter, staffsize, indent)
+    local h_offset = -protrusion
     if #range == 1 and range[1] == "1" and indent then
         warn([[Only one system, deactivating indentation.]])
-        protrusion = protrusion - indent
+        h_offset = h_offset - indent
     end
     local texoutput = ''
     if ly.pre_lilypond then
@@ -348,7 +354,7 @@ function latex.includesystems(filename, range, protrusion, staffsize, indent)
         texoutput = texoutput..string.format([[
         \noindent\hspace*{%spt}\includegraphics{%s}%%
         ]],
-        protrusion, filename..'-'..system)
+        h_offset + gutter, filename..'-'..system)
         if ly.between_lilypond and index < #range then
             texoutput = texoutput..string.format([[
             \betweenLilyPondSystem{%s}%%
@@ -402,10 +408,29 @@ function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
     self.__index = self
+    o.output_names = {}
     o.input_file = input_file
     o.ly_code = ly_code
-    o.orig_ly_code = ly_code
     return o
+end
+
+function Score:bbox(system)
+    if system
+    then
+        if not self.bboxes then
+            self.bboxes = {}
+            for i = 1, self:count_systems() do
+                table.insert(self.bboxes, get_bbox(self.output..'-'..i, self['line-width']))
+            end
+        end
+        return self.bboxes[system]
+    else
+        if not self.bbox
+        then
+            self.bbox = get_bbox(self.output, self['line-width'])
+        end
+        return self.bbox
+    end
 end
 
 function Score:calc_properties()
@@ -437,11 +462,20 @@ function Score:calc_properties()
     for _, dimension in pairs(DIM_OPTIONS) do
         self[dimension] = convert_unit(self[dimension])
     end
-    if not self.leftgutter then self.leftgutter = self.gutter end
-    if not self.rightgutter then self.rightgutter = self.gutter end
+    if not self['max-left-protrusion'] then
+        self['max-left-protrusion'] = self['max-protrusion'] end
+    if not self['max-right-protrusion'] then
+        self['max-right-protrusion'] = self['max-protrusion'] end
     if self.quote then
+        if not self.leftgutter then self.leftgutter = self.gutter end
+        if not self.rightgutter then self.rightgutter = self.gutter end
         self['line-width'] = self['line-width'] - self.leftgutter - self.rightgutter
+    else
+        self.leftgutter = 0
+        self.rightgutter = 0
     end
+    -- store for comparing protrusion against
+    self.original_lw = self['line-width']
     -- score fonts
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
@@ -511,6 +545,36 @@ Found something incompatible with `fragment`
     end
 end
 
+function Score:check_protrusion(bbox_func)
+    if self.insert ~= 'systems' then return false end
+    local bbox = bbox_func(self.output, self['line-width'])
+    if not bbox then return false end
+
+    -- Determine offset due to left protrusion
+    local h_offset = max(bbox.protrusion - self['max-left-protrusion'], 0)
+    self.protrusion = bbox.protrusion - h_offset
+
+    -- Check if stafflines protrude into the right margin after offsetting
+    local line_extent = h_offset + self['line-width']
+    local shorten_line = max(line_extent - self.original_lw, 0)
+    -- Check if image protrudes over max-right-protrusion
+    local available = self.original_lw + self['max-right-protrusion']
+    local total_extent = line_extent + bbox.r_protrusion
+    local shorten_protrusion = max(total_extent - available, 0)
+    local shorten = max(shorten_line, shorten_protrusion)
+    if shorten >= 1
+    then
+        self['line-width'] = self['line-width'] - shorten
+        -- recalculate hash to reflect the reduced line-width
+        self.output = self:output_filename()
+        warn([[Compiled score exceeds protrusion limit(s).
+Recompile with smaller line-width.]])
+        return true
+    else
+        return false
+    end
+end
+
 function Score:content()
     local n = ''
     if self.relative then
@@ -540,17 +604,14 @@ end
 
 function Score:delete_intermediate_files()
   if self.insert ~= 'fullpage' then
-      local n = self:count_systems()
-      for j = 1, n, 1 do
-          os.remove(self.output..'-'..j..'.eps')
-      end
-      os.remove(self.output..'-systems.tex')
-      os.remove(self.output..'-systems.texi')
-      os.remove(self.output..'.eps')
-      if self.lilypond_error then
-          -- ensure score gets recompiled next time
-          os.remove(self.output..'-systems.tex')
-          os.remove(self.output..'.pdf')
+      for _, filename in pairs(self.output_names) do
+          local n = self:count_systems()
+          for j = 1, n, 1 do
+              os.remove(filename..'-'..j..'.eps')
+          end
+          os.remove(filename..'-systems.tex')
+          os.remove(filename..'-systems.texi')
+          os.remove(filename..'.eps')
       end
   end
 end
@@ -647,7 +708,7 @@ produced a score. %s
         return true
     else
         --[[ ensure the score gets recompiled next time --]]
-        self:delete_intermediate_files()
+        os.execute('rm '..self.output..'*')
         if self.showfailed then
             tex.sprint(string.format([[
                 \begin{quote}
@@ -703,7 +764,7 @@ function Score:header()
                 print-first-page-number = ##t
                 first-page-number = %s
                 %s]],
-                ppn, ly.PAGE, self:ly_margins()
+                ppn, self.first_page, self:ly_margins()
 	    )
         )
     else
@@ -714,11 +775,15 @@ function Score:header()
     return header
 end
 
-function Score:lilypond_cmd()
+function Score:is_odd_page()
+    return self.first_page % 2 == 1
+end
+
+function Score:lilypond_cmd(ly_code)
     local input, mode
     if self.debug then
         local f = io.open(self.output..'.ly', 'w')
-        f:write(self.ly_code)
+        f:write(ly_code)
         f:close()
         input = self.output..".ly 2>&1"
         mode = 'r'
@@ -783,19 +848,11 @@ function Score:ly_language()
 end
 
 function Score:ly_margins()
-    local tex_top = self['extra-top-margin'] + convert_unit((
-        tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
-        tex.dimen.headheight + tex.dimen.headsep
-    )..'sp')
-    local tex_bottom = self['extra-bottom-margin'] + (
-        convert_unit(tex.dimen.paperheight..'sp') -
-        (tex_top + convert_unit(tex.dimen.textheight..'sp'))
-    )
-    local inner = convert_unit((
-        tex.sp('1in') +
-        tex.dimen.oddsidemargin +
-        tex.dimen.hoffset
-    )..'sp')
+    local tex_top = self['extra-top-margin'] + self:tex_margin_top()
+    local tex_bottom = self['extra-bottom-margin'] +
+        self:tex_margin_bottom()
+    local inner = self:tex_margin_inner()
+    local left = self:tex_margin_left()
     if self.fullpagealign == 'crop' then
         return string.format([[
             top-margin = %s\pt
@@ -803,7 +860,7 @@ function Score:ly_margins()
             inner-margin = %s\pt
             left-margin = %s\pt
             ]],
-            tex_top, tex_bottom, inner, inner
+            tex_top, tex_bottom, inner, left
         )
     elseif self.fullpagealign == 'staffline' then
       local top_distance = 4 * tex_top / self.staffsize + 2
@@ -922,7 +979,10 @@ end
 local HASHIGNORE = {
   'cleantmp',
   'hpadding',
+  'max-left-protrusion',
+  'max-right-protrusion',
   'print-only',
+  'valign',
   'voffset'
 }
 function Score:output_filename()
@@ -932,54 +992,32 @@ function Score:output_filename()
             properties = properties..'_'..k..'_'..self[k]
         end
     end
+    if self.insert == 'fullpage' then
+        properties = properties..
+            self:tex_margin_top()..
+            self:tex_margin_bottom()..
+            self:tex_margin_left()..
+            self:tex_margin_right()
+    end
     local filename = md5.sumhexa(self:flatten_content(self.ly_code)..properties)
-    self:write_to_filelist(filename)
     return self.tmpdir..'/'..filename
 end
 
 function Score:process()
+    self.first_page = tex.count['c@page']
     self:check_properties()
     self:calc_properties()
+    self:check_protrusion(read_bbox)
     local do_compile = not self:is_compiled()
     if do_compile then
-        self.ly_code = self:header()..self:content()
-        self:run_lilypond()
+        repeat
+            self:run_lilypond(self:header()..self:content())
+        until not self:check_protrusion(parse_bbox)
         self:optimize_pdf()
     end
     self:write_latex(do_compile)
+    self:write_to_filelist()
     if not self.debug then self:delete_intermediate_files() end
-end
-
-function Score:_bbox(system)
-    if not self.bboxes then
-        self.bboxes = {}
-        self.bbox = read_bbox(self.output, self['line-width'])
-        for i = 1, self:count_systems() do
-            table.insert(self.bboxes, read_bbox(self.output..'-'..i, self['line-width']))
-        end
-    end
-    if not system then return self.bbox
-    else return self.bboxes[system]
-    end
-end
-
-function Score:_protrusion()
-    --[[ Determine the amount of space used to the left of the staff lines
-      and generate a horizontal offset command. ]]
-    local gutter = 0
-    if self.quote then gutter = self.leftgutter end
-    local protrusion = convert_unit(self.protrusion)
-    if protrusion then return protrusion + gutter
-    elseif self.protrusion then
-        local f = io.open(self.output..'.eps')
-        if not f then return end
-        local bbline = ''
-        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
-        f:close()
-        protrusion = bbline:match('-?%d+')
-        return tonumber(protrusion) + gutter
-    else return gutter
-    end
 end
 
 function Score:_range()
@@ -998,23 +1036,78 @@ function Score:_range()
     return result
 end
 
-function Score:run_lilypond()
+function Score:run_lilypond(ly_code)
     mkdirs(dirname(self.output))
     self:lilypond_version()
-    local p = io.popen(self:lilypond_cmd())
+    local p = io.popen(self:lilypond_cmd(ly_code))
     if self.debug then
         local f = io.open(self.output..".log", 'w')
         f:write(p:read('*a'))
         f:close()
     else
-        p:write(self.ly_code)
+        p:write(ly_code)
     end
     self.lilypond_error = not p:close()
+    if self:is_compiled() then table.insert(self.output_names, self.output) end
+end
+
+function Score:tex_margin_bottom()
+    if not self._tex_margin_bottom then
+        self._tex_margin_bottom =
+            convert_unit(tex.dimen.paperheight..'sp') -
+            self:tex_margin_top() -
+            convert_unit(tex.dimen.textheight..'sp')
+    end
+    return self._tex_margin_bottom
+end
+
+function Score:tex_margin_inner()
+    if not self._tex_margin_inner then
+        self._tex_margin_inner =
+            convert_unit((
+              tex.sp('1in') +
+              tex.dimen.oddsidemargin +
+              tex.dimen.hoffset
+            )..'sp')
+    end
+    return self._tex_margin_inner
+end
+
+function Score:tex_margin_outer()
+    if not self._tex_margin_outer then
+        self._tex_margin_outer =
+            convert_unit((tex.dimen.paperwidth - tex.dimen.textwidth)..'sp') -
+                self:tex_margin_inner()
+    end
+    return self._tex_margin_outer
+end
+
+function Score:tex_margin_left()
+    if self:is_odd_page() then return self:tex_margin_inner()
+    else return self:tex_margin_outer()
+    end
+end
+
+function Score:tex_margin_right()
+    if self:is_odd_page() then return self:tex_margin_outer()
+    else return self:tex_margin_inner()
+    end
+end
+
+function Score:tex_margin_top()
+    if not self._tex_margin_top then
+        self._tex_margin_top =
+            convert_unit((
+                tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin +
+                tex.dimen.headheight + tex.dimen.headsep
+            )..'sp')
+    end
+    return self._tex_margin_top
 end
 
 function Score:write_latex(do_compile)
     latex.filename(self.printfilename, self.insert, self.input_file)
-    latex.verbatim(self.verbatim, self.orig_ly_code, self.intertext, self.addversion)
+    latex.verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
     if do_compile and not self:is_compiled_without_error() then return end
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
@@ -1023,8 +1116,8 @@ function Score:write_latex(do_compile)
         latex.includepdf(self.output, self:_range(), self.papersize)
     elseif self.insert == 'systems' then
         latex.includesystems(
-            self.output, self:_range(), self:_protrusion(),
-            self.staffsize, self.indent
+            self.output, self:_range(), self.protrusion,
+            self.leftgutter, self.staffsize, self.indent
         )
     else -- inline
         if self:count_systems() > 1 then
@@ -1032,14 +1125,17 @@ function Score:write_latex(do_compile)
 This will probably cause bad output.]])
         end
         latex.includeinline(
-            self.output, self:_bbox(1).height, self.valign, self.hpadding, self.voffset
+            self.output, self:bbox(1).height, self.valign, self.hpadding, self.voffset
         )
     end
 end
 
-function Score:write_to_filelist(filename)
+function Score:write_to_filelist()
     local f = io.open(FILELIST, 'a')
-    f:write(filename, '\t', self.input_file or '', '\t', self.label or '', '\n')
+    for _, file in pairs(self.output_names) do
+        local _, filename = file:match('(./+)(.*)')
+        f:write(filename, '\t', self.input_file or '', '\t', self.label or '', '\n')
+    end
     f:close()
 end
 
