@@ -136,9 +136,17 @@
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
     \directlua{
-      ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
-      ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
-      ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
+      if ly.score.rmfamily == '' then
+          ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
+      else
+          ly.set_property('current-font-as-main', 'false')
+      end
+      if ly.score.sffamily == '' then
+          ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
+      end
+      if ly.score.ttfamily == '' then
+          ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
+      end
     }%
   \endgroup%
 }
