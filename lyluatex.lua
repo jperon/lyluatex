@@ -443,13 +443,22 @@ end
 
 function Score:calc_properties()
     self:calc_staff_properties()
-    -- relative
+    -- fragment and relative
+    if self.relative and not self.fragment then
+        -- local option takes precedence over global option
+        if Score.fragment then self.relative = false end
+    end
     if self.relative then
+        self.fragment = 'true'  -- yes, here we need a string, not a bool
         if self.relative == '' then
             self.relative = 1
         else
             self.relative = tonumber(self.relative)
         end
+    end
+    if self.fragment == '' then
+        -- by default, included files shouldn't be fragments
+        if ly.state == 'file' then self.fragment = false end
     end
     -- default insertion mode
     if self.insert == '' then
@@ -495,8 +504,6 @@ function Score:calc_properties()
 end
 
 function Score:calc_staff_properties()
-    -- included files cannot be fragments
-    if ly.state == 'file' then self.fragment = false self.relative = false end
     -- preset for bare notation symbols in inline images
     if self.insert == 'bare-inline' then self.nostaff = 'true' end
     -- handle meta properties
@@ -537,7 +544,7 @@ function Score:check_properties()
             info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
         end
     end
-    if self.fragment or self.relative then
+    if self.fragment then
         if (self.input_file or
             self.ly_code:find([[\book]]) or
             self.ly_code:find([[\header]]) or
@@ -680,7 +687,7 @@ please retry with option debug=true.
 ]]
         doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
     end
-    if self.fragment or self.relative then
+    if self.fragment then
         local frag_msg = '\n'..[[
 As the input code has been automatically wrapped
 with a music expression, you may try repeating
