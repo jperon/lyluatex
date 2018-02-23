@@ -1,0 +1,24 @@
+\documentclass{scrartcl}
+
+\usepackage{lyluatex}
+\begin{document}
+
+\newcommand{\preLilyPondExample}{\par\bigskip\hrule\par\bigskip}
+
+The following score has an indent of 1cm but only a single system. Therefore the
+indent is deactivated and the score shifted to the left.
+
+\begin{lilypond}[indent=1cm]
+  { c' d' e' d' }
+\end{lilypond}
+
+The following score has an indent of 1cm set and \texttt{print-only=3-1},
+therefore the indented first system wouldn't be at the top of the score. Since
+simply shifting the system to the left would create a “hole” on the right side
+the score is automatically recompiled without indentation.
+
+\begin{lilypond}[print-only=3-1,indent=1cm]
+  \repeat unfold 128 { c' d' e' d' }
+\end{lilypond}
+
+\end{document}

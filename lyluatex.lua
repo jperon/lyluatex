@@ -346,12 +346,8 @@ function latex.includepdf(pdfname, range, papersize)
         table.concat(range, ','), noautoscale, pdfname)
     )end
 
-function latex.includesystems(filename, range, protrusion, gutter, staffsize, indent)
-    local h_offset = -protrusion
-    if #range == 1 and range[1] == "1" and indent then
-        warn([[Only one system, deactivating indentation.]])
-        h_offset = h_offset - indent
-    end
+function latex.includesystems(filename, range, protrusion, gutter, staffsize, indent_offset)
+    local h_offset = -protrusion - indent_offset
     local texoutput = ''
     if ly.pre_lilypond then
         texoutput = texoutput..'\\preLilyPondExample\n'
@@ -503,6 +499,23 @@ function Score:calc_properties()
     self.output = self:output_filename()
 end
 
+function Score:calc_range()
+    local nsystems = self:count_systems(true)
+    if self['print-only'] == '' then
+          self['print-only'] = '1-'..nsystems end
+    local result = {}
+    if tonumber(self['print-only']) then result = { self['print-only'] }
+    else
+        for _, r in pairs(self['print-only']:explode(',')) do
+            local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+            if range then
+                for _, v in pairs(range) do table.insert(result, v) end
+            end
+        end
+    end
+    self.range = result
+end
+
 function Score:calc_staff_properties()
     -- preset for bare notation symbols in inline images
     if self.insert == 'bare-inline' then self.nostaff = 'true' end
@@ -516,6 +529,29 @@ function Score:calc_staff_properties()
         self.notimesig = 'true'
         -- do *not* suppress timing
         self.noclef = 'true'
+    end
+end
+
+function Score:check_indent()
+    self.indent_offset = 0
+    -- Recompile score without indent when only first system is printed
+    -- or first system is not printed as first system.
+    if (#self.range == 1 and self.range[1] == 1 and
+        self.indent and self.indent ~= 0)
+        or
+        (self.indent and self.indent ~= 0 and self.range[1] ~= 1)
+    then
+        local recompile = ''
+        if self:count_systems() > 1 then recompile = '.\nRecompile' end
+        warn('Deactivate indentation because of system selection'..recompile)
+        if self:count_systems() > 1
+        then
+            self.indent = 0
+            self.output = self:output_filename()
+            return true
+        else
+            self.indent_offset = self.indent
+        end
     end
 end
 
@@ -566,6 +602,10 @@ function Score:check_protrusion(bbox_func)
     if self.insert ~= 'systems' then return false end
     local bb = bbox_func(self.output, self['line-width'])
     if not bb then return false end
+
+    -- Score has been created but protrusion not checked yet
+    self:calc_range()
+    if self:check_indent() then return true end
 
     -- Determine offset due to left protrusion
     local h_offset = max(bb.protrusion - self['max-left-protrusion'], 0)
@@ -1035,22 +1075,6 @@ function Score:process()
     if not self.debug then self:delete_intermediate_files() end
 end
 
-function Score:_range()
-    local nsystems = ''
-    local f = io.open(self.output..'-systems.count', 'r')
-    if f then nsystems = f:read('*a') f:close() end
-    if self['print-only'] == '' then self['print-only'] = '1-'..nsystems end
-    if tonumber(self['print-only']) then return {self['print-only']} end
-    local result = {}
-    for _, r in pairs(self['print-only']:explode(',')) do
-        local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
-        if range then
-            for _, v in pairs(range) do table.insert(result, v) end
-        end
-    end
-    return result
-end
-
 function Score:run_lilypond(ly_code)
     mkdirs(dirname(self.output))
     self:lilypond_version()
@@ -1128,11 +1152,11 @@ function Score:write_latex(do_compile)
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
     if self.insert == 'fullpage' then
-        latex.includepdf(self.output, self:_range(), self.papersize)
+        latex.includepdf(self.output, self.range, self.papersize)
     elseif self.insert == 'systems' then
         latex.includesystems(
-            self.output, self:_range(), self.protrusion,
-            self.leftgutter, self.staffsize, self.indent
+            self.output, self.range, self.protrusion,
+            self.leftgutter, self.staffsize, self.indent_offset
         )
     else -- inline
         if self:count_systems() > 1 then
