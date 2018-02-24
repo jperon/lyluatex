@@ -1061,8 +1061,8 @@ function Score:process()
     self.first_page = tex.count['c@page']
     self:check_properties()
     self:calc_properties()
-    self:check_protrusion(bbox.read)
-    local do_compile = not self:is_compiled()
+    local do_compile = not self:is_compiled() or
+        self:check_protrusion(bbox.read)
     if do_compile then
         repeat
             self:run_lilypond(self:header()..self:content())
