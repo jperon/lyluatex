@@ -3,6 +3,38 @@
 
 \newcommand\mylily[2][1]{\lily[inline-staffsize=10, #1]{#2}}
 
+\begin{document}
+
+\begin{ly}
+  a b c
+  d e f
+\end{ly}
+
+This is \mylily[voffset=10pt]{a' b' c''} a test.
+
+It's possible to wrap \verb`ly` within and environment, but there are
+several drawbacks:
+\begin{itemize}
+  \item this custom environment cannot have optional parameters. To be more
+  precise, if it has only optional parameters, it will be necessary to add \verb`[]`
+  after \verb`\begin{MY_ENV}` if no parameter is specified ; so they're not
+  optional any more…
+  \item to call \verb`ly`, you'll have to:
+  \begin{itemize}
+    \item either write \verb`\begin{ly}[] \end{ly}` (which works with
+    \verb`\begin{lilypond}[] \end{lilypond}` too) ;
+    \item or use the \TeX\ primitives \verb`\ly \endly` (not only for \verb`ly`,
+    but also for other environments).
+  \end{itemize}
+\end{itemize}
+
+\newenvironment{myly}{%
+  This is \emph{my} lilypond environment.
+  \begin{ly}[]%
+}{%
+  \end{ly}
+}
+
 \newenvironment{lyfigure}[2][]{%
 \edef\mycaption{#2}
 \begin{figure}
@@ -15,13 +47,30 @@
 \end{figure}
 }
 
-\begin{document}
+\newenvironment{lyotherfigure}[1][]{%
+\edef\option{#1}
+\figure
+\center
+  \ly
+}{%
+  \endly%
+  \def\empty{}\ifx\option\empty\else\caption{\option}\fi
+\endcenter
+\endfigure
+}
 
-Ceci est \mylily[voffset=10pt]{a' b' c''} un test.
+\begin{myly}
+  a b c
+\end{myly}
 
 \begin{lyfigure}{caption}
 a' b' c
 d' e' f
 \end{lyfigure}
+
+\begin{lyotherfigure}[]
+d' e' f
+a' b' c
+\end{lyotherfigure}
 
 \end{document}
