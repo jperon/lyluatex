@@ -33,8 +33,15 @@ the score is automatically recompiled without indentation.
 The following score has the same properties as the previous ones but
 additionally a \texttt{max-protrusion} limit of 0.5cm and a protruding
 instrument name.  This results in the situation that normally the whole score
-would be shortened to fit in the maximum protrusion.
-If an indent is given as an option \texttt{lyluatex} tries to fix the protrusion
+would be shortened to fit in the maximum protrusion because the indent is
+automatically deactivated:
+
+\begin{lilypond}[print-only=2-1,max-protrusion=0.5cm]
+  \set Staff.instrumentName = "Violin"
+  \repeat unfold 15 { c' d' e' d' }
+\end{lilypond}
+
+However, since an indent is given \texttt{lyluatex} tries to fix the protrusion
 issue first by reintroducing an indent up to the given value.  This is because
 in a majority of cases the protrusion limit will be be exceeded by instrument
 names in the first system (which is what indent basically is used for).  In
