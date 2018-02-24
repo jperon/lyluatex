@@ -14,6 +14,7 @@
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
 
 \edef\ly@false{false}\def\ly@istwosided{\if@twoside\else\ly@false\fi}
+\savecatcodetable 40
 
 % Options
 \catcode`-=11
@@ -194,10 +195,10 @@
 
 % Base environments to include a LilyPond fragment integrated into
 % the document.
-\newcommand\lyscorebegin[1]{\directlua{ly.buffenv_begin()}}
+\newcommand\lyscorebegin{\directlua{ly.buffenv_begin()}}
 \newcommand\lyscoreend{\directlua{ly.buffenv_end()}}
 \newenvironment{ly@bufferenv}{%
-  \lyscorebegin{\@currenvir}%
+  \lyscorebegin%
 }{%
   \lyscoreend%
   \ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
@@ -219,12 +220,11 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newenvironment{ly}[1][]{%
+\newenvironment{ly}[1][noarg]{%
   \edef\options{#1}%
-  \directlua{ly.state = 'env'}%
-  \ly@bufferenv
+  \directlua{ly.env_begin([[#1]])}%
 }{%
-  \endly@bufferenv
+  \directlua{ly.env_end()}%
 }
 
 \newcommand*{\lily}[2][]{%

@@ -211,6 +211,7 @@ end
 
 
 local function process_options(k, v)
+    if k == '' or k == 'noarg' then return end
     if not contains_key(OPTIONS, k) then err('Unknown option: '..k) end
     -- aliases
     if OPTIONS[k] and OPTIONS[k][2] == ly.is_alias then
@@ -1299,6 +1300,26 @@ function ly.declare_package_options(options)
 end
 
 
+function ly.env_begin(opts)
+    ly.state = 'env'
+    ly.env_no_args = opts == 'noarg'
+    if ly.env_no_args then
+        tex.sprint(40, [[\ly@compilely]], '\n')
+    else
+        tex.sprint(40, [[\ly@bufferenv]], '\n')
+    end
+end
+
+
+function ly.env_end()
+    if ly.env_no_args then
+        tex.sprint(40, [[\endly@compilely]])
+    else
+        tex.sprint(40, [[\endly@bufferenv]])
+    end
+end
+
+
 function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]
@@ -1401,21 +1422,24 @@ end
 
 function ly.set_local_options(opts)
     local options = {}
-    local next_opt = opts:gmatch('([^,]*)')  -- iterator over options
+    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
     local opt = next_opt()
     while opt do
         local k, v = opt:match('([^=]+)=?(.*)')
         if k then
-            if v and v:sub(1) == '{' then  -- handle keys with {multiple, values}
-                local vs = ''
-                while not vs:sub(-1) == '}' do
+            if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
+                local vs
+                repeat
                     vs = next_opt()
                     v = v..','..vs
-                end
+                until vs:sub(-1) == '}'
+                v = v:sub(2, -2)  -- remove { }
             end
             k, v = process_options(k:gsub('^%s', ''), v:gsub('^%s', ''))
-            if options[k] then err('Option %s is set two times for the same score.', k)
-            else options[k] = v
+            if k then
+                if options[k] then err('Option %s is set two times for the same score.', k)
+                else options[k] = v
+                end
             end
         end
         opt = next_opt()
