@@ -165,6 +165,11 @@ local function max(a, b)
 end
 
 
+local function min(a, b)
+    if a < b then return a else return b end
+end
+
+
 local function mkdirs(str)
     local path = '.'
     for dir in str:gmatch('([^%/]+)') do
@@ -489,6 +494,7 @@ function Score:calc_properties()
     end
     -- store for comparing protrusion against
     self.original_lw = self['line-width']
+    self.original_indent = self.indent
     -- score fonts
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
@@ -532,27 +538,55 @@ function Score:calc_staff_properties()
     end
 end
 
-function Score:check_indent()
-    self.indent_offset = 0
-    -- Recompile score without indent when only first system is printed
-    -- or first system is not printed as first system.
-    if (#self.range == 1 and self.range[1] == 1 and
-        self.indent and self.indent ~= 0)
-        or
-        (self.indent and self.indent ~= 0 and self.range[1] ~= 1)
+function Score:check_indent(shorten)
+    if (not self.original_indent and
+        -- Either only first system
+        ((#self.range == 1 and self.range[1] == 1)
+        -- or system one not printed first in a multi-system range
+         or
+         (#self.range > 1 and
+          self.range[1] ~= 1 and
+          contains(self.range, 1))))
+    then return shorten, false end
+
+    -- Now we know we have to deal with the indent
+    local changed = false
+    if not self.indent_offset
     then
-        local recompile = ''
-        if self:count_systems() > 1 then recompile = '.\nRecompile' end
-        warn('Deactivate indentation because of system selection'..recompile)
+        -- First step: deactivate indent
+        self.indent_offset = 0
+        recompile = ''
         if self:count_systems() > 1
         then
+            -- only recompile if the *original* score has more than 1 system
             self.indent = 0
-            self.output = self:output_filename()
-            return true
+            changed = true
+            recompile = '.\nRecompile'
         else
             self.indent_offset = self.indent
         end
+        warn('Deactivate indentation because of system selection'..recompile)
+        return shorten, changed
     end
+
+    -- We are checking a recompilation
+    if self.indent == 0
+    then
+        if shorten > 0 then
+            self.indent = min(shorten, self.original_indent)
+            shorten = shorten - self.indent
+            changed = true
+            warn('Add some indent to keep protrusion limit. Recompile')
+        end
+    else
+        self.indent = max(self.indent - shorten, 0)
+        if shorten > 0
+        then
+            changed = true
+            warn('Adjust protrusion and indent. Recompile')
+        end
+    end
+    return shorten, changed
 end
 
 function Score:check_properties()
@@ -605,7 +639,6 @@ function Score:check_protrusion(bbox_func)
 
     -- Score has been created but protrusion not checked yet
     self:calc_range()
-    if self:check_indent() then return true end
 
     -- Determine offset due to left protrusion
     local h_offset = max(bb.protrusion - self['max-left-protrusion'], 0)
@@ -619,13 +652,19 @@ function Score:check_protrusion(bbox_func)
     local total_extent = line_extent + bb.r_protrusion
     local shorten_protrusion = max(total_extent - available, 0)
     local shorten = max(shorten_line, shorten_protrusion)
-    if shorten >= 1
+    local changed_indent
+    shorten, changed_indent = self:check_indent(shorten)
+
+    if shorten > 0 or changed_indent
     then
         self['line-width'] = self['line-width'] - shorten
         -- recalculate hash to reflect the reduced line-width
         self.output = self:output_filename()
-        warn([[Compiled score exceeds protrusion limit(s).
+        if not changed_indent
+        then
+            warn([[Compiled score exceeds protrusion limit(s).
 Recompile with smaller line-width.]])
+        end
         return true
     else
         return false
