@@ -14,6 +14,7 @@ local lfs = require 'lfs'
 
 local ly = {}
 local latex = {}
+local Score = {}
 
 local FILELIST
 local OPTIONS = {}
@@ -31,6 +32,15 @@ local DIM_OPTIONS = {
     'rightgutter',
     'paperwidth',
     'paperheight',
+    'voffset'
+}
+local HASHIGNORE = {
+    'cleantmp',
+    'hpadding',
+    'max-left-protrusion',
+    'max-right-protrusion',
+    'print-only',
+    'valign',
     'voffset'
 }
 local MXML_OPTIONS = {
@@ -74,7 +84,6 @@ local LY_HEAD = [[
 
 %%Follows original score
 ]]
-local Score = {}
 
 
 --[[ ========================== Helper functions ========================== ]]
@@ -119,9 +128,7 @@ local function convert_unit(value)
 end
 
 
-local function dirname(str)
-    return str:gsub("(.*/)(.*)", "%1") or ''
-end
+local function dirname(str) return str:gsub("(.*/)(.*)", "%1") or '' end
 
 
 local function extract_includepaths(includepaths)
@@ -137,9 +144,7 @@ end
 
 
 local fontdata = fonts.hashes.identifiers
-local function fontinfo(id)
-    return fontdata[id] or font.fonts[id]
-end
+local function fontinfo(id) return fontdata[id] or font.fonts[id] end
 
 
 local function font_default_staffsize()
@@ -160,11 +165,6 @@ local function locate(file, includepaths, ext)
 end
 
 
-local function max(a, b)
-    if a > b then return a else return b end
-end
-
-
 local function mkdirs(str)
     local path = '.'
     for dir in str:gmatch('([^%/]+)') do
@@ -174,34 +174,17 @@ local function mkdirs(str)
 end
 
 
-local function __genorderedindex(t)
-    local orderedIndex = {}
-    for key in pairs(t) do
-        table.insert(orderedIndex, key)
-    end
-    table.sort( orderedIndex )
-    return orderedIndex
-end
-local function __orderednext(t, state)
-    local key = nil
-    if state == nil then
-        t.__orderedIndex = __genorderedindex(t)
-        key = t.__orderedIndex[1]
-    else
-        for i = 1, #t.__orderedIndex do
-            if t.__orderedIndex[i] == state then
-                key = t.__orderedIndex[i+1]
-            end
-        end
-    end
-    if key then
-        return key, t[key]
-    end
-    t.__orderedIndex = nil
-    return
-end
 local function orderedpairs(t)
-    return __orderednext, t, nil
+    local key
+    local i = 0
+    local orderedIndex = {}
+    for k in pairs(t) do table.insert(orderedIndex, k) end
+    table.sort(orderedIndex)
+    return function ()
+            i = i + 1
+            key = orderedIndex[i]
+            if key then return key, t[key] end
+        end
 end
 
 
@@ -221,8 +204,7 @@ local function process_options(k, v)
         if v ~= nil and v ~= 'default' then
             k = k:gsub('^no(.*)', '%1')
             v = not v
-        else
-            return
+        else return
         end
     end
     return k, v
@@ -241,8 +223,10 @@ in list of page ranges. Possible entries:
 - Single number
 - Range (M-N, N-M or N-)
 This item will be skipped!
-      ]], range)
-      return
+]],
+        range
+        )
+        return
     end
     local result = {}
     local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
@@ -255,14 +239,11 @@ This item will be skipped!
     end
 end
 
-local function splitext(str, ext)
-    if str:match(".-%..-") then
-        local name = string.gsub(str, "(.*)(%." .. ext .. ")", "%1")
-        return name
-    else
-        return str
-    end
-end
+
+local function sorted(a, b) if a < b then return a, b else return b, a end end
+
+
+local function splitext(str, ext) return str:match('(.*)%.'..ext..'$') or str end
 
 
 --[[ ================ Bounding box calculations =========================== ]]
@@ -275,10 +256,11 @@ end
 function bbox.read(filename)
     local f = io.open(filename..'.bbox', 'r')
     if f then
-        local bb = {}
-        bb.protrusion = f:read('*l')
-        bb.r_protrusion = f:read('*l')
-        bb.height = f:read('*l')
+        local bb = {
+            ['protrusion'] = f:read('*l'),
+            ['r_protrusion'] = f:read('*l'),
+            ['height'] = f:read('*l')
+        }
         f:close()
         return bb
     end
@@ -291,10 +273,11 @@ function bbox.parse(filename, line_width)
     while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
     f:close()
     local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
-    local bb = {}
-    bb.protrusion = -x_1
-    bb.r_protrusion = x_2 - line_width
-    bb.height = y_2 - y_1
+    local bb = {
+        ['protrusion'] = x_1,
+        ['r_protrusion'] = x_2 - line_width,
+        ['height'] = y_2 - y_1
+    }
     f = io.open(filename..'.bbox', 'w')
     f:write(bb.protrusion..'\n'..bb.r_protrusion..'\n'..bb.height..'\n')
     f:close()
@@ -317,8 +300,7 @@ end
 function latex.fullpagestyle(style, ppn)
     local function texoutput(s) tex.sprint('\\includepdfset{pagecommand='..s..'}%') end
     if style == '' then
-        if ppn then
-            texoutput('\\thispagestyle{empty}')
+        if ppn then texoutput('\\thispagestyle{empty}')
         else texoutput('')
         end
     else texoutput('\\thispagestyle{'..style..'}')
@@ -344,41 +326,35 @@ function latex.includepdf(pdfname, range, papersize)
     if papersize then noautoscale = 'noautoscale' end
     tex.sprint(string.format(
         [[\includepdf[pages={%s},%s]{%s}]],
-        table.concat(range, ','), noautoscale, pdfname)
-    )end
+        table.concat(range, ','), noautoscale, pdfname
+    ))
+end
 
-function latex.includesystems(filename, range, protrusion, gutter, staffsize, indent)
-    local h_offset = -protrusion
+function latex.includesystems(filename, range, h_offset, gutter, staffsize, indent)
     if #range == 1 and range[1] == "1" and indent then
         warn([[Only one system, deactivating indentation.]])
         h_offset = h_offset - indent
     end
-    local texoutput = ''
-    if ly.pre_lilypond then
-        texoutput = texoutput..'\\preLilyPondExample\n'
-    end
+    local texoutput = '\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi\n'
     texoutput = texoutput..'\\par\n'
     for index, system in pairs(range) do
         if not lfs.isfile(filename..'-'..system..'.pdf') then break end
-        texoutput = texoutput..string.format([[
-        \noindent\hspace*{%spt}\includegraphics{%s}%%
-        ]],
-        h_offset + gutter, filename..'-'..system)
-        if ly.between_lilypond and index < #range then
-            texoutput = texoutput..string.format([[
-            \betweenLilyPondSystem{%s}%%
-            ]], index)
-        else
-            texoutput = texoutput..string.format([[
-\par\vspace{%spt plus %spt minus %spt}
-            ]],
-            staffsize / 4,
-            staffsize / 12,
-            staffsize / 16)
-        end
+        texoutput = texoutput..
+            string.format([[
+\noindent\hspace*{%spt}\includegraphics{%s}%%
+\ifx\betweenLilyPondSystem\undefined%%
+  \par\vspace{%spt plus %spt minus %spt}%%
+\else%%
+  \betweenLilyPondSystem{%s}%%
+\fi%%
+]],
+                h_offset + gutter, filename..'-'..system,
+                staffsize / 4, staffsize / 12, staffsize / 16,
+                index
+            )
     end
     if ly.post_lilypond then
-        texoutput = texoutput..'\n\\postLilyPondExample'
+        texoutput = texoutput..'\n\\ifx\\postLilyPondExample\\undefined\\else\\postLilyPondExample\\fi'
     end
     tex.sprint(texoutput:explode('\n'))
 end
@@ -388,7 +364,7 @@ function latex.label(label, labelprefix)
 end
 
 function latex.systems_list(filename, hoffset, range)
-    tex.sprint(-hoffset..'pt,')
+    tex.sprint(hoffset..'pt,')
     for i = 1, #range - 1 do tex.sprint(filename..'-'..range[i]..',') end
     tex.sprint(filename..'-'..range[#range])
 end
@@ -398,8 +374,8 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
         if version then tex.sprint('\\lyVersion{'..version..'}') end
         local content = table.concat(ly_code:explode('\n'), '\n'):gsub(
-          '.*%%%s*begin verbatim', ''):gsub(
-          '%%%s*end verbatim.*', '')
+            '.*%%%s*begin verbatim', ''):gsub(
+            '%%%s*end verbatim.*', '')
         --[[ We unfortunately need an external file,
              as verbatim environments are quite special. ]]
         local fname = ly.get_option('tmpdir')..'/verb.tex'
@@ -430,8 +406,7 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:bbox(system)
-    if system
-    then
+    if system then
         if not self.bboxes then
             self.bboxes = {}
             for i = 1, self:count_systems() do
@@ -440,10 +415,7 @@ function Score:bbox(system)
         end
         return self.bboxes[system]
     else
-        if not self.bbox
-        then
-            self.bbox = bbox.get(self.output, self['line-width'])
-        end
+        if not self.bbox then self.bbox = bbox.get(self.output, self['line-width']) end
         return self.bbox
     end
 end
@@ -457,10 +429,8 @@ function Score:calc_properties()
     end
     if self.relative then
         self.fragment = 'true'  -- yes, here we need a string, not a bool
-        if self.relative == '' then
-            self.relative = 1
-        else
-            self.relative = tonumber(self.relative)
+        if self.relative == '' then self.relative = 1
+        else self.relative = tonumber(self.relative)
         end
     end
     if self.fragment == '' then
@@ -474,25 +444,22 @@ function Score:calc_properties()
         end
     end
     -- staffsize
-    local staffsize = tonumber(self.staffsize)
-    if staffsize == 0 then staffsize = font_default_staffsize() end
+    self.staffsize = tonumber(self.staffsize)
+    if self.staffsize == 0 then self.staffsize = font_default_staffsize() end
     if self.insert == 'inline' or self.insert == 'bare-inline' then
         local inline_staffsize = tonumber(self['inline-staffsize'])
-        if inline_staffsize == 0 then inline_staffsize = staffsize / 1.5 end
-        staffsize = inline_staffsize
+        if inline_staffsize == 0 then inline_staffsize = self.staffsize / 1.5 end
+        self.staffsize = inline_staffsize
     end
-    self.staffsize = staffsize
     -- dimensions that can be given by LaTeX
     for _, dimension in pairs(DIM_OPTIONS) do
         self[dimension] = convert_unit(self[dimension])
     end
-    if not self['max-left-protrusion'] then
-        self['max-left-protrusion'] = self['max-protrusion'] end
-    if not self['max-right-protrusion'] then
-        self['max-right-protrusion'] = self['max-protrusion'] end
+    self['max-left-protrusion'] = self['max-left-protrusion'] or self['max-protrusion']
+    self['max-right-protrusion'] = self['max-right-protrusion'] or self['max-protrusion']
     if self.quote then
-        if not self.leftgutter then self.leftgutter = self.gutter end
-        if not self.rightgutter then self.rightgutter = self.gutter end
+        self.leftgutter = self.leftgutter or self.gutter
+        self.rightgutter = self.rightgutter or self.gutter
         self['line-width'] = self['line-width'] - self.leftgutter - self.rightgutter
     else
         self.leftgutter = 0
@@ -501,9 +468,7 @@ function Score:calc_properties()
     -- store for comparing protrusion against
     self.original_lw = self['line-width']
     -- score fonts
-    if self['current-font-as-main'] then
-        self.rmfamily = self['current-font']
-    end
+    if self['current-font-as-main'] then self.rmfamily = self['current-font'] end
     -- LilyPond version
     if self.addversion then self.addversion = self:lilypond_version(true) end
     -- temporary file name
@@ -539,17 +504,15 @@ function Score:check_properties()
             end
         end
         if unexpected then
-            err(
-                'Unexpected value "%s" for option %s:\n'..
-                'authorized values are "%s"',
+            err([[
+Unexpected value "%s" for option %s:
+authorized values are "%s"]],
                 self[k], k, table.concat(OPTIONS[k], ', ')
             )
         end
     end
     for _, k in pairs(TEXINFO_OPTIONS) do
-        if self[k] then
-            info([[Option ]]..k..[[ is specific to Texinfo: ignoring it.]])
-        end
+        if self[k] then info([[Option %s is specific to Texinfo: ignoring it.]], k) end
     end
     if self.fragment then
         if (self.input_file or
@@ -562,7 +525,8 @@ function Score:check_properties()
             warn([[
 Found something incompatible with `fragment`
 (or `relative`). Setting them to false.
-            ]])
+]]
+            )
             self.fragment = false
             self.relative = false
         end
@@ -570,29 +534,28 @@ Found something incompatible with `fragment`
 end
 
 function Score:check_protrusion(bbox_func)
-    if self.insert ~= 'systems' then return false end
+    if self.insert ~= 'systems' then return end
     local bb = bbox_func(self.output, self['line-width'])
-    if not bb then return false end
-
+    if not bb then return end
     -- Determine offset due to left protrusion
-    local h_offset = max(bb.protrusion - self['max-left-protrusion'], 0)
-    self.protrusion = bb.protrusion - h_offset
-
+    local h_offset = sorted(bb.protrusion + self['max-left-protrusion'], 0)
+    self.protrusion = bb.protrusion + h_offset
     -- Check if stafflines protrude into the right margin after offsetting
     local line_extent = h_offset + self['line-width']
-    local shorten_line = max(line_extent - self.original_lw, 0)
+    local _, shorten_line = sorted(line_extent - self.original_lw, 0)
     -- Check if image protrudes over max-right-protrusion
     local available = self.original_lw + self['max-right-protrusion']
     local total_extent = line_extent + bb.r_protrusion
-    local shorten_protrusion = max(total_extent - available, 0)
-    local shorten = max(shorten_line, shorten_protrusion)
-    if shorten >= 1
-    then
+    local _, shorten_protrusion = sorted(total_extent - available, 0)
+    local _, shorten = sorted(shorten_line, shorten_protrusion)
+    if shorten >= 1 then
         self['line-width'] = self['line-width'] - shorten
         -- recalculate hash to reflect the reduced line-width
         self.output = self:output_filename()
-        warn([[Compiled score exceeds protrusion limit(s).
-Recompile with smaller line-width.]])
+        warn([[
+Compiled score exceeds protrusion limit(s).
+Recompile with smaller line-width.]]
+)
         return true
     else
         return false
@@ -602,7 +565,7 @@ end
 function Score:content()
     local n = ''
     if self.relative then
-        self.fragment = true  -- in case it would serve later
+        self.fragment = 'true'  -- in case it would serve later
         if self.relative < 0 then
             for _ = -1, self.relative, -1 do n = n..',' end
         elseif self.relative > 0 then
@@ -630,9 +593,7 @@ function Score:delete_intermediate_files()
   if self.insert ~= 'fullpage' then
       for _, filename in pairs(self.output_names) do
           local n = self:count_systems()
-          for j = 1, n, 1 do
-              os.remove(filename..'-'..j..'.eps')
-          end
+          for j = 1, n, 1 do os.remove(filename..'-'..j..'.eps') end
           os.remove(filename..'-systems.tex')
           os.remove(filename..'-systems.texi')
           os.remove(filename..'.eps')
@@ -645,23 +606,26 @@ function Score:flatten_content(ly_code)
         including referenced files (if they can be opened.
         Other files (from LilyPond's include path) are considered
         irrelevant for the purpose of a hashsum.) --]]
-    local b, e, i, ly_file
-    while true do
-        b, e = ly_code:find('\\include%s*"[^"]*"', e)
-        if not e then break
-        else
-            ly_file = ly_code:match('\\include%s*"([^"]*)"', b)
-            ly_file = locate(ly_file, self.includepaths, '.ly')
-            if ly_file then
-                i = io.open(ly_file, 'r')
-                ly_code = ly_code:sub(1, b - 1)..
-                    self:flatten_content(i:read('*a'))..
-                    ly_code:sub(e + 1)
-                i:close()
-            end
+    local i, ly_file
+    local includepaths = self.includepaths
+    if self.input_file then includepaths = self.includepaths..','..dirname(self.input_file) end
+    for ifile in ly_code:gmatch('\\include%s*"[^"]*"') do
+        ly_file = locate(ifile:match('\\include%s*"([^"]*)"'), includepaths, '.ly')
+        if ly_file then
+            i = io.open(ly_file, 'r')
+            ly_code = ly_code:gsub(ifile, self:flatten_content(i:read('*a')))
+            i:close()
         end
     end
     return ly_code
+end
+
+function Score:header()
+    local header = LY_HEAD
+    for element in LY_HEAD:gmatch('<<<(%w+)>>>') do
+        header = header:gsub('<<<'..element..'>>>', self['ly_'..element](self) or '')
+    end
+    return header
 end
 
 function Score:is_compiled()
@@ -681,8 +645,8 @@ and the generated LilyPond code in
 %s
 %s
 ]],
-        self.output..'.log',
-        self.output..'.ly')
+            self.output..'.log', self.output..'.ly'
+        )
         doc_debug_msg = [[
 A log file and a LilyPond file have been written.\\
 See log for details.]]
@@ -718,40 +682,35 @@ produced a score. %s
         os.execute('rm '..self.output..'*')
         if self.showfailed then
             tex.sprint(string.format([[
-                \begin{quote}
-                \minibox[frame]{LilyPond failed to compile a score.\\
+\begin{quote}
+\minibox[frame]{LilyPond failed to compile a score.\\
 %s}
-                \end{quote}
+\end{quote}
 
 ]],
-                doc_debug_msg))
+                doc_debug_msg
+            ))
             warn([[
 
 LilyPond failed to compile the score.
 %s
 ]],
-            debug_msg)
+                debug_msg
+            )
         else
             err([[
 
 LilyPond failed to compile the score.
 %s
 ]],
-          debug_msg)
+                debug_msg
+            )
         end
     end
 end
 
-function Score:header()
-    local header = LY_HEAD
-    for element in LY_HEAD:gmatch('<<<(%w+)>>>') do
-        header = header:gsub('<<<'..element..'>>>', self['ly_'..element](self) or '')
-    end
-    return header
-end
-
 function Score:is_odd_page()
-    return self.first_page % 2 == 1
+    return tex.count['c@page'] % 2 == 1
 end
 
 function Score:lilypond_cmd(ly_code)
@@ -785,10 +744,11 @@ function Score:lilypond_version(number)
     local p = io.popen(self.program..' --version', 'r')
     if not p then
       err([[
-      LilyPond could not be started.
-      Please check that LuaLaTeX is
-      started with the --shell-escape option.
-      ]])
+LilyPond could not be started.
+Please check that LuaLaTeX is started with the
+--shell-escape option.
+]]
+    )
     end
     local result = p:read()
     p:close()
@@ -803,23 +763,23 @@ function Score:lilypond_version(number)
         end
     else
         err([[
-        LilyPond could not be started.
-        Please check that 'program' points
-        to a valid LilyPond executable
-        ]])
+LilyPond could not be started.
+Please check that 'program' points
+to a valid LilyPond executable
+]]
+        )
     end
 end
 
 function Score:ly_fonts()
     if self['pass-fonts'] then
-        return string.format(
-            [[
-        #(define fonts
-          (make-pango-font-tree "%s"
-                                "%s"
-                                "%s"
-                                (/ staff-height pt 20)))
-        ]],
+        return string.format([[
+#(define fonts
+    (make-pango-font-tree "%s"
+                          "%s"
+                          "%s"
+                          (/ staff-height pt 20)))
+]],
             self.rmfamily,
             self.sffamily,
             self.ttfamily
@@ -849,53 +809,52 @@ function Score:ly_margins()
     local left = self:tex_margin_left()
     if self.fullpagealign == 'crop' then
         return string.format([[
-            top-margin = %s\pt
-            bottom-margin = %s\pt
-            inner-margin = %s\pt
-            left-margin = %s\pt
-            ]],
+top-margin = %s\pt
+bottom-margin = %s\pt
+inner-margin = %s\pt
+left-margin = %s\pt
+]],
             tex_top, tex_bottom, inner, left
         )
     elseif self.fullpagealign == 'staffline' then
       local top_distance = 4 * tex_top / self.staffsize + 2
       local bottom_distance = 4 * tex_bottom / self.staffsize + 2
         return string.format([[
-        top-margin = 0\pt
-        bottom-margin = 0\pt
-        inner-margin = %s\pt
-        left-margin = %s\pt
-        top-system-spacing =
-        #'((basic-distance . %s)
-           (minimum-distance . %s)
-           (padding . 0)
-           (stretchability . 0))
-        top-markup-spacing =
-        #'((basic-distance . %s)
-           (minimum-distance . %s)
-           (padding . 0)
-           (stretchability . 0))
-        last-bottom-spacing =
-        #'((basic-distance . %s)
-           (minimum-distance . %s)
-           (padding . 0)
-           (stretchability . 0))
-        ]],
-        inner,
-        inner,
-        top_distance,
-        top_distance,
-        top_distance,
-        top_distance,
-        bottom_distance,
-        bottom_distance
-      )
+top-margin = 0\pt
+bottom-margin = 0\pt
+inner-margin = %s\pt
+left-margin = %s\pt
+top-system-spacing =
+    #'((basic-distance . %s)
+        (minimum-distance . %s)
+        (padding . 0)
+        (stretchability . 0))
+top-markup-spacing =
+    #'((basic-distance . %s)
+        (minimum-distance . %s)
+        (padding . 0)
+        (stretchability . 0))
+last-bottom-spacing =
+    #'((basic-distance . %s)
+        (minimum-distance . %s)
+        (padding . 0)
+        (stretchability . 0))
+]],
+            inner,
+            inner,
+            top_distance,
+            top_distance,
+            top_distance,
+            top_distance,
+            bottom_distance,
+            bottom_distance
+        )
     else
-        err(
-            [[
-        Invalid argument for option 'fullpagealign'.
-        Allowed: 'crop', 'staffline'.
-        Given: %s
-        ]],
+        err([[
+Invalid argument for option 'fullpagealign'.
+Allowed: 'crop', 'staffline'.
+Given: %s
+]],
             self.fullpagealign
         )
     end
@@ -906,12 +865,12 @@ function Score:ly_paper()
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
         return string.format([[
-            #(set-paper-size "lyluatexfmt")
-            print-page-number = ##%s
-            print-first-page-number = ##t
-            first-page-number = %s
-            %s]],
-            ppn, self.first_page, self:ly_margins()
+#(set-paper-size "lyluatexfmt")
+print-page-number = ##%s
+print-first-page-number = ##t
+first-page-number = %s
+%s]],
+            ppn, tex.count['c@page'], self:ly_margins()
 	    )
     end
 end
@@ -926,8 +885,7 @@ function Score:ly_preamble()
             [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
             self.paperwidth, self.paperheight
 	    )
-    else
-        return [[\include "lilypond-book-preamble.ly"]]
+    else return [[\include "lilypond-book-preamble.ly"]]
     end
 end
 
@@ -941,91 +899,62 @@ end
 
 function Score:ly_staffprops()
     local clef, timing, timesig, staff = '', '', '', ''
-    if self.noclef then
-        clef = [[\context { \Staff \remove "Clef_engraver" }
-        ]]
-    end
-    if self.notiming then
-        timing = [[\context { \Score timing = ##f }
-        ]]
-    end
-    if self.notimesig then
-        timesig = [[\context { \Staff \remove "Time_signature_engraver" }
-        ]]
-    end
-    if self.nostaffsymbol then
-        staff = [[\context { \Staff \remove "Staff_symbol_engraver" }
-        ]]
-    end
-    return string.format([[%s%s%s%s
-    ]], clef, timing, timesig, staff)
+    if self.noclef then clef = [[\context { \Staff \remove "Clef_engraver" }]] end
+    if self.notiming then timing = [[\context { \Score timing = ##f }]] end
+    if self.notimesig then timesig = [[\context { \Staff \remove "Time_signature_engraver" }]] end
+    if self.nostaffsymbol then staff = [[\context { \Staff \remove "Staff_symbol_engraver" }]] end
+    return string.format('%s\n%s\n%s\n%s', clef, timing, timesig, staff)
 end
 
-function Score:ly_twoside()
-    if self.twoside then return 't' else return 'f' end
-end
+function Score:ly_twoside() if self.twoside then return 't' else return 'f' end end
 
 function Score:ly_version() return self['ly-version'] end
 
 function Score:optimize_pdf()
-    if self['optimize-pdf'] then
-        local pdf2ps, ps2pdf, path
-        for file in lfs.dir(self.tmpdir) do
-            path = self.tmpdir..'/'..file
-            if path:match(self.output) and path:sub(-4) == '.pdf' then
-                pdf2ps = io.popen(
-                    'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE '..path..' -c quit',
-                    'r'
+    if not self['optimize-pdf'] then return end
+    local pdf2ps, ps2pdf, path
+    for file in lfs.dir(self.tmpdir) do
+        path = self.tmpdir..'/'..file
+        if path:match(self.output) and path:sub(-4) == '.pdf' then
+            pdf2ps = io.popen(
+                'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE '..path..' -c quit',
+                'r'
+            )
+            ps2pdf = io.popen(
+                'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile='..path..'-gs -',
+                'w'
+            )
+            if pdf2ps then
+                ps2pdf:write(pdf2ps:read('*a'))
+                pdf2ps:close()
+                ps2pdf:close()
+                os.rename(path..'-gs', path)
+            else
+                warn(
+                    [[You have asked for pdf optimization, but gs wasn't found.]]
                 )
-                ps2pdf = io.popen(
-                    'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile='..
-                    path..'-gs -',
-                    'w'
-                )
-                if pdf2ps then
-                    ps2pdf:write(pdf2ps:read('*a'))
-                    pdf2ps:close()
-                    ps2pdf:close()
-                    os.rename(path..'-gs', path)
-                else
-                    warn(
-                        [[You have asked for pdf optimization, but gs wasn't found.]]
-                    )
-                end
             end
         end
     end
 end
 
-local HASHIGNORE = {
-  'cleantmp',
-  'hpadding',
-  'max-left-protrusion',
-  'max-right-protrusion',
-  'print-only',
-  'valign',
-  'voffset'
-}
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
-        if (not contains(HASHIGNORE, k)) and  self[k] and type(self[k]) ~= 'function' then
+        if (not contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'_'..k..'_'..self[k]
         end
     end
     if self.insert == 'fullpage' then
         properties = properties..
-            self:tex_margin_top()..
-            self:tex_margin_bottom()..
-            self:tex_margin_left()..
-            self:tex_margin_right()
+            self:tex_margin_top()..self:tex_margin_bottom()..
+            self:tex_margin_left()..self:tex_margin_right()
     end
     local filename = md5.sumhexa(self:flatten_content(self.ly_code)..properties)
     return self.tmpdir..'/'..filename
 end
 
 function Score:process()
-    self.first_page = tex.count['c@page']
     self:check_properties()
     self:calc_properties()
     self:check_protrusion(bbox.read)
@@ -1150,8 +1079,10 @@ function Score:write_latex(do_compile)
         )
     else -- inline
         if self:count_systems() > 1 then
-            warn([[Score with more than one system included inline.
-This will probably cause bad output.]])
+            warn([[
+Score with more than one system included inline.
+This will probably cause bad output.]]
+            )
         end
         latex.includeinline(
             self.output, self:bbox(1).height, self.valign, self.hpadding, self.voffset
@@ -1223,8 +1154,9 @@ end
 
 function ly.conclusion_text()
     info([[
-        Output written on %s.pdf.
-        Transcript written on %s.log.]],
+Output written on %s.pdf.
+Transcript written on %s.log.
+]],
         tex.jobname, tex.jobname
     )
 end
@@ -1254,9 +1186,9 @@ function ly.env_begin(opts)
     ly.state = 'env'
     ly.env_no_args = opts == 'noarg'
     if ly.env_no_args then
-        tex.sprint(40, [[\ly@compilely]], '\n')
+        tex.sprint(40, [[\ly@compilely]])
     else
-        tex.sprint(40, [[\ly@bufferenv]], '\n')
+        tex.sprint(40, [[\ly@bufferenv]])
     end
 end
 
@@ -1303,6 +1235,14 @@ function ly.file_musicxml(input_file, options)
     end
     local xml2ly = ly.get_option('xml2ly')
     local i = io.popen(xml2ly..' --out=-'..xmlopts..' "'..input_file..'"', 'r')
+    if not i then
+        err([[
+LilyPond could not be started.
+Please check that LuaLaTeX is started with the
+--shell-escape option.
+]]
+        )
+    end
     ly.score = Score:new(i:read('*a'), options, input_file)
     i:close()
 end
@@ -1342,13 +1282,12 @@ function ly.is_dim(k, v)
     -- invalid input will be prevented in by the LaTeX parser already
     if n and sl and u then return true end
     if n and contains(TEX_UNITS, u) then return true end
-    err(
-        [[
+    err([[
 Unexpected value "%s" for dimension %s:
 should be either a number (for example "12"),
 a number with unit, without space ("12pt"),
 or a (multiplied) TeX length (".8\linewidth")
-        ]],
+]],
         v, k
     )
 end
