@@ -548,7 +548,10 @@ function Score:check_indent(shorten)
          (#self.range > 1 and
           self.range[1] ~= 1 and
           contains(self.range, 1))))
-    then return shorten, false end
+    then
+        self.indent_offset = 0
+        return shorten, false
+    end
 
     -- Now we know we have to deal with the indent
     local changed = false
