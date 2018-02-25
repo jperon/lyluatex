@@ -17,15 +17,16 @@
 % The environment commands that will be used for verbatim.
 \lysetverbenv{\begin{lstlisting}[language=TeX]}{\end{lstlisting}}
 
-% It's possible to wrap `ly` within another environment, using \ly[] and \endly.
+% It's possible to wrap `ly` (or `lilypond`) within another environment.
 \newenvironment{verbly}{%
-\ly[verbatim]
+\begin{lilypond}[verbatim]
 }{%
-\endly
+\end{lilypond}
 }
 
 \begin{verbly}
 a b c
+d e f
 \end{verbly}
 
 % Import d'une partition externe. La commande \includely est strictement équivalente.
@@ -192,11 +193,7 @@ L'environnement \texttt{lilypond} :
 }
 
 \clearpage
-Ce fragment :
-
-\lilypond{a' b' c''}
-
-\noindent sera écrit plus petit en note de bas de
+Ce fragment \fbox{\lilypond[label=test2]{a' b' c''}} sera écrit plus petit en note de bas de
 page\footnote{\lilypond[relative=2]{a b c}}.
 
 \newpage

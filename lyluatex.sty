@@ -14,6 +14,7 @@
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
 
 \edef\ly@false{false}\def\ly@istwosided{\if@twoside\else\ly@false\fi}
+\savecatcodetable 40
 
 % Options
 \catcode`-=11
@@ -22,11 +23,11 @@
   ly.declare_package_options({
     ['addversion'] = {'false', 'true', ''},
     ['cleantmp'] = {'false', 'true', ''},
-    ['current-font-as-main'] = {'true', 'false', ''},
+    ['currfiledir'] = {},
     ['debug'] = {'false', 'true', ''},
     ['extra-bottom-margin'] = {'0', ly.is_dim},
     ['extra-top-margin'] = {'0', ly.is_dim},
-    ['fragment'] = {'true', 'false', ''},
+    ['fragment'] = {'', 'false', 'true'},
         ['nofragment'] = {'default', ly.is_neg},
     ['fullpagealign'] = {'crop', 'staffline'},
     ['fullpagestyle'] = {''},
@@ -39,7 +40,7 @@
         ['noindent'] = {'default', ly.is_neg},
     ['insert'] = {'', 'systems', 'fullpage', 'inline', 'bare-inline'},
     ['intertext'] = {''},
-    ['labelprefix'] = {'ly_'},
+    ['label'] = {'false'}, ['labelprefix'] = {'ly_'},
     ['line-width'] = {[[\linewidth]], ly.is_dim},
     ['ly-version'] = {'2.18.2'},
     ['max-protrusion'] = {[[\maxdimen]], ly.is_dim},
@@ -56,20 +57,24 @@
     ['paperheight'] = {[[\paperheight]], ly.is_dim},
     ['papersize'] = {'false'},
     ['pass-fonts'] = {'false', 'true', ''},
+        ['current-font'] = {}, ['current-font-as-main'] = {'true', 'false', ''},
+        ['rmfamily'] = {}, ['sffamily'] = {}, ['ttfamily'] = {},
     ['print-page-number'] = {'false', 'true', ''},
     ['print-only'] = {''},
     ['printfilename'] = {'false', 'true', ''},
     ['program'] = {'lilypond'},
     ['protrusion'] = {'', ly.is_dim},
         ['noprotrusion'] = {'default', ly.is_neg},
+    ['raw-pdf'] = {'false', 'true', ''},
     ['quote'] = {'false', 'true', ''},
     ['ragged-right'] = {'default', 'true', 'false', ''},
         ['noragged-right'] = {'default', ly.is_neg},
     ['relative'] = {'false', ly.is_num},
+        ['norelative'] = {'default', ly.is_neg},
     ['showfailed'] = {'false', 'true' ,''},
     ['staffsize'] = {'0', ly.is_dim},
         ['inline-staffsize'] = {'0', ly.is_dim},
-    ['tmpdir'] = {'tmp_ly'},
+    ['tmpdir'] = {'tmp-ly'},
     ['twoside'] = {'\ly@istwosided', 'false', 'true', ''},
     ['verbatim'] = {'false', 'true', ''},
     ['voffset'] = {'0pt', ly.is_dim},
@@ -89,7 +94,7 @@
 \directlua{
   if ly.get_option('cleantmp') then
     luatexbase.add_to_callback('stop_run', ly.clean_tmp_dir, 'lyluatex cleantmp')
-    luatexbase.add_to_callback('stop_run', ly.conclusion_text, 'lyluatex cleantmp')
+    luatexbase.add_to_callback('stop_run', ly.conclusion_text, 'lyluatex conclusion')
   end
 }
 \catcode`-=12
@@ -101,20 +106,18 @@
   \let\ly@old@pt\pt\protected\def\pt{pt}%
   \let\ly@old@mm\mm\protected\def\mm{mm}%
   \let\ly@old@cm\cm\protected\def\cm{cm}%
-  \let\ly@old@hfuzz\hfuzz\setlength{\hfuzz}{\maxdimen}
+  \let\ly@old@hfuzz\hfuzz\setlength{\hfuzz}{\maxdimen}%
 }
 \newcommand{\ly@resetunits}{%
   \let\in\ly@old@in%
   \let\pt\ly@old@pt%
   \let\mm\ly@old@mm%
   \let\cm\ly@old@cm%
-  \setlength{\hfuzz}{\ly@old@hfuzz}
+  \setlength{\hfuzz}{\ly@old@hfuzz}%
 }
 
 % Command to change options during the document
-\newcommand{\lysetoption}[2]{%
-  \directlua{ly.set_property([[#1]], [[#2]])}
-}
+\newcommand{\lysetoption}[2]{\directlua{ly.set_property([[#1]], [[#2]])}}
 
 % How the filename of a score will look like (if printed)
 \newcommand{\lyFilename}[1]{\noindent #1\par\bigskip}
@@ -129,56 +132,54 @@
 % and store them as options. Additionally store the
 % *current* font for optional use.
 \newcommand{\ly@currentfonts}{%
-\begingroup%
+  \begingroup%
     \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}%
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
-    \directlua{
-        ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
-        ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
-        ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
-    }%
-\endgroup%
+    % Set font families to those of the document
+    % that haven't been set explicitly as options.
+    \directlua{ly.set_fonts(\rmfamilyid, \sffamilyid, \ttfamilyid)}%
+  \endgroup%
 }
 
 \newcommand{\ly@checkprepost}{%
-\ifx\preLilyPondExample\undefined%
-\directlua{ly.pre_lilypond = false}%
-\else%
-\directlua{ly.pre_lilypond = true}%
-\fi%
-\ifx\postLilyPondExample\undefined%
-\directlua{ly.post_lilypond = false}%
-\else%
-\directlua{ly.post_lilypond = true}%
-\fi%
-\ifx\betweenLilyPondSystem\undefined%
-\directlua{ly.between_lilypond = false}%
-\else%
-\directlua{ly.between_lilypond = true}%
-\fi%
+  \ifx\preLilyPondExample\undefined%
+    \directlua{ly.pre_lilypond = false}%
+  \else%
+    \directlua{ly.pre_lilypond = true}%
+  \fi%
+  \ifx\postLilyPondExample\undefined%
+    \directlua{ly.post_lilypond = false}%
+  \else%
+    \directlua{ly.post_lilypond = true}%
+  \fi%
+  \ifx\betweenLilyPondSystem\undefined%
+    \directlua{ly.between_lilypond = false}%
+  \else%
+    \directlua{ly.between_lilypond = true}%
+  \fi%
 }
 
 % Main commands
 % Score processing
 \newcommand*{\ly@compilescore}[1]{%
-\ly@setunits%
-\ly@checkprepost%
-\directlua{
-  ly.set_property('currfiledir', [[\currfiledir]])
-  ly.set_property('twoside', '\ly@istwosided')
-  #1
-  ly.newpage_if_fullpage()
-}%
-\ly@resetunits%
-\ly@currentfonts%
-\directlua{ly.score:process()}%
+  \ly@setunits%
+  \ly@checkprepost%
+  \directlua{
+    ly.set_property('currfiledir', [[\currfiledir]])
+    ly.set_property('twoside', '\ly@istwosided')
+    #1
+    ly.newpage_if_fullpage()
+  }%
+  \ly@resetunits%
+  \ly@currentfonts%
+  \directlua{ly.score:process()}%
 }
 
 % Inclusion of a .ly file
 \newcommand*\includely[2][]{%
-\directlua{ly.state = 'env'}%
+\directlua{ly.state = 'file'}%
   \ly@compilescore{ly.file(
     '\luatexluaescapestring{#2}', [[#1]]
   )}%
@@ -191,8 +192,17 @@
   )}
 }
 
-% Base environment to include a LilyPond fragment integrated into
+% Base environments to include a LilyPond fragment integrated into
 % the document.
+\newcommand\lyscorebegin{\directlua{ly.buffenv_begin()}}
+\newcommand\lyscoreend{\directlua{ly.buffenv_end()}}
+\newenvironment{ly@bufferenv}{%
+  \lyscorebegin%
+}{%
+  \lyscoreend%
+  \ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
+}
+
 \NewEnviron{ly@compilely}{%
   \ly@compilescore{ly.fragment(
     '\luatexluaescapestring{\unexpanded\expandafter{\BODY}}',
@@ -209,32 +219,28 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newcommand*{\lily}[2][]{%
-\edef\options{#1}
-\let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
-\directlua{ly.state = 'cmd'}
-\begin{ly@compilely}%
-#2
-\end{ly@compilely}%
-\let\repeat\ly@oldrepeat%
+\newenvironment{ly}[1][noarg]{%
+  \edef\options{#1}%
+  \directlua{ly.env_begin([[#1]])}%
+}{%
+  \directlua{ly.env_end()}%
 }
 
-\newcommand\lyscorebegin[1]{\directlua{ly.env_begin('#1')}}
-\newcommand\lyscoreend{\directlua{ly.env_end()}}
-
-\newenvironment{ly}[1][]{%
-\edef\options{#1}%
-\typeout\options%
-\directlua{ly.state = 'env'}%
-\lyscorebegin{\@currenvir}
-}{%
-\lyscoreend%
-\ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
+\newcommand*{\lily}[2][]{%
+  \edef\options{#1}%
+  \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
+  \directlua{ly.state = 'cmd'}%
+  \begin{ly@compilely}%
+    #2
+  \end{ly@compilely}%
+  \let\repeat\ly@oldrepeat%
 }
 
 % Commands for compatibility with lilypond-book
 \let\lilypondfile\includely%
-\protected\def\lilypond{\def\reserved@a{lilypond}%
+\protected\def\lilypond{%
+  \def\reserved@a{lilypond}%
   \ifx\reserved@a\@currenvir\expandafter\ly%
-  \else\expandafter\lily\fi}
+  \else\expandafter\lily\fi%
+}%
 \let\endlilypond\endly
