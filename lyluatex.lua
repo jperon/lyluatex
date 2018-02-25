@@ -126,8 +126,8 @@ end
 
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
-    if Score.currfiledir == '' then Score.currfiledir = './' end
-    table.insert(includepaths, 1, Score.currfiledir)
+    local cfd = Score.currfiledir:gsub('^$', './')
+    table.insert(includepaths, 1, cfd)
     for i, path in ipairs(includepaths) do
         -- delete initial space (in case someone puts a space after the comma)
         includepaths[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME"))
@@ -238,7 +238,7 @@ local function range_parse(range, nsystems)
     local num = tonumber(range)
     if num then return {num} end
     -- if nsystems is set, we have insert=systems
-    if range:sub(-1) == '-' then range = range..nsystems end
+    if nsystems ~= 0 and range:sub(-1) == '-' then range = range..nsystems end
     if not range:match('^%d+%s*-%s*%d*$') then
         warn([[
 Invalid value '%s' for item
@@ -246,8 +246,8 @@ in list of page ranges. Possible entries:
 - Single number
 - Range (M-N, N-M or N-)
 This item will be skipped!
-      ]], range)
-      return
+        ]], range)
+        return
     end
     local result = {}
     local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
@@ -509,7 +509,10 @@ end
 function Score:calc_range()
     local nsystems = self:count_systems(true)
     if self['print-only'] == '' then
-          self['print-only'] = '1-'..nsystems end
+        if nsystems == 0 then self['print-only'] = '1-'
+        else self['print-only'] = '1-'..nsystems
+        end
+    end
     local result = {}
     if tonumber(self['print-only']) then result = { self['print-only'] }
     else
@@ -520,7 +523,7 @@ function Score:calc_range()
             end
         end
     end
-    self.range = result
+    return result
 end
 
 function Score:calc_staff_properties()
@@ -540,42 +543,33 @@ function Score:calc_staff_properties()
 end
 
 function Score:check_indent(shorten)
-    if (not self.original_indent and
-        -- Either only first system
-        ((#self.range == 1 and self.range[1] == 1)
-        -- or system one not printed first in a multi-system range
-         or
-         (#self.range > 1 and
-          self.range[1] ~= 1 and
-          contains(self.range, 1))))
-    then
+    if not self.original_indent and (
+            -- Either only first system
+            #self.range == 1 and self.range[1] == 1 or
+            -- or system one not printed first in a multi-system range
+            #self.range > 1 and self.range[1] ~= 1 and contains(self.range, 1)
+    ) then
         self.indent_offset = 0
         return shorten, false
     end
-
     -- Now we know we have to deal with the indent
     local changed = false
-    if not self.indent_offset
-    then
+    if not self.indent_offset then
         -- First step: deactivate indent
         self.indent_offset = 0
-        recompile = ''
-        if self:count_systems() > 1
-        then
+        local recompile = ''
+        if self:count_systems() > 1 then
             -- only recompile if the *original* score has more than 1 system
             self.indent = 0
             changed = true
             recompile = '.\nRecompile'
-        else
-            self.indent_offset = self.indent
+        else self.indent_offset = self.indent or 0
         end
         warn('Deactivate indentation because of system selection'..recompile)
         return shorten, changed
     end
-
     -- We are checking a recompilation
-    if self.indent == 0
-    then
+    if self.indent == 0 then
         if shorten > 0 then
             self.indent = min(shorten, self.original_indent)
             shorten = shorten - self.indent
@@ -637,12 +631,10 @@ Found something incompatible with `fragment`
 end
 
 function Score:check_protrusion(bbox_func)
-    if self.insert ~= 'systems' then return false end
+    self.range = self:calc_range()  -- couldn't be done before: the score must be compiled
+    if self.insert ~= 'systems' then return self:is_compiled() end
     local bb = bbox_func(self.output, self['line-width'])
     if not bb then return false end
-
-    -- Score has been created but protrusion not checked yet
-    self:calc_range()
 
     -- Determine offset due to left protrusion
     local h_offset = max(bb.protrusion - self['max-left-protrusion'], 0)
@@ -659,26 +651,22 @@ function Score:check_protrusion(bbox_func)
     local changed_indent
     shorten, changed_indent = self:check_indent(shorten)
 
-    if shorten > 0 or changed_indent
-    then
+    if shorten > 0 or changed_indent then
         self['line-width'] = self['line-width'] - shorten
         -- recalculate hash to reflect the reduced line-width
-        self.output = self:output_filename()
-        if not changed_indent
-        then
+        if not changed_indent then
             warn([[Compiled score exceeds protrusion limit(s).
 Recompile with smaller line-width.]])
         end
-        return true
-    else
-        return false
     end
+    self.output = self:output_filename()
+    return self:is_compiled()
 end
 
 function Score:content()
     local n = ''
     if self.relative then
-        self.fragment = true  -- in case it would serve later
+        self.fragment = 'true'  -- in case it would serve later
         if self.relative < 0 then
             for _ = -1, self.relative, -1 do n = n..',' end
         elseif self.relative > 0 then
@@ -741,10 +729,8 @@ function Score:flatten_content(ly_code)
 end
 
 function Score:is_compiled()
-    if self.insert == 'fullpage' then
-        return lfs.isfile(self.output..'.pdf')
-    else
-        return self:count_systems(true) ~= 0
+    if self.insert == 'fullpage' then return lfs.isfile(self.output..'.pdf')
+    else return self:count_systems(true) ~= 0
     end
 end
 
@@ -1085,7 +1071,7 @@ local HASHIGNORE = {
 function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
-        if (not contains(HASHIGNORE, k)) and  self[k] and type(self[k]) ~= 'function' then
+        if (not contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'_'..k..'_'..self[k]
         end
     end
@@ -1104,12 +1090,10 @@ function Score:process()
     self.first_page = tex.count['c@page']
     self:check_properties()
     self:calc_properties()
-    local do_compile = not self:is_compiled() or
-        self:check_protrusion(bbox.read)
+    local do_compile = not self:check_protrusion(bbox.read)
     if do_compile then
-        repeat
-            self:run_lilypond(self:header()..self:content())
-        until not self:check_protrusion(bbox.parse)
+        repeat self:run_lilypond(self:header()..self:content())
+        until self:check_protrusion(bbox.parse)
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
@@ -1126,8 +1110,7 @@ function Score:run_lilypond(ly_code)
         local f = io.open(self.output..".log", 'w')
         f:write(p:read('*a'))
         f:close()
-    else
-        p:write(ly_code)
+    else p:write(ly_code)
     end
     self.lilypond_error = not p:close()
     if self:is_compiled() then table.insert(self.output_names, self.output) end
@@ -1147,9 +1130,7 @@ function Score:tex_margin_inner()
     if not self._tex_margin_inner then
         self._tex_margin_inner =
             convert_unit((
-              tex.sp('1in') +
-              tex.dimen.oddsidemargin +
-              tex.dimen.hoffset
+              tex.sp('1in') + tex.dimen.oddsidemargin + tex.dimen.hoffset
             )..'sp')
     end
     return self._tex_margin_inner
@@ -1159,7 +1140,7 @@ function Score:tex_margin_outer()
     if not self._tex_margin_outer then
         self._tex_margin_outer =
             convert_unit((tex.dimen.paperwidth - tex.dimen.textwidth)..'sp') -
-                self:tex_margin_inner()
+            self:tex_margin_inner()
     end
     return self._tex_margin_outer
 end

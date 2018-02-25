@@ -180,7 +180,7 @@
 
 % Inclusion of a .ly file
 \newcommand*\includely[2][]{%
-\directlua{ly.state = 'file'}%
+  \directlua{ly.state = 'file'}%
   \ly@compilescore{ly.file(
     '\luatexluaescapestring{#2}', [[#1]]
   )}%
@@ -188,6 +188,7 @@
 
 % Inclusion of a musicxml file
 \newcommand*\musicxmlfile[2][]{%
+  \directlua{ly.state = 'file'}%
   \ly@compilescore{ly.file_musicxml(
     '\luatexluaescapestring{#2}', [[#1]]
   )}
