@@ -1357,6 +1357,26 @@ function ly.newpage_if_fullpage()
 end
 
 
+function ly.set_fonts(rm, sf, tt)
+  if rm..sf..tt ~= '' then
+      ly.set_property('pass-fonts', 'true')
+      info("At least one font family set explicitly. Activate 'pass-fonts'")
+  end
+  if ly.score.rmfamily == '' then
+      ly.set_property('rmfamily', ly.get_font_family(rm))
+  else
+      -- if explicitly set don't override rmfamily with 'current' font
+      ly.set_property('current-font-as-main', 'false')
+      info("rmfamily set explicitly. Deactivate 'current-font-as-main'")
+  end
+  if ly.score.sffamily == '' then
+      ly.set_property('sffamily', ly.get_font_family(sf))
+  end
+  if ly.score.ttfamily == '' then
+      ly.set_property('ttfamily', ly.get_font_family(tt))
+  end
+end
+
 function ly.set_local_options(opts)
     local options = {}
     local next_opt = opts:gmatch('([^,]+)')  -- iterator over options

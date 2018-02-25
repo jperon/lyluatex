@@ -138,23 +138,7 @@
     \ttfamily \edef\ttfamilyid{\fontid\font}%
     % Set font families to those of the document
     % that haven't been set explicitly as options.
-    \directlua{
-      -- implicitly activate pass-fonts if *any* font family has been set
-      if ly.score.rmfamily..ly.score.sffamily..ly.score.rmfamily ~= ''
-      then ly.set_property('pass-fonts', 'true') end
-      if ly.score.rmfamily == '' then
-          ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
-      else
-          -- if explicitly set don't override rmfamily with 'current' font
-          ly.set_property('current-font-as-main', 'false')
-      end
-      if ly.score.sffamily == '' then
-          ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
-      end
-      if ly.score.ttfamily == '' then
-          ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
-      end
-    }%
+    \directlua{ly.set_fonts(\rmfamilyid, \sffamilyid, \ttfamilyid)}%
   \endgroup%
 }
 
