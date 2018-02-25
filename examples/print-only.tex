@@ -3,80 +3,47 @@
 \newcommand{\postLilyPondExample}{\par\bigskip\hrule\par\bigskip}
 \begin{document}
 
-\section*{System Selection and Indent Suppression}
+\section*{Print only Selected Systems or Pages}
 
-This document demonstrates the use of \texttt{print-only} and \texttt{indent}.
-With \texttt{print-only} the output can be limited to a selection of systems or
-pages in arbitrary order.  \texttt{lyluatex} suppresses a given indent if either
-only the first (or single) system is printed or the first systems happens to be
-printed not at the first position.  If necessary one or several recompilation(s)
-are triggered automatically.
+The \texttt{print-only} option allows to limit the printed systems or pages from
+a score. A typical use case is to print a score interspersed with comments.  The
+advantage of this approach is that the score is compiled only once while the
+individual systems are simply reused by \LaTeX.
 
-\bigskip The following score has an indent of 1cm but only a single system.
-Therefore the indent is deactivated and the score shifted to the left.  Since
-the score itself has only one system no recompilation is required because the
-score is ragged-right anyway.
+Throughout this document we'll demonstrate the different options to
+select systems from the following score:
 
-\begin{lilypond}[indent=1cm]
-  { c' d' e' d' }
-\end{lilypond}
+\lilypondfile[verbatim]{../ly/eight-systems.ly}
 
-The following score has an indent of 1cm set and \texttt{print-only=3-1},
-therefore the indented first system wouldn't be at the top of the score. Since
-simply shifting the system to the left would create a “hole” on the right side
-the score is automatically recompiled without indentation.
+The simplest selection is a single system: \texttt{print-only=4}
 
-\begin{lilypond}[print-only=3-1,indent=1cm]
-  \repeat unfold 28 { c' d' e' d' }
-\end{lilypond}
+\lilypondfile[print-only=4]{../ly/eight-systems.ly}
 
-The following score has the same properties as the previous ones but
-additionally a \texttt{max-protrusion} limit of 0.5cm and a protruding
-instrument name.  This results in the situation that normally the whole score
-would be shortened to fit in the maximum protrusion because the indent is
-automatically deactivated:
+Ranges are also possible: \texttt{print-only=3-5}, with the special form of
+\texttt{print-only=6-} which prints from the given system throughout the end of
+the score. Negative ranges can be given with \texttt{print-only=7-5}
 
-\begin{lilypond}[print-only=2-1,max-protrusion=0.5cm]
-  \set Staff.instrumentName = "Violin"
-  \repeat unfold 15 { c' d' e' d' }
-\end{lilypond}
+\lilypondfile[print-only=3-5]{../ly/eight-systems.ly}
 
-However, since an indent is given \texttt{lyluatex} tries to fix the protrusion
-issue first by reintroducing an indent up to the given value.  This is because
-in a majority of cases the protrusion limit will be be exceeded by instrument
-names in the first system (which is what indent basically is used for).  In
-this score this is sufficient, so only the first system is indented and not the
-whole score.
+\lilypondfile[print-only=6-]{../ly/eight-systems.ly}
 
-\begin{lilypond}[autoindent, indent=1cm,max-protrusion=0.5cm]
-  \set Staff.instrumentName = "Violin"
-  \repeat unfold 15 { c' d' e' d' }
-\end{lilypond}
+\lilypondfile[print-only=7-5]{../ly/eight-systems.ly}
 
-If the protrusion is so wide that it would exceed the allowed indent the whole
-score will be narrowed by the necessary additional amount:
+With a comma-separated list an arbitrary sequence of systems can be specified.
+The list has to be enclosed in curly brackets: \texttt{print-only={4,1,2}}
 
-\begin{lilypond}[print-only=2-1,indent=10cm,max-protrusion=0.5cm]
-  \set Staff.instrumentName = "Violin I. and II."
-  \repeat unfold 15 { c' d' e' d' }
-\end{lilypond}
+\lilypondfile[print-only={4,1,2}]{../ly/eight-systems.ly}
 
-Finally it is possible that after applying the dynamic indent there still is a
-protrusion overflow caused by other systems than the first one.  In this case
-the score is narrowed according to the protrusion and the dynamic indent reduced
-accordingly:
+Each element of the list can include any of the forms described above:\\
+\texttt{print-only={3,5-7,4,7-}}
 
-\begin{lilypond}[print-only=2-1,indent=1cm,max-protrusion=0.5cm]
-  \set Staff.instrumentName = "Violin 1"
-  \set Staff.shortInstrumentName = "Violin"
-  \repeat unfold 15 { c' d' e' d' }
-\end{lilypond}
+\lilypondfile[print-only={3,5-7,4,7-}]{../ly/eight-systems.ly}
 
+The functionality is identical with fullpage scores where the selection applies
+to \emph{pages} instead. This can for example be used when the “score” file
+contains a number of individual pieces (e.g. songs for a song book), and
+individual selections are to be printed.
 
-
-The handling of indent suppression may require up to four compilations of the
-score, but these are handled automatically, and the resulting intermediate
-stages of the score are cached just like the scores actually used in the
-document.
+Systems have some specific behaviour with regard to \emph{indent}, but this is demonstrated in its own file \texttt{dynamic-indent.tex}.
 
 \end{document}
