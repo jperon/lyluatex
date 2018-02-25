@@ -1381,7 +1381,7 @@ function ly.set_local_options(opts)
                 local vs
                 repeat
                     vs = next_opt()
-                    v = v..','..vs
+                    if vs then v = v..','..vs else break end
                 until vs:sub(-1) == '}'
                 v = v:sub(2, -2)  -- remove { }
             end
