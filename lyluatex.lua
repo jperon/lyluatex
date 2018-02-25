@@ -1372,27 +1372,32 @@ end
 
 function ly.set_local_options(opts)
     local options = {}
-    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
-    local opt = next_opt()
+    local function next_opt (remain)
+        if remain == '' then return nil, nil end
+        local brace = remain:match('^[^,]*{[^}]*}')
+        local comma = remain:match('^[^{]*,')
+        if brace then return brace:sub(1,-1), remain:sub(brace:len()+2)
+        elseif comma then return comma:sub(1,-2), remain:sub(comma:len()+1)
+        else return remain, ''
+        end
+    end
+--    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
+    local opt, remainder = next_opt(opts)
     while opt do
         local k, v = opt:match('([^=]+)=?(.*)')
         if k then
-            if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
-                local vs
-                repeat
-                    vs = next_opt()
-                    v = v..','..vs
-                until vs:sub(-1) == '}'
-                v = v:sub(2, -2)  -- remove { }
+            if v then
+                v = v:gsub('^%s', '')
+                if v:match('{.*}') then v = v:sub(2,-2) end
             end
-            k, v = process_options(k:gsub('^%s', ''), v:gsub('^%s', ''))
+            k, v = process_options(k:gsub('^%s', ''), v)
             if k then
                 if options[k] then err('Option %s is set two times for the same score.', k)
                 else options[k] = v
                 end
             end
         end
-        opt = next_opt()
+        opt, remainder = next_opt(remainder)
     end
     return options
 end
