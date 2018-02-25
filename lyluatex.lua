@@ -387,6 +387,12 @@ function latex.label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
 end
 
+function latex.systems_list(filename, hoffset, range)
+    tex.sprint(-hoffset..'pt,')
+    for i = 1, #range - 1 do tex.sprint(filename..'-'..range[i]..',') end
+    tex.sprint(filename..'-'..range[#range])
+end
+
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
 function latex.verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
@@ -1122,6 +1128,13 @@ function Score:tex_margin_top()
 end
 
 function Score:write_latex(do_compile)
+    if self['raw-pdf']
+    then
+        if self.insert == 'systems' then
+            latex.systems_list(self.output, self.protrusion, self:_range())
+        else tex.sprint(self.output) end
+        return
+    end
     latex.filename(self.printfilename, self.insert, self.input_file)
     latex.verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
     if do_compile and not self:is_compiled_without_error() then return end
@@ -1388,7 +1401,7 @@ function ly.set_local_options(opts)
                 local vs
                 repeat
                     vs = next_opt()
-                    v = v..','..vs
+                    if vs then v = v..','..vs else break end
                 until vs:sub(-1) == '}'
                 v = v:sub(2, -2)  -- remove { }
             end
