@@ -137,11 +137,9 @@
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
-    \directlua{
-      ly.set_property('rmfamily', ly.get_font_family(\rmfamilyid))
-      ly.set_property('sffamily', ly.get_font_family(\sffamilyid))
-      ly.set_property('ttfamily', ly.get_font_family(\ttfamilyid))
-    }%
+    % Set font families to those of the document
+    % that haven't been set explicitly as options.
+    \directlua{ly.set_fonts(\rmfamilyid, \sffamilyid, \ttfamilyid)}%
   \endgroup%
 }
 
