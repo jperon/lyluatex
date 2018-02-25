@@ -48,7 +48,7 @@ names in the first system (which is what indent basically is used for).  In
 this score this is sufficient, so only the first system is indented and not the
 whole score.
 
-\begin{lilypond}[print-only=2-1,indent=1cm,max-protrusion=0.5cm]
+\begin{lilypond}[autoindent, indent=1cm,max-protrusion=0.5cm]
   \set Staff.instrumentName = "Violin"
   \repeat unfold 15 { c' d' e' d' }
 \end{lilypond}
@@ -56,7 +56,7 @@ whole score.
 If the protrusion is so wide that it would exceed the allowed indent the whole
 score will be narrowed by the necessary additional amount:
 
-\begin{lilypond}[print-only=2-1,indent=1cm,max-protrusion=0.5cm]
+\begin{lilypond}[print-only=2-1,indent=10cm,max-protrusion=0.5cm]
   \set Staff.instrumentName = "Violin I. and II."
   \repeat unfold 15 { c' d' e' d' }
 \end{lilypond}

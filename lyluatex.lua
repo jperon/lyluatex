@@ -552,6 +552,8 @@ function Score:check_indent(shorten)
     if not (self.original_indent and (
             -- Either only first system
             #self.range == 1 and self.range[1] == 1 or
+            -- or autoindent is specified
+            self.autoindent or
             -- or system one not printed first in a multi-system range
             #self.range > 1 and self.range[1] ~= 1 and contains(self.range, 1)
     )) then
@@ -640,7 +642,7 @@ function Score:check_protrusion(bbox_func)
     self.range = self:calc_range()  -- couldn't be done before: the score must be compiled
     if self.insert ~= 'systems' then return self:is_compiled() end
     local bb = bbox_func(self.output, self['line-width'])
-    if not bb then return false end
+    if not bb then return end
 
     -- Determine offset due to left protrusion
     local h_offset = max(bb.protrusion - self['max-left-protrusion'], 0)
@@ -664,9 +666,10 @@ function Score:check_protrusion(bbox_func)
             warn([[Compiled score exceeds protrusion limit(s).
 Recompile with smaller line-width.]])
         end
+        self.output = self:output_filename()
+        return
+    else return true
     end
-    self.output = self:output_filename()
-    return self:is_compiled()
 end
 
 function Score:content()
@@ -1078,7 +1081,7 @@ function Score:output_filename()
     local properties = ''
     for k, _ in orderedpairs(OPTIONS) do
         if (not contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
-            properties = properties..'_'..k..'_'..self[k]
+            properties = properties..'\n'..k..'\t'..self[k]
         end
     end
     if self.insert == 'fullpage' then
@@ -1099,7 +1102,7 @@ function Score:process()
     local do_compile = not self:check_protrusion(bbox.read)
     if do_compile then
         repeat self:run_lilypond(self:header()..self:content())
-        until self:check_protrusion(bbox.parse)
+        until self:check_protrusion(bbox.read) or self:check_protrusion(bbox.parse)
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
@@ -1109,6 +1112,7 @@ function Score:process()
 end
 
 function Score:run_lilypond(ly_code)
+    if self:is_compiled() then return end
     mkdirs(dirname(self.output))
     self:lilypond_version()
     local p = io.popen(self:lilypond_cmd(ly_code))
