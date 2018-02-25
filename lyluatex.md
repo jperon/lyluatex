@@ -43,6 +43,11 @@ features.
 a number of `key=value` options.  Their general use is described in the [Option
 Handling](#option-handling) section below.
 
+By default \lyluatex\ invokes LilyPond simply as `lilypond`.  If LilyPond is
+installed in another location or a specific version of LilyPond should be used
+the invocation is controlled with the \option{program} option, see [The LilyPond
+Executable](#program).
+
 \lyIssue{Note:} \lyluatex\ can only be used with \LuaLaTeX, and compiling with
 any other \LaTeX\ engine will fail.
 
