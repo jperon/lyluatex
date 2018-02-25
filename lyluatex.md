@@ -81,7 +81,6 @@ with the
 `musicexamples`^[[https://github.com/uliska/musicexamples](https://github.com/uliska/musicexamples)]
 package.
 
-
 \lyluatex\ aims at being an upwards-compatible drop-in replacement for the
 `lilypond-book` preprocessor shipping with
 LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
@@ -943,7 +942,7 @@ they can be used for including files from within the LilyPond code.  Paths
 starting with the tilde will implicitly be expanded to absolute paths in that
 process.
 
-### LilyPond Executable
+### LilyPond Executable{#program}
 
 By default \lyluatex\ will invoke LilyPond through the `lilypond` command, which
 will work in many situations for default installations. However, in order to
