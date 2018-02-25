@@ -22,7 +22,8 @@
   ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")
   ly.declare_package_options({
     ['addversion'] = {'false', 'true', ''},
-    ['autoindent'] = {'false', 'true', ''},
+    ['autoindent'] = {'', 'true', 'false'},
+        ['noautoindent'] = {'default', ly.is_neg},
     ['cleantmp'] = {'false', 'true', ''},
     ['currfiledir'] = {},
     ['debug'] = {'false', 'true', ''},

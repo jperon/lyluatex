@@ -549,13 +549,16 @@ function Score:calc_staff_properties()
 end
 
 function Score:check_indent(shorten)
+    if self.autoindent == '' then
+        if not (#self.range > 1 and self.range[1] ~= 1 and contains(self.range, 1)) then
+            self.autoindent = false
+        end
+    end
     if not (self.original_indent and (
             -- Either only first system
             #self.range == 1 and self.range[1] == 1 or
             -- or autoindent is specified
-            self.autoindent or
-            -- or system one not printed first in a multi-system range
-            #self.range > 1 and self.range[1] ~= 1 and contains(self.range, 1)
+            self.autoindent
     )) then
         self.indent_offset = 0
         return shorten, false
