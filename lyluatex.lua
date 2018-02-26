@@ -549,25 +549,36 @@ function Score:calc_staff_properties()
 end
 
 function Score:check_indent(shorten)
-    -- if autoindent is not specified then make it default
-    -- *when system 1 is printed at a later position*
-    if self.autoindent == '' then
-        self.autoindent =
-            (#self.range > 1 and
-             self.range[1] ~= 1 and
-              contains(self.range, 1))
+    local nsystems = self:count_systems(true)
+
+    local function autoindent()
+        -- if autoindent is not specified then make it default
+        -- *when system 1 is printed at a later position*
+        return (#self.range > 1 and
+                self.range[1] ~= 1 and
+                contains(self.range, 1))
     end
-    -- simply deactivate indent
-    if self.original_indent and (self:count_systems(true) == 1) then
+
+    local function regular_score()
+        -- score without any indent or with the first system
+        -- printed regularly, with others following.
+        return (not self.original_indent) or
+            (nsystems > 1 and
+             #self.range > 1 and
+             self.range[1] == 1)
+    end
+
+    local function simple_noindent()
+        -- score with indent and only one system
+        return self.original_indent and (nsystems == 1)
+    end
+
+    if self.autoindent == '' then self.autoindent = autoindent() end
+    if simple_noindent() then
         self.indent_offset = self.indent
+        warn('Deactivate indent for single-system score.')
         return shorten, false
-    end
-    if not (self.original_indent and (
-            -- Either only first system
-            #self.range == 1 and self.range[1] == 1 or
-            -- or autoindent is specified
-            self.autoindent
-    )) then
+    elseif regular_score() then
         self.indent_offset = 0
         return shorten, false
     end
