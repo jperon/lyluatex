@@ -3,75 +3,81 @@
 \newcommand{\postLilyPondExample}{\par\bigskip\hrule\par\bigskip}
 \begin{document}
 
-\section*{System Selection and Indent Suppression}
+\section*{Indent Handling}
 
-This document demonstrates the use of \texttt{print-only} and \texttt{indent}.
-With \texttt{print-only} the output can be limited to a selection of systems or
-pages in arbitrary order.  \texttt{lyluatex} suppresses a given indent if either
-only the first (or single) system is printed or the first systems happens to be
-printed not at the first position.  If necessary one or several recompilation(s)
-are triggered automatically.
+This document demonstrates the use of \texttt{indent} and \texttt{autoindent},
+partially in combination with \texttt{print-only}.
 
-\bigskip The following score has an indent of 1cm but only a single system.
-Therefore the indent is deactivated and the score shifted to the left.  Since
-the score itself has only one system no recompilation is required because the
-score is ragged-right anyway.
+\texttt{indent=1cm} indents the first line, but if the resulting score contains
+only one system this indent is suppressed (issuing a warning on the console):
+
+\begin{lilypond}[indent=1cm]
+  \repeat unfold 12 { c' d' e' d' }
+\end{lilypond}
 
 \begin{lilypond}[indent=1cm]
   { c' d' e' d' }
 \end{lilypond}
 
-The following score has an indent of 1cm set and \texttt{print-only=3-1},
-therefore the indented first system wouldn't be at the top of the score. Since
-simply shifting the system to the left would create a “hole” on the right side
-the score is automatically recompiled without indentation.
+If the output of a score containing more than one system is limited to the first
+system using \texttt{print-only=1} then the indent is removed but the score is
+recompiled to ensure a full-length system. The following score is the first
+system of the first two-system score:
 
-\begin{lilypond}[print-only=3-1,indent=1cm]
-  \repeat unfold 28 { c' d' e' d' }
+\textbf{This is broken:} The indent should be suppressed. For
+this \emph{two} compilations would have been necessary instead of just one.
+
+\begin{lilypond}[indent=1cm,print-only=1]
+  \repeat unfold 12 { c' d' e' d' }
 \end{lilypond}
 
-The following score has the same properties as the previous ones but
-additionally a \texttt{max-protrusion} limit of 0.5cm and a protruding
-instrument name.  This results in the situation that normally the whole score
-would be shortened to fit in the maximum protrusion because the indent is
-automatically deactivated:
+Note that this behaviour also applies when \texttt{print-only} causes the first
+system to be printed at another position, e.g. with \texttt{print-only={3,1,2}}.
+In this case the indent of the first system is suppressed in order to avoid a
+“hole”. Of course this is a corner case, but might be useful when a score
+consists of separate entities (examples, exercises) per system.
 
-\begin{lilypond}[print-only=2-1,max-protrusion=0.5cm]
-  \set Staff.instrumentName = "Violin"
-  \repeat unfold 15 { c' d' e' d' }
+\textbf{Note:} this works correctly, so obviously there's something wrong with
+the entry conditional checking whether indent suppression should be applied.
+
+\begin{lilypond}[indent=1cm,print-only={3,1,2}]
+  \repeat unfold 25 { c' d' e' d' }
 \end{lilypond}
 
-However, since an indent is given \texttt{lyluatex} tries to fix the protrusion
-issue first by reintroducing an indent up to the given value.  This is because
-in a majority of cases the protrusion limit will be be exceeded by instrument
-names in the first system (which is what indent basically is used for).  In
-this score this is sufficient, so only the first system is indented and not the
-whole score.
 
-\begin{lilypond}[autoindent, indent=1cm,max-protrusion=0.5cm]
-  \set Staff.instrumentName = "Violin"
-  \repeat unfold 15 { c' d' e' d' }
-\end{lilypond}
+If a protrusion limit has been set with \texttt{max-protrusion=0.5cm} and the
+score exceeds that limit in spite of an indent then the whole score will
+appropriately be indented:
 
-If the protrusion is so wide that it would exceed the allowed indent the whole
-score will be narrowed by the necessary additional amount:
-
-\begin{lilypond}[print-only=2-1,indent=10cm,max-protrusion=0.5cm]
+\begin{lilypond}[indent=1cm,max-protrusion=0.5cm]
   \set Staff.instrumentName = "Violin I. and II."
-  \repeat unfold 15 { c' d' e' d' }
+  \repeat unfold 11 { c' d' e' d' }
 \end{lilypond}
 
-Finally it is possible that after applying the dynamic indent there still is a
-protrusion overflow caused by other systems than the first one.  In this case
-the score is narrowed according to the protrusion and the dynamic indent reduced
-accordingly:
+This doesn't look very good because the indentation of the consecutive systems
+isn't actually necessary if only the first systems has that excessive
+protrusion. To improve that situation the option \texttt{autoindent} will add an
+automatic indent so only the first system is sufficiently indented:
 
-\begin{lilypond}[print-only=2-1,indent=1cm,max-protrusion=0.5cm]
-  \set Staff.instrumentName = "Violin 1"
-  \set Staff.shortInstrumentName = "Violin"
-  \repeat unfold 15 { c' d' e' d' }
+\textbf{This is broken:} autoindent doesn't seem to make a difference.
+
+\begin{lilypond}[autoindent,max-protrusion=0.5cm]
+  \set Staff.instrumentName = "Violin I. and II."
+  \repeat unfold 11 { c' d' e' d' }
 \end{lilypond}
 
+However, if the protrusion limit is not only exceeded by the \emph{first} system
+(which should be the typical case due to the instrument name) \texttt{lyluatex}
+will deal with the situation by indenting the \emph{whole} score by the
+appropriate amount and adjusting the indent of the first system accordingly:
+
+\textbf{This is broken:} autoindent doesn't seem to make a difference.
+
+\begin{lilypond}[autoindent,max-protrusion=0.5cm]
+  \set Staff.instrumentName = "Violin I. and II."
+  \set Staff.shortInstrumentName = "Violin I/II"
+  \repeat unfold 11 { c' d' e' d' }
+\end{lilypond}
 
 
 The handling of indent suppression may require up to four compilations of the
