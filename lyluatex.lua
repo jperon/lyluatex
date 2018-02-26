@@ -549,10 +549,18 @@ function Score:calc_staff_properties()
 end
 
 function Score:check_indent(shorten)
+    -- if autoindent is not specified then make it default
+    -- *when system 1 is printed at a later position*
     if self.autoindent == '' then
-        if not (#self.range > 1 and self.range[1] ~= 1 and contains(self.range, 1)) then
-            self.autoindent = false
-        end
+        self.autoindent =
+            (#self.range > 1 and
+             self.range[1] ~= 1 and
+              contains(self.range, 1))
+    end
+    -- simply deactivate indent
+    if self.original_indent and (self:count_systems(true) == 1) then
+        self.indent_offset = self.indent
+        return shorten, false
     end
     if not (self.original_indent and (
             -- Either only first system
@@ -1072,6 +1080,7 @@ function Score:optimize_pdf()
 end
 
 local HASHIGNORE = {
+  'autoindent',
   'cleantmp',
   'hpadding',
   'max-left-protrusion',
