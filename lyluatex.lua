@@ -438,8 +438,7 @@ function Score:new(ly_code, options, input_file)
 end
 
 function Score:bbox(system)
-    if system
-    then
+    if system then
         if not self.bboxes then
             self.bboxes = {}
             for i = 1, self:count_systems() do
@@ -448,8 +447,7 @@ function Score:bbox(system)
         end
         return self.bboxes[system]
     else
-        if not self.bbox
-        then
+        if not self.bbox then
             self.bbox = bbox.get(self.output, self['line-width'])
         end
         return self.bbox
@@ -529,7 +527,7 @@ function Score:calc_range()
         end
     end
     local result = {}
-    if tonumber(self['print-only']) then result = { self['print-only'] }
+    if tonumber(self['print-only']) then result = {self['print-only']}
     else
         for _, r in pairs(self['print-only']:explode(',')) do
             local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
@@ -557,7 +555,7 @@ function Score:calc_staff_properties()
     end
 end
 
-function Score:check_indent(lp, bb)
+function Score:check_indent(lp)
     local nsystems = self:count_systems()
 
     local function handle_autoindent()
@@ -659,11 +657,10 @@ Found something incompatible with `fragment`
 end
 
 function Score:check_protrusion(bbox_func)
+    self.range = self:calc_range()
     if self.insert ~= 'systems' then return self:is_compiled() end
     local bb = bbox_func(self.output, self['line-width'])
     if not bb then return end
-    -- Now we know there is a compiled score
-    self.range = self:calc_range()
 
     -- line_props lp
     local lp = {}
@@ -1210,10 +1207,9 @@ function Score:tex_margin_top()
 end
 
 function Score:write_latex(do_compile)
-    if self['raw-pdf']
-    then
+    if self['raw-pdf'] then
         if self.insert == 'systems' then
-            latex.systems_list(self.output, self.protrusion_left, self:_range())
+            latex.systems_list(self.output, self.protrusion_left, self.range)
         else tex.sprint(self.output) end
         return
     end
