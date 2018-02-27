@@ -1,0 +1,49 @@
+\documentclass{scrartcl}
+\usepackage{lyluatex}
+\newcommand{\postLilyPondExample}{\par\bigskip\hrule\par\bigskip}
+\begin{document}
+
+\section*{Print only Selected Systems or Pages}
+
+The \texttt{print-only} option allows to limit the printed systems or pages from
+a score. A typical use case is to print a score interspersed with comments.  The
+advantage of this approach is that the score is compiled only once while the
+individual systems are simply reused by \LaTeX.
+
+Throughout this document we'll demonstrate the different options to
+select systems from the following score:
+
+\lilypondfile[verbatim]{../ly/eight-systems.ly}
+
+The simplest selection is a single system: \texttt{print-only=4}
+
+\lilypondfile[print-only=4]{../ly/eight-systems.ly}
+
+Ranges are also possible: \texttt{print-only=3-5}, with the special form of
+\texttt{print-only=6-} which prints from the given system throughout the end of
+the score. Negative ranges can be given with \texttt{print-only=7-5}
+
+\lilypondfile[print-only=3-5]{../ly/eight-systems.ly}
+
+\lilypondfile[print-only=6-]{../ly/eight-systems.ly}
+
+\lilypondfile[print-only=7-5]{../ly/eight-systems.ly}
+
+With a comma-separated list an arbitrary sequence of systems can be specified.
+The list has to be enclosed in curly brackets: \texttt{print-only={4,1,2}}
+
+\lilypondfile[print-only={4,1,2}]{../ly/eight-systems.ly}
+
+Each element of the list can include any of the forms described above:\\
+\texttt{print-only={3,5-7,4,7-}}
+
+\lilypondfile[print-only={3,5-7,4,7-}]{../ly/eight-systems.ly}
+
+The functionality is identical with fullpage scores where the selection applies
+to \emph{pages} instead. This can for example be used when the “score” file
+contains a number of individual pieces (e.g. songs for a song book), and
+individual selections are to be printed.
+
+Systems have some specific behaviour with regard to \emph{indent}, but this is demonstrated in its own file \texttt{dynamic-indent.tex}.
+
+\end{document}
