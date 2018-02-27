@@ -221,6 +221,19 @@ will use their default value which is documented with each option.  Boolean
 options don't have to be set to `true` explicitly, using the option alone will
 do that as well, for example: `[debug=true]` is equivalent to `[debug]`.
 
+Options can be unset (i.e. reset to their default value) through the syntax
+`key=`. This can for example be used to use the default value locally when
+a value has been specified globally.
+
+Some options are complemented by a corresponding `no<option>`.  Using this
+alternative is equivalent to setting an option so `false`: `nofragment` is
+the same as `fragment=false`.
+
+Finally it has to be mentioned that some options have side-effect on other
+options. For example, setting `indent` to some value implicitly will set
+`autoindent=false`, or `max-protrusion` will define `max-left-protrusion`
+and `max-right-protrusion` if these are not set explicitly.
+
 \lyMargin{Package Options\index{Package Options}}
 Options can be set globally through package options, which are used with
 
