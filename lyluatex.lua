@@ -1133,7 +1133,7 @@ function Score:process()
     local do_compile = not self:check_protrusion(bbox.read)
     if do_compile then
         repeat self:run_lilypond(self:header()..self:content())
-        until self:check_protrusion(bbox.read) or self:check_protrusion(bbox.parse)
+        until self:check_protrusion(bbox.get)
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
