@@ -502,6 +502,8 @@ function Score:calc_properties()
     -- store for comparing protrusion against
     self.original_lw = self['line-width']
     self.original_indent = self.indent
+    -- explicit indent disables autoindent
+    if self.indent then self.autoindent = false end
     -- score fonts
     if self['current-font-as-main'] then
         self.rmfamily = self['current-font']
@@ -590,8 +592,6 @@ function Score:check_indent(shorten)
         return self.original_indent and (nsystems == 1)
     end
 
-    if type(self.autoindent) == 'string' then
-        self.autoindent = default_autoindent() end
     if simple_noindent() then
         self.indent_offset = self.indent
         warn('Deactivate indent for single-system score.')
