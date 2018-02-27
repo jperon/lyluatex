@@ -226,10 +226,10 @@ Options can be unset (i.e. reset to their default value) through the syntax
 a value has been specified globally.
 
 Some options are complemented by a corresponding `no<option>`.  Using this
-alternative is equivalent to setting an option so `false`: `nofragment` is
+alternative is equivalent to setting an option to `false`: `nofragment` is
 the same as `fragment=false`.
 
-Finally it has to be mentioned that some options have side-effect on other
+Finally it has to be mentioned that some options have side-effects on other
 options. For example, setting `indent` to some value implicitly will set
 `autoindent=false`, or `max-protrusion` will define `max-left-protrusion`
 and `max-right-protrusion` if these are not set explicitly.
