@@ -161,11 +161,15 @@ end
 
 
 local function max(a, b)
+    a = tonumber(a)
+    b = tonumber(b)
     if a > b then return a else return b end
 end
 
 
 local function min(a, b)
+    a = tonumber(a)
+    b = tonumber(b)
     if a < b then return a else return b end
 end
 
@@ -283,6 +287,7 @@ function bbox.read(filename)
         local bb = {}
         bb.protrusion = f:read('*l')
         bb.r_protrusion = f:read('*l')
+        bb.width = f:read('*l')
         bb.height = f:read('*l')
         f:close()
         return bb
@@ -298,10 +303,12 @@ function bbox.parse(filename, line_width)
     local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
     local bb = {}
     bb.protrusion = -x_1
-    bb.r_protrusion = x_2 - line_width
+    bb.r_protrusion = x_2 + 1 - math.floor(line_width)
+    bb.width = x_2 + 1
     bb.height = y_2 - y_1
     f = io.open(filename..'.bbox', 'w')
-    f:write(bb.protrusion..'\n'..bb.r_protrusion..'\n'..bb.height..'\n')
+    f:write(bb.protrusion..'\n'..bb.r_protrusion..'\n'..
+            bb.width..'\n'..bb.height..'\n')
     f:close()
     return bb
 end
@@ -353,7 +360,7 @@ function latex.includepdf(pdfname, range, papersize)
     )end
 
 function latex.includesystems(filename, range, protrusion, gutter, staffsize, indent_offset)
-    local h_offset = -protrusion - indent_offset
+    local h_offset = protrusion + indent_offset
     local texoutput = ''
     if ly.pre_lilypond then
         texoutput = texoutput..'\\preLilyPondExample\n'
@@ -389,7 +396,7 @@ function latex.label(label, labelprefix)
 end
 
 function latex.systems_list(filename, hoffset, range)
-    tex.sprint(-hoffset..'pt,')
+    tex.sprint(hoffset..'pt,')
     for i = 1, #range - 1 do tex.sprint(filename..'-'..range[i]..',') end
     tex.sprint(filename..'-'..range[#range])
 end
@@ -550,32 +557,43 @@ function Score:calc_staff_properties()
     end
 end
 
-function Score:check_indent(shorten)
-    local nsystems = self:count_systems(true)
-
-    local function default_autoindent()
-        -- if autoindent is not specified then make it default
-        -- *when system 1 is printed at a later position*
-        if self.autoindent == '' then
-            local ai = false
-            if (#self.range > 1 and
-                self.range[1] ~= 1 and
-                contains(self.range, 1)) or
-                self.autoindent == 'true' then
-                    ai = true
-                    self.original_indent = false
-                    self.indent = 0
-            end
-        end
-        self.autoindent = ai
-    end
+function Score:check_indent(lp, bb)
+    local nsystems = self:count_systems()
 
     local function handle_autoindent()
-        if not self.indent then self.indent = 0 end
-        self.indent = self.indent + shorten
-        print("Handle indent")
-        print("Shorten: "..shorten)
-        return 0, true
+        self.indent_offset = 0
+        if lp.shorten > 0 then
+            if (not self.indent) or (self.indent == 0) then
+                self.indent = lp.overflow_left
+                lp.shorten = max(lp.shorten - lp.overflow_left, 0)
+            else
+                self.indent = max(self.indent - lp.overflow_left, 0)
+            end
+            lp.changed_indent = true
+        end
+    end
+
+    local function handle_indent()
+        if not self.indent_offset then
+            -- First step: deactivate indent
+            self.indent_offset = 0
+            local recompile = ''
+            if self:count_systems() > 1 then
+                -- only recompile if the *original* score has more than 1 system
+                self.indent = 0
+                lp.changed_indent = true
+                recompile = '.\nRecompile'
+            else self.indent_offset = self.indent or 0
+            end
+            warn('Deactivate indentation because of system selection'..recompile)
+        elseif lp.shorten > 0 then
+                self.indent = 0
+                self.autoindent = true
+--                lp.changed_indent = true
+                handle_autoindent()
+                warn([[Deactivated indent causes protrusion.
+Recompile with autoindent.]])
+        end
     end
 
     local function regular_score()
@@ -593,48 +611,12 @@ function Score:check_indent(shorten)
     end
 
     if simple_noindent() then
-        self.indent_offset = self.indent
+        self.indent_offset = -self.indent
         warn('Deactivate indent for single-system score.')
-        return shorten, false
-    elseif self.autoindent then
-        return handle_autoindent()
-    elseif regular_score() then
-        self.indent_offset = 0
-        return shorten, false
+    elseif self.autoindent then handle_autoindent()
+    elseif regular_score() then self.indent_offset = 0
+    else handle_indent()
     end
-    -- Now we know we have to deal with the indent
-    local changed = false
-    if not self.indent_offset then
-        -- First step: deactivate indent
-        self.indent_offset = 0
-        local recompile = ''
-        if self:count_systems() > 1 then
-            -- only recompile if the *original* score has more than 1 system
-            self.indent = 0
-            changed = true
-            recompile = '.\nRecompile'
-        else self.indent_offset = self.indent or 0
-        end
-        warn('Deactivate indentation because of system selection'..recompile)
-        return shorten, changed
-    end
-    -- We are checking a recompilation
-    if self.indent == 0 then
-        if shorten > 0 then
-            self.indent = min(shorten, self.original_indent)
-            shorten = shorten - self.indent
-            changed = true
-            warn('Add some indent to keep protrusion limit. Recompile')
-        end
-    else
-        self.indent = max(self.indent - shorten, 0)
-        if shorten > 0
-        then
-            changed = true
-            warn('Adjust protrusion and indent. Recompile')
-        end
-    end
-    return shorten, changed
 end
 
 function Score:check_properties()
@@ -681,32 +663,40 @@ Found something incompatible with `fragment`
 end
 
 function Score:check_protrusion(bbox_func)
-    self.range = self:calc_range()  -- couldn't be done before: the score must be compiled
     if self.insert ~= 'systems' then return self:is_compiled() end
     local bb = bbox_func(self.output, self['line-width'])
     if not bb then return end
+    -- Now we know there is a compiled score
+    self.range = self:calc_range()
 
+    -- line_props lp
+    local lp = {}
     -- Determine offset due to left protrusion
-    local h_offset = max(bb.protrusion - self['max-left-protrusion'], 0)
-    self.protrusion = bb.protrusion - h_offset
-
+    lp.overflow_left = max(bb.protrusion - math.floor(self['max-left-protrusion']), 0)
+    self.protrusion_left = lp.overflow_left - bb.protrusion
+    -- Determine further line properties
+    lp.stave_extent = lp.overflow_left + min(self['line-width'], bb.width)
+    lp.available = self.original_lw + self['max-right-protrusion']
+    lp.total_extent = lp.stave_extent + bb.r_protrusion
     -- Check if stafflines protrude into the right margin after offsetting
-    local line_extent = h_offset + self['line-width']
-    local shorten_line = max(line_extent - self.original_lw, 0)
-    -- Check if image protrudes over max-right-protrusion
-    local available = self.original_lw + self['max-right-protrusion']
-    local total_extent = line_extent + bb.r_protrusion
-    local shorten_protrusion = max(total_extent - available, 0)
-    local shorten = max(shorten_line, shorten_protrusion)
-    local changed_indent
-    shorten, changed_indent = self:check_indent(shorten)
+    -- Note: we can't *reliably* determine this with ragged one-system scores,
+    -- possibly resulting in unnecessarily short lines when right protrusion is
+    -- present
+    lp.stave_overflow_right = max(lp.stave_extent - math.floor(self.original_lw), 0)
+    -- Check if image as a whole protrudes over max-right-protrusion
+    lp.overflow_right = max(lp.total_extent - lp.available, 0)
+    lp.shorten = max(lp.stave_overflow_right, lp.overflow_right)
 
-    if shorten > 0 or changed_indent then
-        self['line-width'] = self['line-width'] - shorten
+    lp.changed_indent = false
+    self:check_indent(lp, bb)
+
+    if lp.shorten > 0 or lp.changed_indent then
+        self['line-width'] = self['line-width'] - lp.shorten
         -- recalculate hash to reflect the reduced line-width
-        if not changed_indent then
+        if not lp.changed_indent then
             warn([[Compiled score exceeds protrusion limit(s).
 Recompile with smaller line-width.]])
+        else warn([[Adjusted indent. Recompiling]])
         end
         self.output = self:output_filename()
         return
@@ -1142,6 +1132,8 @@ function Score:process()
     self.first_page = tex.count['c@page']
     self:check_properties()
     self:calc_properties()
+    -- with bbox.read check_ptrotrusion will only execute with
+    -- a prior compilation, otherwise it will be ignored
     local do_compile = not self:check_protrusion(bbox.read)
     if do_compile then
         repeat self:run_lilypond(self:header()..self:content())
@@ -1225,7 +1217,7 @@ function Score:write_latex(do_compile)
     if self['raw-pdf']
     then
         if self.insert == 'systems' then
-            latex.systems_list(self.output, self.protrusion, self:_range())
+            latex.systems_list(self.output, self.protrusion_left, self:_range())
         else tex.sprint(self.output) end
         return
     end
@@ -1239,7 +1231,7 @@ function Score:write_latex(do_compile)
         latex.includepdf(self.output, self.range, self.papersize)
     elseif self.insert == 'systems' then
         latex.includesystems(
-            self.output, self.range, self.protrusion,
+            self.output, self.range, self.protrusion_left,
             self.leftgutter, self.staffsize, self.indent_offset
         )
     else -- inline
