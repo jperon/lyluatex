@@ -312,15 +312,6 @@ If either of these macros is defined it will be expanded immediately before or
 after the score.  This may for example be used to wrap the example in
 environments.
 
-\lyIssue{Note:}
-If a score contains only one system or only the first system of a score is
-included through \option{print-only=1} and at the same time the \option{indent}
-option is used then the indent is suppressed and a warning issued.  This
-suppression is performed *after* the score has been generated, so there is a
-small margin of error where this may produce undesirable results: if a score is
-just too long to fit on one system due to indentation but would have been
-engraved on one system *without* indent.
-
 ### Fullpage
 
 \lyMargin{\texttt{insert=fullpage}}
