@@ -133,3 +133,10 @@ sympy-plots-for-*.tex/
 # WinEdt
 *.bak
 *.sav
+
+# LilyPond intermediate files
+*-systems.*
+*.midi
+
+# lyluatex temp directories
+*tmp-ly/
