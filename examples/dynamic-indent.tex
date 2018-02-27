@@ -8,26 +8,29 @@
 This document demonstrates the use of \texttt{indent} and \texttt{autoindent},
 partially in combination with \texttt{print-only}.
 
-\texttt{indent=1cm} indents the first line, but if the resulting score contains
+\texttt{indent=2cm} indents the first line, but if the resulting score contains
 only one system this indent is suppressed (issuing a warning on the console):
 
-\begin{lilypond}[indent=1cm]
+\begin{lilypond}[indent=2cm]
+  \set Staff.instrumentName = "Violin"
   \repeat unfold 12 { c' d' e' d' }
 \end{lilypond}
 
-\begin{lilypond}[indent=1cm]
-  { c' d' e' d' }
+\begin{lilypond}[indent=2cm]
+  {
+    \set Staff.instrumentName = "Violin"
+    c' d' e' d'
+  }
 \end{lilypond}
 
-If the output of a score containing more than one system is limited to the first
-system using \texttt{print-only=1} then the indent is removed but the score is
-recompiled to ensure a full-length system. The following score is the first
-system of the first two-system score:
-
-\textbf{This is broken:} The indent should be suppressed. For
-this \emph{two} compilations would have been necessary instead of just one.
+If the output of a score which contains more than one system is limited to the
+first system using \texttt{print-only=1} then the indent is removed but the
+score is recompiled to ensure a full-length system. The following score shows
+the two-system score from above (with \texttt{indent=1cm}), limited to its first
+system:
 
 \begin{lilypond}[indent=1cm,print-only=1]
+  \set Staff.instrumentName = "Violin"
   \repeat unfold 12 { c' d' e' d' }
 \end{lilypond}
 
@@ -37,46 +40,53 @@ In this case the indent of the first system is suppressed in order to avoid a
 “hole”. Of course this is a corner case, but might be useful when a score
 consists of separate entities (examples, exercises) per system.
 
-\textbf{Note:} this works correctly, so obviously there's something wrong with
-the entry conditional checking whether indent suppression should be applied.
-
-\begin{lilypond}[indent=1cm,print-only={3,1,2}]
+\begin{lilypond}[indent=1cm,print-only={3,1,2},max-protrusion=0.5cm]
   \repeat unfold 25 { c' d' e' d' }
 \end{lilypond}
 
-
 If a protrusion limit has been set with \texttt{max-protrusion=0.5cm} and the
-score exceeds that limit in spite of an indent then the whole score will
-appropriately be indented:
+score exceeds that limit in spite of \texttt{indent=1cm} then the whole score
+will appropriately be narrowed:
 
 \begin{lilypond}[indent=1cm,max-protrusion=0.5cm]
   \set Staff.instrumentName = "Violin I. and II."
   \repeat unfold 11 { c' d' e' d' }
 \end{lilypond}
 
-This doesn't look very good because the indentation of the consecutive systems
-isn't actually necessary if only the first systems has that excessive
-protrusion. To improve that situation the option \texttt{autoindent} will add an
-automatic indent so only the first system is sufficiently indented:
 
-\textbf{This is broken:} autoindent doesn't seem to make a difference.
+This doesn't really look good because the indentation of the second system
+wouldn't have been necessary since only the first system exceeds the protrusion
+limit. The solution to this situation is the option \texttt{autoindent} which
+handles the indentation \emph{automatically} and set the indent to a value that
+will make the \emph{first} system fit into the protrusion limit and leave the
+remaining systems unchanged:
 
-\begin{lilypond}[autoindent,max-protrusion=0.5cm]
+\begin{lilypond}[autoindent=true,max-protrusion=0cm]
   \set Staff.instrumentName = "Violin I. and II."
   \repeat unfold 11 { c' d' e' d' }
 \end{lilypond}
 
+
 However, if the protrusion limit is not only exceeded by the \emph{first} system
 (which should be the typical case due to the instrument name) \texttt{lyluatex}
-will deal with the situation by indenting the \emph{whole} score by the
-appropriate amount and adjusting the indent of the first system accordingly:
+will deal with the situation by narrowing the \emph{whole} score by the
+appropriate amount and adjusting the indent of the first system so all systems
+will just fit into the protrusion limit:
 
-\textbf{This is broken:} autoindent doesn't seem to make a difference.
-
-\begin{lilypond}[autoindent,max-protrusion=0.5cm]
+\begin{lilypond}[autoindent=true,max-protrusion=0.5cm]
   \set Staff.instrumentName = "Violin I. and II."
   \set Staff.shortInstrumentName = "Violin I/II"
   \repeat unfold 11 { c' d' e' d' }
+\end{lilypond}
+
+There is one special case to be mentioned. As described above the indent is
+deactivated if the first system of a score is printed at a later position.
+However, if this score will exceed the left protrusion limit \texttt{autoindent}
+will be automatically activated to avoid having the \emph{whole} score narrowed:
+
+\begin{lilypond}[indent=1cm,print-only={3,1,2},max-protrusion=0.5cm]
+  \set Staff.instrumentName = "Violin"
+  \repeat unfold 25 { c' d' e' d' }
 \end{lilypond}
 
 
@@ -84,5 +94,12 @@ The handling of indent suppression may require up to four compilations of the
 score, but these are handled automatically, and the resulting intermediate
 stages of the score are cached just like the scores actually used in the
 document.
+
+The \texttt{autoindent} option is active by default but will be deactivated if
+\texttt{indent} is set explicitly. It has to be noted that this option will add
+more LilyPond compilations and therefore compilation time. But it will only
+apply and be executed if the score exceeds the protrusion limit, so it can only
+occur in circumstances where multiple LilyPond runs are expected anyway.
+
 
 \end{document}
