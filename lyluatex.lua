@@ -551,12 +551,29 @@ end
 function Score:check_indent(shorten)
     local nsystems = self:count_systems(true)
 
-    local function autoindent()
+    local function default_autoindent()
         -- if autoindent is not specified then make it default
         -- *when system 1 is printed at a later position*
-        return (#self.range > 1 and
+        if self.autoindent == '' then
+            local ai = false
+            if (#self.range > 1 and
                 self.range[1] ~= 1 and
-                contains(self.range, 1))
+                contains(self.range, 1)) or
+                self.autoindent == 'true' then
+                    ai = true
+                    self.original_indent = false
+                    self.indent = 0
+            end
+        end
+        self.autoindent = ai
+    end
+
+    local function handle_autoindent()
+        if not self.indent then self.indent = 0 end
+        self.indent = self.indent + shorten
+        print("Handle indent")
+        print("Shorten: "..shorten)
+        return 0, true
     end
 
     local function regular_score()
@@ -573,11 +590,14 @@ function Score:check_indent(shorten)
         return self.original_indent and (nsystems == 1)
     end
 
-    if self.autoindent == '' then self.autoindent = autoindent() end
+    if type(self.autoindent) == 'string' then
+        self.autoindent = default_autoindent() end
     if simple_noindent() then
         self.indent_offset = self.indent
         warn('Deactivate indent for single-system score.')
         return shorten, false
+    elseif self.autoindent then
+        return handle_autoindent()
     elseif regular_score() then
         self.indent_offset = 0
         return shorten, false
