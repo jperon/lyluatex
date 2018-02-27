@@ -89,7 +89,26 @@ will be automatically activated to avoid having the \emph{whole} score narrowed:
   \repeat unfold 25 { c' d' e' d' }
 \end{lilypond}
 
+\paragraph{Right protrusion}
+The dynamic handling of (automatic) indent also works correctly when there is
+protrusion handling to the right. The following score has the ties manually
+shaped to exceed the staff symbol by 10, and 7 staff spaces, and
+\texttt{max-protrusion=1cm} .
 
+\begin{lilypond}[nofragment,max-protrusion=1cm,]
+{
+  \set Staff.instrumentName = "Violin 1 & 2"
+  \set Staff.shortInstrumentName = "Vl 1 & 2"
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(10 . 0)) Tie
+  c'1 ~ \break
+  \shape #'((0 . 0)(0 . 0)(3 . 0)(7 . 0)) Tie
+  c' ~ \break
+  c'
+}
+\end{lilypond}
+
+
+\paragraph{Performance considerations}
 The handling of indent suppression may require up to four compilations of the
 score, but these are handled automatically, and the resulting intermediate
 stages of the score are cached just like the scores actually used in the
