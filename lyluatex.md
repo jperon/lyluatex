@@ -395,6 +395,7 @@ or pages.  The selection of systems/pages can be specified as
 * a single number: include a single page/system
 * a range of numbers: include a range of pages/systems
   `{M-N}` or `{N-M}` (to print backwards)
+* the special range `N-`, including all systems/pages from N throughout the end
 * a comma-separated list of numbers or ranges
   `{A,B , C,D-E, F, C- B}` (freely mixed, in arbitrary order)
 
