@@ -577,22 +577,18 @@ function Score:check_indent(lp, bb)
         if not self.indent_offset then
             -- First step: deactivate indent
             self.indent_offset = 0
-            local recompile = ''
             if self:count_systems() > 1 then
                 -- only recompile if the *original* score has more than 1 system
                 self.indent = 0
                 lp.changed_indent = true
-                recompile = '.\nRecompile'
-            else self.indent_offset = self.indent or 0
             end
-            warn('Deactivate indentation because of system selection'..recompile)
+            info('Deactivate indentation because of system selection')
         elseif lp.shorten > 0 then
                 self.indent = 0
                 self.autoindent = true
 --                lp.changed_indent = true
                 handle_autoindent()
-                warn([[Deactivated indent causes protrusion.
-Recompile with autoindent.]])
+                info('Deactivated indent causes protrusion.')
         end
     end
 
@@ -693,12 +689,12 @@ function Score:check_protrusion(bbox_func)
     if lp.shorten > 0 or lp.changed_indent then
         self['line-width'] = self['line-width'] - lp.shorten
         -- recalculate hash to reflect the reduced line-width
-        if not lp.changed_indent then
-            warn([[Compiled score exceeds protrusion limit(s).
-Recompile with smaller line-width.]])
-        else warn([[Adjusted indent. Recompiling]])
+        if lp.shorten > 0 then
+            info('Compiled score exceeds protrusion limit(s)')
         end
+        if lp.changed_indent then info([[Adjusted indent.]]) end
         self.output = self:output_filename()
+        warn('Recompile or reuse cached score')
         return
     else return true
     end
