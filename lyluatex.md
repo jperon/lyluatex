@@ -1060,3 +1060,11 @@ for more information.
 # Appendix
 
 \printindex
+
+# Examples
+
+The remaining pages of this manual are imported from the example documents
+stored in the `examples` subdirectory of the repository. It is not full clear
+where they end up when the package is included in \LaTeX\ distributions.
+
+\input{examples/examples-include.tex}
