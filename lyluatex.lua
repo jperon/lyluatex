@@ -924,7 +924,7 @@ function Score:ly_fonts()
 end
 
 function Score:ly_indent()
-    if not (self.indent == '' and self.insert == 'fullpage') then
+    if not (self.indent == false and self.insert == 'fullpage') then
         return [[indent = ]]..(self.indent or 0)..[[\pt]]
     end
 end
