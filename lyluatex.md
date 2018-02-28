@@ -767,10 +767,6 @@ its equivalent \option{nofragment}.
 \lyOption{pass-fonts}{false}
 Use the text document's fonts in the LilyPond score.
 
-\lyOption{current-font-as-main}{true}
-Use the font family *currently* used for typesetting as LilyPond's main font
-if \option{pass-fonts=false}.
-
 The choice of fonts is arguably the most obvious factor in the appearance of any
 document, be it text or music.  In text documents with interspersed scores the
 text fonts should be consistent between text and music sections. \lyluatex\ can
@@ -778,30 +774,53 @@ handle this automatically by passing the used text fonts to LilyPond, so the
 user doesn't have to worry about keeping the scores' fonts in sync with the text
 document.
 
-The following steps are taken when \option{pass-fonts} is `true`:
-Before generating any score \lyluatex\ retrieves the currently defined fonts for
+The following steps are taken when \option{pass-fonts} is `true`: Before
+generating any score \lyluatex\ retrieves the currently defined fonts for
 \cmd{rmfamily}, \cmd{sffamily}, and \cmd{ttfamily}, as well as the font that is
-currently in use for typesetting.  By default the *current* font is used as the
-roman font in LilyPond, while `sans` and `mono` fonts are passed to their
-corresponding families.  This ensures that the score's main font is consistent
-with the surrounding text.  However, this behaviour may not be desirable because
-it effectively removes the roman font from the LilyPond score, and it may make
-the *scores* look inconsistent with each other.  Therefore \lyluatex\ can also
-just pass the three font families to their LilyPond counterparts by setting
-\option{current-font-as-main} to `false`.
+currently in use for typesetting. These fonts are included in the score compiled
+by LilyPond, but if the LilyPond input explicitly defines fonts in a
+\cmd{paper \{\}} block this takes precedence over the automatically
+transferred fonts.
 
-If fonts are explicitly defined in a \cmd{paper \{\}} block in the LilyPond
-input this takes precedence over the automatically transferred fonts.
+\lyIssue{Note:}
+So far only the font *family* is used by LilyPond, but it is intended to add
+support for OpenType features in the future.
 
-\lyIssue{Note:} So far only the main *font family* is used by LilyPond, but it is intended to add support for OpenType features in the future.
+\lyIssue{Note:}
+LilyPond handles font selection differently from \LuaTeX\ and can only look up
+fonts that are installed as system fonts. For any font that is installed in the
+`texmf` tree LilyPond will use an arbitrary fallback font. Therefore
+\option{pass-fonts} defaults to `false`.
 
-\lyIssue{Note:} LilyPond handles font selection differently from \LuaTeX\ and
-can only look up fonts that are installed as system fonts.
-For any font that is installed in the `texmf` tree LilyPond will use an
-arbitrary fallback font.
-Therefore \option{pass-fonts} defaults to `false`.
-However, it doesn't matter whether the fonts are selected by their family or
-file names.
+\lyOption{current-font-as-main}{false}
+Use the font family *currently* used for typesetting as LilyPond's main font.
+
+\lyOption{current-font-as-main}{false} By default \option{pass-fonts} matches,
+roman, sans, and mono fonts, but with \option{current-font-as-main=false} the
+font that is *currently* used for typesetting is passed to LilyPond as its
+“main” roman font.  This ensures that the score's main font is consistent with
+the surrounding text.  However, this behaviour may not be desirable because it
+effectively removes the roman font from the LilyPond score, and it may make the
+*scores* look inconsistent with each other.  Therefore \lyluatex\ by default
+passes the text documetn's three font families to their directy LilyPond
+counterparts.
+
+\lyOption{rmfamily}{}
+\lyOption{sffamily}{}
+\lyOption{ttfamily}{}
+
+The roman, sans, and mono fonts can also be specified explicitly to be passed
+into the LilyPond document independently from the text document's fonts.  If
+*any* of these options is set \option{pass-fonts} is implicitly set to `true`.
+Note that in this case for families that are *not* set explicitly the current
+text document fonts are used.
+
+If \option{rmfamily} is set explicitly then \option{current-font-as-main} is
+implicitly disabled.
+
+\lyMargin{Examples:}
+Demonstrations of the different font handling features are available in
+\protect\hyperlink{ex-fonts}{Font Handling}.
 
 ### Staff Display
 
