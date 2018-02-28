@@ -1369,8 +1369,7 @@ end
 function ly.set_local_options(opts)
     local options = {}
     local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
-    local opt = next_opt()
-    while opt do
+    for opt in next_opt do
         local k, v = opt:match('([^=]+)=?(.*)')
         if k then
             if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
@@ -1384,7 +1383,6 @@ function ly.set_local_options(opts)
                 end
             end
         end
-        opt = next_opt()
     end
     return options
 end
