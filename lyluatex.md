@@ -394,6 +394,9 @@ or pages.  The selection of systems/pages can be specified as
 It is the user's responsibility to only request pages/systems that are actually
 present in the score, otherwise \LaTeX\ will raise an error.
 
+\lyMargin{Examples:}
+Usage examples for this option can be found in \protect\hyperlink{ex-print-only}{Choosing Systems}.
+
 ## Score Layout
 
 One of the most obvious features of \lyluatex\ is its ability to configure the
