@@ -64,7 +64,13 @@ and only fully trusted input files should be compiled.
 You may mitigate (but not totally remove) this security hole by adding
 `lilypond` to `shell_escape_commands`, and using `--shell-restricted` instead
 of `--shell-escape`:
-look at the documentation of your \TeX\ distribution.
+look at the documentation of your \TeX\ distribution. For example, on Debian
+Linux with TeXLive:
+
+```sh
+% export shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond
+% lualatex --shell-restricted DOCUMENT.tex
+```
 
 ## Basic Operation
 
@@ -100,7 +106,7 @@ be directly usable with \lyluatex, with some caveats:
 The basic mode of inserting scores into text documents is the `lilypond` environment:
 
 ```lilypond
-\begin{lilypond}[]
+\begin{lilypond}
 music = \relative {
   c d e
 }
@@ -119,7 +125,7 @@ music = \relative {
 \end{lilypond}
 ```
 
-\begin{lilypond}[]
+\begin{lilypond}
 
 music = \relative {
   c d e
@@ -137,9 +143,6 @@ music = \relative {
     >>
 }
 \end{lilypond}
-
-Please note the `[]` after `\begin{lilypond}`: there's a known limitation that
-makes it necessary, even when no optional parameter is specified.
 
 \lyluatex\ will now collect the given content and wrap it in additional LilyPond
 code to create the layout and appearance according to the text document and the
@@ -300,8 +303,10 @@ the system count:
 
 \lyCmd{preLilyPondExample, \cmd{postLilyPondExample}}
 If either of these macros is defined it will be expanded immediately before or
-after the score.  This may for example be used to wrap the example in
-environments.
+after the score; this may for example be used to wrap the example in
+environments, though there probably are better ways to do so.
+With \option{verbatim}, \cmd{preLilyPondExample} will take place after the
+verbatim block, just before the score.
 
 ### Fullpage
 
@@ -437,6 +442,9 @@ This option, which is there for compatibility with `lilypond-book`,
 reduces line length of a music snippet by $2×0.4\,in$ and puts the output into
 a quotation block.
 The value $0.4\,in$ can be controlled with following options.
+
+This option isn't intended to be used with \cmd{insert=fullpage}, and won't
+give a good result with it.
 
 \lyOption{gutter, leftgutter, rightgutter, exampleindent}{$0.4\,in$}
 \option{leftgutter} control the supplementary left margin of a “quoted” score,
@@ -740,18 +748,24 @@ limitaion with LilyPond).
 ### Automatic Wrapping of Music Expressions {#autowrap}
 
 \lyOption{fragment}{true}
-With this default option, the input code is wrapped between `{ }`, so that you
-can directly enter simple code, for example:
+With this option set to \option{true}, the input code is wrapped between `{ }`,
+so that you can directly enter simple code,
+for example:
 
 ```TeX
 \lilypond{a' b' c'}
 ```
 
-This option cannot be enabled with `\lilypondfile`.
+This option defaults to `true` with \cmd{lilypond} and `lilypond` environment,
+to `false` with \cmd{lilypondfile}.
 It will be automatically disabled if a `\book`, `\header`, `\layout`,
 `\paper` or `\score` block is found within the input code; but in some cases,
 it will be necessary to explicitly disable it with \option{fragment=false} or
 its equivalent \option{nofragment}.
+
+\option{nofragment} and \option{relative} are mutually exclusive;
+the locally-defined option will take precedence over the globally-defined one,
+and if both are defined at the same level, the result will be random.
 
 ### Font Handling
 
@@ -996,7 +1010,8 @@ With the \option{includepaths} option a comma-separated list of search paths can
 be specified.  These paths will be used by \lyluatex\ to locate external files,
 and relative paths are searched for in the following order:
 
-* relative to the current `.tex` file's directory
+* relative to the current `.tex` file's directory (i. e. the file from which
+  the score is included)
 * relative to each `includepath`, in the order of their definition in the list
 * using \LaTeX's search mechanism
 

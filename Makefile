@@ -2,13 +2,14 @@ test:
 	lualatex -interaction=nonstopmode -shell-escape test.tex
 
 manual:
+	(cd examples/ && lualatex --shell-escape print-only && lualatex --shell-escape dynamic-indent)
 	pandoc -s -V fontfamily=libertine \
 		--toc-depth=4 \
 		-o lyluatex.tex \
 		lyluatex.md && \
-		lualatex --shell-escape lyluatex.tex && \
+		lualatex --shell-escape --interaction=nonstopmode lyluatex.tex && \
 		makeindex lyluatex && \
-		lualatex --shell-escape lyluatex.tex
+		lualatex --shell-escape --interaction=nonstopmode lyluatex.tex
 
 
 ctan:
