@@ -96,30 +96,8 @@ be directly usable with \lyluatex, with some caveats:
   command.
 
 
-\lyCmd{lilypond}
-Very short fragments of LilyPond code can directly be input using the \cmd{lilypond} command:
-
-```lilypond
-\lilypond{ c' d' e' }
-```
-
-\lilypond[insert=systems]{ c' d' e' }
-
-Note that the sequence of notes is implicitly wrapped in a LilyPond music expression, but it is also possible to pass a “real” music expression:
-
-```lilypond
-\lilypond{ \relative { c' d e }}
-```
-
-\lilypond[insert=systems]{ \relative { c' d e }}
-
-Fragments specified with \cmd{lilypond} are by default inserted as *inline*
-scores like individual characters, while the other types are by default includes
-system per system.  For further information about the
-different insertion modes read the section about [insertion modes](#insertion-mode).
-
 \lyMargin{lilypond\index{lilypond}}
-More elaborate scores can be enclosed in the `lilypond` environment:
+The basic mode of inserting scores into text documents is the `lilypond` environment:
 
 ```lilypond
 \begin{lilypond}[]
@@ -163,10 +141,23 @@ music = \relative {
 Please note the `[]` after `\begin{lilypond}`: there's a known limitation that
 makes it necessary, even when no optional parameter is specified.
 
-<!-- FALSE
-Note that the automatic wrapping does *not* work in the environment and that the
-content of the environment must represent a compilable LilyPond file.
--->
+\lyluatex\ will now collect the given content and wrap it in additional LilyPond
+code to create the layout and appearance according to the text document and the
+user's configuration.  The resulting file is compiled with LilyPond and saved in
+a temporary directory, from where it is included in the text document. A hash
+value including the full content and all options will be used to determine if
+the score has already been compiled earlier, so unnecessary recompilations are
+avoided.
+
+
+\lyCmd{lilypond}
+
+Very short fragments of LilyPond code can be entered inline using the
+\cmd{lilypond} command: `\lilypond{ c' d' e' }` \lilypond{ c' d' e' }
+Fragments specified with \cmd{lilypond} are by default inserted as *inline*
+scores with a smaller staff size.  For further information about the different
+insertion modes read the section about [insertion modes](#insertion-mode).
+
 
 \lyCmd{lilypondfile}
 External files of arbitrary complexity can be referenced with
