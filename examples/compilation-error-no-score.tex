@@ -9,26 +9,38 @@ produce no score file.  Without the use of \texttt{debug} and \texttt{showfailed
 
 \begin{verbatim}
 \begin{lilypond}[debug=false, showfailed=false]
+{
   some meaningless words
+  \score{}
+}
 \end{lilypond}
 \end{verbatim}
 
 \begin{lilypond}[debug=false, showfailed=false]
+{
   some meaningless words
+  \score{}
+}
 \end{lilypond}
 
 Compiling the same code \emph{with} \texttt{showfailed} will produce a warning
 instead of raising an error and prints an information text box in the document.
 
 \begin{lilypond}[debug=false, showfailed]
+{
   some meaningless words
+  \score{}
+}
 \end{lilypond}
 
 In a final variant, \texttt{debug} is active too, showing different information
 in the console and the text box, referencing the log files.
 
 \begin{lilypond}[debug, showfailed]
+{
   some meaningless words
+  \score{}
+}
 \end{lilypond}
 
 \end{document}
