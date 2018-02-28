@@ -1359,8 +1359,10 @@ function ly.set_fonts(rm, sf, tt)
         ly.score.rmfamily = ly.get_font_family(rm)
     else
         -- if explicitly set don't override rmfamily with 'current' font
-        ly.score['current-font-as-main'] = 'false'
-        info("rmfamily set explicitly. Deactivate 'current-font-as-main'")
+        if ly.score['current-font-as-main'] then
+            info("rmfamily set explicitly. Deactivate 'current-font-as-main'")
+        end
+        ly.score['current-font-as-main'] = false
     end
     if ly.score.sffamily == '' then ly.score.sffamily = ly.get_font_family(sf) end
     if ly.score.ttfamily == '' then ly.score.ttfamily = ly.get_font_family(tt) end
