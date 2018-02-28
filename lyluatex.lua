@@ -1374,11 +1374,7 @@ function ly.set_local_options(opts)
         local k, v = opt:match('([^=]+)=?(.*)')
         if k then
             if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
-                local vs
-                repeat
-                    vs = next_opt()
-                    if vs then v = v..','..vs else break end
-                until vs:sub(-1) == '}'
+                while v:sub(-1) ~= '}' do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
             k, v = process_options(k:gsub('^%s', ''), v:gsub('^%s', ''))
