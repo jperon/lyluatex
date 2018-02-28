@@ -1,5 +1,5 @@
 \documentclass[a5paper, fontsize=12pt]{scrbook}
-\usepackage[program=lilypond, tmpdir=tmp_ly, pass-fonts, debug]{lyluatex}
+\usepackage[program=lilypond, tmpdir=tmp-ly, pass-fonts]{lyluatex}
 \usepackage{multicol}
 \usepackage{listings}
 
@@ -30,7 +30,7 @@ d e f
 \end{verbly}
 
 % Import d'une partition externe. La commande \includely est strictement équivalente.
-\lilypondfile[line-width=250pt, insert=fullpage, label=test]{ly/Ave Maria De Lourdes/Ave Maria De Lourdes}
+\lilypondfile[line-width=250pt, insert=fullpage, label=test]{ly/Ave Maria De Lourdes/Ave Maria}
 
 \pageref{ly_test}
 
