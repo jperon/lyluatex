@@ -657,6 +657,51 @@ print-only=1]
 \end{lilypond}
 
 
+#### Managing indentation {#indent}
+
+\lyOption{indent}{false}
+As mentioned above \option{indent} controls the indentation of the first system
+in a score.  However, \lyluatex\ provides smart dynamic indent handling for
+\option{insert=systems} that goes beyond simply setting the `indent` in the
+LilyPond score.
+
+\lyMargin{Deactivating indent}
+
+The indent is deactivated if one of the following condition is true:
+
+* The score consists of a single system
+* Only the first system of a score is printed using \option{print-only=true}
+* \option{print-only} is set so the first system of a score is printed but not
+  in the first position.
+
+In the first case the score is simply shifted left, but in the other cases the
+score is recompiled to avoid a “hole” at the right edge.
+
+\lyOption{autoindent}{true}
+
+When \option{autoindent} is active protrusion handling will be modified.  If a
+given protrusion limit is exceeded \lyluatex\ will not reduce the
+\option{line-width} of the *whole* score but add an indent.  This is because in
+many cases it is the *first* system of a score that contains significant
+protruding elements. If after application of the indent the protrusion limit is
+still exceeded due to other systems the line width is only reduced by the
+necessary amount and the indent adjusted accordingly.
+
+\option{autoindent} is active by default but will be deactivated if
+\option{indent} is set.
+
+\option{autoindent} will also be applied when a given indent is deactivated as
+described in the previous paragraph.  This is done in order to avoid the whole
+score to be narrowed because of the deactivated indent.
+
+\lyIssue{Note:}
+Handling automatic indent requires up to three recompilations of a score, but it
+will only be applied when a protrusion limit is given and exceeded. Intermediate
+scores are cached and won't be unnecessarily recompiled.
+
+\lyMargin{Examples:}
+A comprehensive set of examples demonstrating the dynamic indent behaviour is available in \protect\hyperlink{ex-dynamic-indent}{Dynamic Indent}.
+
 #### Vertical Alignment of Fullpage Scores
 
 \lyOption{fullpagealign}{crop|staffline}

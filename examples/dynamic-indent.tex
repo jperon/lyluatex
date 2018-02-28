@@ -3,20 +3,20 @@
 \newcommand{\postLilyPondExample}{\par\bigskip\hrule\par\bigskip}
 \begin{document}
 
-\section*{Indent Handling}
+\section*{Dynamic Indent}
 
 This document demonstrates the use of \texttt{indent} and \texttt{autoindent},
 partially in combination with \texttt{print-only}.
 
-\texttt{indent=2cm} indents the first line, but if the resulting score contains
+\texttt{indent=1cm} indents the first line, but if the resulting score contains
 only one system this indent is suppressed (issuing a warning on the console):
 
-\begin{lilypond}[indent=2cm]
+\begin{lilypond}[indent=1cm]
   \set Staff.instrumentName = "Violin"
   \repeat unfold 12 { c' d' e' d' }
 \end{lilypond}
 
-\begin{lilypond}[indent=2cm]
+\begin{lilypond}[indent=1cm]
   {
     \set Staff.instrumentName = "Violin"
     c' d' e' d'
