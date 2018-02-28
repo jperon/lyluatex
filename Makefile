@@ -2,10 +2,15 @@ test:
 	lualatex -interaction=nonstopmode -shell-escape test.tex
 
 manual:
-	pandoc --pdf-engine=lualatex \
-		-V fontfamily=libertine \
-		-o lyluatex.pdf \
-		lyluatex.md
+	(cd examples/ && lualatex --shell-escape print-only && lualatex --shell-escape dynamic-indent && lualatex --shell-escape fonts)
+	pandoc -s -V fontfamily=libertine \
+		--toc-depth=4 \
+		-o lyluatex.tex \
+		lyluatex.md && \
+		lualatex --shell-escape --interaction=nonstopmode lyluatex.tex && \
+		makeindex lyluatex && \
+		lualatex --shell-escape --interaction=nonstopmode lyluatex.tex
+
 
 ctan:
 	mkdir -p ./ctan/lyluatex

@@ -5,6 +5,7 @@
 \usepackage{fontspec}
 \usepackage{microtype}
 \usepackage{libertine}
+\setmonofont[Scale=MatchLowercase]{Inconsolata}
 \defaultfontfeatures{
 	Ligatures=TeX,
 	Scale=MatchLowercase,
@@ -15,20 +16,31 @@
 
 \usepackage{lyluatex}
 
+\usepackage{makeidx}
+\makeindex
+\usepackage[colorlinks=true]{hyperref}
+
 \newcommand{\cmd}[1]{%
-\textbackslash \texttt{#1}}
+\textcolor{blue}{\textbackslash \texttt{#1}}}
 
-\newcommand{\lyOption}[3]{%
+\newcommand{\option}[1]{%
+\textcolor{blue}{\texttt{#1}}%
+}
+
+\newcommand{\lyMargin}[1]{%
 
 \medskip
-\hspace*{-1em}\textbf{#1} (#2) {\small \textit{#3}} ---\\}
+\hspace*{-1em}%
+\noindent%
+\textcolor{blue}{#1}
+\nopagebreak
+}
 
-\newcommand{\lyCmd}[2]{%
+\newcommand{\lyOption}[2]{%
+\lyMargin{\texttt{#1} {\small \emph{(#2)}}\index{#1}}}
 
-\medskip
-\hspace*{-1em}\textbf{\textbackslash #1} (#2 args)---\\}
+\newcommand{\lyCmd}[1]{%
+\lyMargin{\texttt{\textbackslash #1}\index{\textbackslash #1}}}
 
 \newcommand{\lyIssue}[1]{%
-
-\medskip
-\hspace*{-1em}\textbf{\textcolor{red}{#1}}\\}
+\lyMargin{\textbf{\textcolor{red}{#1}}}}

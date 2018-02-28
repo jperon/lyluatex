@@ -14,7 +14,15 @@ C).  This is equivalent to setting \texttt{relative} to \texttt{1}:
 
 \lilypond[relative=2]{ c d e d }
 
+\begin{lilypond}
+  \score {
+  \new Staff { c'}
+  }
+\end{lilypond}
+
 and \texttt{relative=0} uses the plain \texttt{c} as origin pitch.
 
 \lilypond[relative=0]{ \clef bass c d e d }
+
+\lilypondfile[debug]{../ly/AveMariaDeLourdes/AveMariaDeLourdes}
 \end{document}
