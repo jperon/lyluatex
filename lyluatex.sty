@@ -144,29 +144,10 @@
   \endgroup%
 }
 
-\newcommand{\ly@checkprepost}{%
-  \ifx\preLilyPondExample\undefined%
-    \directlua{ly.pre_lilypond = false}%
-  \else%
-    \directlua{ly.pre_lilypond = true}%
-  \fi%
-  \ifx\postLilyPondExample\undefined%
-    \directlua{ly.post_lilypond = false}%
-  \else%
-    \directlua{ly.post_lilypond = true}%
-  \fi%
-  \ifx\betweenLilyPondSystem\undefined%
-    \directlua{ly.between_lilypond = false}%
-  \else%
-    \directlua{ly.between_lilypond = true}%
-  \fi%
-}
-
 % Main commands
 % Score processing
 \newcommand*{\ly@compilescore}[1]{%
   \ly@setunits%
-  \ly@checkprepost%
   \directlua{
     ly.set_property('currfiledir', [[\currfiledir]])
     ly.set_property('twoside', '\ly@istwosided')
