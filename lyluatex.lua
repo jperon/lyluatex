@@ -1050,7 +1050,10 @@ function Score:process()
     if do_compile then
         repeat
             self:run_lilypond(self:header()..self:content())
-            if self:is_compiled() then table.insert(self.output_names, self.output) end
+            if self:is_compiled_without_error() then
+                table.insert(self.output_names, self.output)
+            else break
+            end
         until self:check_protrusion(bbox.get)
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
