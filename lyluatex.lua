@@ -357,11 +357,8 @@ function latex.includesystems(filename, range, protrusion, gutter, staffsize, in
         if index < #range then
             texoutput = texoutput..
                 string.format([[
-\ifx\betweenLilyPondSystem\undefined%%
-  \par\vspace{%spt plus %spt minus %spt}%%
-\else%%
-  \betweenLilyPondSystem{%s}%%
-\fi%%
+\ifx\betweenLilyPondSystem\undefined\par\vspace{%spt plus %spt minus %spt}%%
+\else\betweenLilyPondSystem{%s}\fi%%
 ]],
                     staffsize / 4, staffsize / 12, staffsize / 16,
                     index
@@ -697,11 +694,11 @@ function Score:delete_intermediate_files()
     for _, filename in pairs(self.output_names) do
         if self.insert == 'fullpage' then os.remove(filename..'.ps')
         else
-            local n = self:count_systems()
-            for i = 1, n, 1 do os.remove(filename..'-'..i..'.eps') end
+            for i = 1, self:count_systems() do os.remove(filename..'-'..i..'.eps') end
             os.remove(filename..'-systems.tex')
             os.remove(filename..'-systems.texi')
             os.remove(filename..'.eps')
+            os.remove(filename..'.pdf')
         end
     end
 end
@@ -711,15 +708,14 @@ function Score:flatten_content(ly_code)
         including referenced files (if they can be opened.
         Other files (from LilyPond's include path) are considered
         irrelevant for the purpose of a hashsum.) --]]
-    local i, ly_file
+    local f
     local includepaths = self.includepaths
     if self.input_file then includepaths = self.includepaths..','..dirname(self.input_file) end
     for iline in ly_code:gmatch('\\include%s*"[^"]*"') do
-        ly_file = locate(iline:match('\\include%s*"([^"]*)"'), includepaths, '.ly')
-        if ly_file then
-            i = io.open(ly_file, 'r')
-            ly_code = ly_code:gsub(iline, self:flatten_content(i:read('*a')))
-            i:close()
+        f = io.open(locate(iline:match('\\include%s*"([^"]*)"'), includepaths, '.ly') or '')
+        if f then
+            ly_code = ly_code:gsub(iline, self:flatten_content(f:read('*a')))
+            f:close()
         end
     end
     return ly_code
@@ -734,9 +730,7 @@ function Score:header()
 end
 
 function Score:is_compiled()
-    if self.insert == 'fullpage' then return lfs.isfile(self.output..'.pdf')
-    else return self:count_systems(true) ~= 0
-    end
+    return lfs.isfile(self.output..'.pdf') or self:count_systems(true) ~= 0
 end
 
 function Score:is_compiled_without_error()
@@ -902,8 +896,6 @@ function Score:ly_staffsize() return self.staffsize end
 function Score:ly_margins()
     local tex_top = self['extra-top-margin'] + self:tex_margin_top()
     local tex_bottom = self['extra-bottom-margin'] + self:tex_margin_bottom()
-    local inner = self:tex_margin_inner()
-    local left = self:tex_margin_left()
     if self.fullpagealign == 'crop' then
         return string.format([[
 top-margin = %s\pt
@@ -911,7 +903,7 @@ bottom-margin = %s\pt
 inner-margin = %s\pt
 left-margin = %s\pt
 ]],
-            tex_top, tex_bottom, inner, left
+            tex_top, tex_bottom, self:tex_margin_inner(), self:tex_margin_left()
         )
     elseif self.fullpagealign == 'staffline' then
         local top_distance = 4 * tex_top / self.staffsize + 2
@@ -937,8 +929,8 @@ last-bottom-spacing =
         (padding . 0)
         (stretchability . 0))
 ]],
-            inner,
-            inner,
+            self:tex_margin_inner(),
+            self:tex_margin_left(),
             top_distance,
             top_distance,
             top_distance,
