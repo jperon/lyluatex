@@ -512,7 +512,7 @@ print-only=1]
 \end{lilypond}
 
 
-\lyOption{max-dimension}{\cmd{maxdimen}}
+\lyOption{max-protrusion}{\cmd{maxdimen}}
 \lyOption{max-left-protrusion}{default}
 \lyOption{max-right-protrusion}{default}
 
