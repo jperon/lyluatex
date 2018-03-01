@@ -2,7 +2,7 @@ test:
 	lualatex -interaction=nonstopmode -shell-escape test.tex
 
 manual:
-	(cd examples/ && lualatex --shell-escape print-only && lualatex --shell-escape dynamic-indent && lualatex --shell-escape fonts)
+	(cd examples/ && lualatex --shell-escape insert-systems && lualatex --shell-escape print-only && lualatex --shell-escape dynamic-indent && lualatex --shell-escape fonts)
 	pandoc -s -V fontfamily=libertine \
 		--toc-depth=4 \
 		-o lyluatex.tex \

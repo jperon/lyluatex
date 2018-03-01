@@ -308,6 +308,9 @@ environments, though there probably are better ways to do so.
 With \option{verbatim}, \cmd{preLilyPondExample} will take place after the
 verbatim block, just before the score.
 
+\lyMargin{Examples:}
+For a demonstration of the system-by-system options see \linkexample{insert-systems}{Insert Systems}.
+
 ### Fullpage
 
 \lyMargin{\texttt{insert=fullpage}}
