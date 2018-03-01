@@ -1140,7 +1140,9 @@ please refer to
 [`musicxml2ly` documentation](http://lilypond.org/doc/v2.18/Documentation/usage/invoking-musicxml2ly)
 for more information.
 
-# Wrapping \lyluatex\ commands
+# Using \lyluatex\ in Classes or Style Files
+
+## Wrapping \lyluatex\ commands
 
 \cmd{lilypond} and \highlight{lilypond} are aliases for a command and an
 environment that \lyluatex\ defines internally,
@@ -1152,9 +1154,8 @@ which makes it a bit unusual to wrap.
 You'll find more about this point in \linkexample{wrappingcommands}{Wrapping
 Commands}
 
-# Index
-
 \printindex
+\addcontentsline{toc}{section}{Index}
 
 # Examples
 
