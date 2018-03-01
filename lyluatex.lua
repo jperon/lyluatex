@@ -663,6 +663,16 @@ function Score:check_protrusion(bbox_func)
     end
 end
 
+function Score:clean_failed_compilation()
+    for file in lfs.dir(self.tmpdir) do
+        filename = self.tmpdir..'/'..file
+        if filename:find(self.output) then
+            print("Remove "..filename)
+            os.remove(filename)
+        end
+    end
+end
+
 function Score:content()
     local n = ''
     if self.relative then
@@ -775,14 +785,7 @@ produced a score. %s
         end
         return true
     else
-        --[[ ensure the score gets recompiled next time --]]
-        for file in lfs.dir(self.tmpdir) do
-            filename = self.tmpdir..'/'..file
-            if filename:find(self.output) then
-                print("Remove "..filename)
-                os.remove(filename)
-            end
-        end
+        self:clean_failed_compilation()
         if self.showfailed then
             tex.sprint(string.format([[
 \begin{quote}
@@ -1056,9 +1059,11 @@ function Score:process()
     if do_compile then
         repeat
             self:run_lilypond(self:header()..self:content())
-            if self:is_compiled_without_error() then
+            if self:is_compiled() then
                 table.insert(self.output_names, self.output)
-            else break
+            else
+                self:clean_failed_compilation()
+                break
             end
         until self:check_protrusion(bbox.get)
         self:optimize_pdf()
