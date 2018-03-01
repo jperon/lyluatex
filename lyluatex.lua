@@ -741,11 +741,8 @@ end
 
 function Score:clean_failed_compilation()
     for file in lfs.dir(self.tmpdir) do
-        filename = self.tmpdir..'/'..file
-        if filename:find(self.output) then
-            print("Remove "..filename)
-            os.remove(filename)
-        end
+        local filename = self.tmpdir..'/'..file
+        if filename:find(self.output) then os.remove(filename) end
     end
 end
 
@@ -1063,8 +1060,7 @@ function Score:process()
     if do_compile then
         repeat
             self:run_lilypond(self:header()..self:content())
-            if self:is_compiled() then
-                table.insert(self.output_names, self.output)
+            if self:is_compiled() then table.insert(self.output_names, self.output)
             else
                 self:clean_failed_compilation()
                 break
