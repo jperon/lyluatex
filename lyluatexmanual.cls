@@ -19,4 +19,4 @@
 \makeindex
 \usepackage[colorlinks=true]{hyperref}
 
-\newcommand{\linkexample}[2]{\protect\hyperlink{#1.tex.1}{#2}}
+\newcommand{\linkexample}[2]{\protect\hyperlink{examples/#1.pdf.1}{#2}}
