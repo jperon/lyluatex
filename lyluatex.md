@@ -367,6 +367,8 @@ Can be used to *add* a vertical offset to the automatic alignment.
 Inserts some space to the left and right of the included score (except at line
 start or end).
 
+\lyMargin{Examples:}
+Examples can be found in \linkexample{insert-inline}{Insert Inline}.
 
 ### Choosing Systems/Pages
 
