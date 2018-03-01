@@ -365,9 +365,7 @@ function latex.includesystems(filename, range, protrusion, gutter, staffsize, in
                 )
         end
     end
-    if ly.post_lilypond then
-        texoutput = texoutput..'\n\\ifx\\postLilyPondExample\\undefined\\else\\postLilyPondExample\\fi'
-    end
+    texoutput = texoutput..'\n\\ifx\\postLilyPondExample\\undefined\\else\\postLilyPondExample\\fi'
     tex.sprint(texoutput:explode('\n'))
 end
 
