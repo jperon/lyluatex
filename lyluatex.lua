@@ -776,7 +776,13 @@ produced a score. %s
         return true
     else
         --[[ ensure the score gets recompiled next time --]]
-        os.execute('rm '..self.output..'*')
+        for file in lfs.dir(self.tmpdir) do
+            filename = self.tmpdir..'/'..file
+            if filename:find(self.output) then
+                print("Remove "..filename)
+                os.remove(filename)
+            end
+        end
         if self.showfailed then
             tex.sprint(string.format([[
 \begin{quote}
