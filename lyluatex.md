@@ -232,7 +232,7 @@ and `max-right-protrusion` if these are not set explicitly.
 Options can be set globally through package options, which are used with
 
 ```tex
-\usepackage[key1=value1,key2=value2]{lyluatex}
+\usepackage[key1=value1,key2]{lyluatex}
 ```
 
 \lyMargin{Local Options\index{Local Options}}
