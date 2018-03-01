@@ -1138,7 +1138,7 @@ please refer to
 [`musicxml2ly` documentation](http://lilypond.org/doc/v2.18/Documentation/usage/invoking-musicxml2ly)
 for more information.
 
-# Appendix
+# Index
 
 \printindex
 
