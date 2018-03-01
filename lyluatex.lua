@@ -524,6 +524,82 @@ function Score:calc_staff_properties()
     end
 end
 
+function Score:check_compilation()
+    local debug_msg, doc_debug_msg
+    if self.debug then
+        debug_msg = string.format([[
+Please check the log file
+and the generated LilyPond code in
+%s
+%s
+]],
+            self.output..'.log', self.output..'.ly'
+        )
+        doc_debug_msg = [[
+A log file and a LilyPond file have been written.\\
+See log for details.]]
+    else
+        debug_msg = [[
+If you need more information
+than the above message,
+please retry with option debug=true.
+]]
+        doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
+    end
+    if self.fragment then
+        local frag_msg = '\n'..[[
+As the input code has been automatically wrapped
+with a music expression, you may try repeating
+with the `nofragment` option.]]
+        debug_msg = debug_msg..frag_msg
+        doc_debug_msg = doc_debug_msg..frag_msg
+    end
+
+    if self:is_compiled() then
+        if self.lilypond_error then
+            warn([[
+
+LilyPond reported a failed compilation but
+produced a score. %s
+]],
+                debug_msg
+            )
+        end
+        -- we do have *a* score (although labeled as failed by LilyPond)
+        return true
+    else
+        self:clean_failed_compilation()
+        if self.showfailed then
+            tex.sprint(string.format([[
+\begin{quote}
+\minibox[frame]{LilyPond failed to compile a score.\\
+%s}
+\end{quote}
+
+]],
+                doc_debug_msg
+            ))
+            warn([[
+
+LilyPond failed to compile the score.
+%s
+]],
+                debug_msg
+            )
+        else
+            err([[
+
+LilyPond failed to compile the score.
+%s
+]],
+                debug_msg
+            )
+        end
+        -- We don't have any compiled score
+        return false
+    end
+end
+
 function Score:check_indent(lp)
     local nsystems = self:count_systems()
 
@@ -661,6 +737,13 @@ function Score:check_protrusion(bbox_func)
     end
 end
 
+function Score:clean_failed_compilation()
+    for file in lfs.dir(self.tmpdir) do
+        local filename = self.tmpdir..'/'..file
+        if filename:find(self.output) then os.remove(filename) end
+    end
+end
+
 function Score:content()
     local n = ''
     if self.relative then
@@ -729,79 +812,6 @@ end
 
 function Score:is_compiled()
     return lfs.isfile(self.output..'.pdf') or self:count_systems(true) ~= 0
-end
-
-function Score:is_compiled_without_error()
-    local debug_msg, doc_debug_msg
-    if self.debug then
-        debug_msg = string.format([[
-Please check the log file
-and the generated LilyPond code in
-%s
-%s
-]],
-            self.output..'.log', self.output..'.ly'
-        )
-        doc_debug_msg = [[
-A log file and a LilyPond file have been written.\\
-See log for details.]]
-    else
-        debug_msg = [[
-If you need more information
-than the above message,
-please retry with option debug=true.
-]]
-        doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
-    end
-    if self.fragment then
-        local frag_msg = '\n'..[[
-As the input code has been automatically wrapped
-with a music expression, you may try repeating
-with the `nofragment` option.]]
-        debug_msg = debug_msg..frag_msg
-        doc_debug_msg = doc_debug_msg..frag_msg
-    end
-    if self:is_compiled() then
-        if self.lilypond_error then
-            warn([[
-
-LilyPond reported a failed compilation but
-produced a score. %s
-]],
-                debug_msg
-            )
-        end
-        return true
-    else
-        --[[ ensure the score gets recompiled next time --]]
-        os.execute('rm '..self.output..'*')
-        if self.showfailed then
-            tex.sprint(string.format([[
-\begin{quote}
-\minibox[frame]{LilyPond failed to compile a score.\\
-%s}
-\end{quote}
-
-]],
-                doc_debug_msg
-            ))
-            warn([[
-
-LilyPond failed to compile the score.
-%s
-]],
-                debug_msg
-            )
-        else
-            err([[
-
-LilyPond failed to compile the score.
-%s
-]],
-                debug_msg
-            )
-        end
-    end
 end
 
 function Score:is_odd_page() return tex.count['c@page'] % 2 == 1 end
@@ -1048,7 +1058,11 @@ function Score:process()
     if do_compile then
         repeat
             self:run_lilypond(self:header()..self:content())
-            if self:is_compiled() then table.insert(self.output_names, self.output) end
+            if self:is_compiled() then table.insert(self.output_names, self.output)
+            else
+                self:clean_failed_compilation()
+                break
+            end
         until self:check_protrusion(bbox.get)
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
@@ -1125,7 +1139,7 @@ function Score:write_latex(do_compile)
     end
     latex.filename(self.printfilename, self.insert, self.input_file)
     latex.verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
-    if do_compile and not self:is_compiled_without_error() then return end
+    if do_compile and not self:check_compilation() then return end
     --[[ Now we know there is a proper score --]]
     latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex.label(self.label, self.labelprefix)
