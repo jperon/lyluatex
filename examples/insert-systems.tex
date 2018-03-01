@@ -1,0 +1,90 @@
+\documentclass{lyluatexexample}
+
+\begin{document}
+
+\section*{Insert System-by-System}
+
+By default scores defined by the \option{lilypond} environment or the \cmd{lilypondfile} command are inserted as a sequence of systems.
+
+\lyluatex\ determines the vertical space between the systems as a flexible length calculated from the \emph{staff size} of the score (as opposed to from the font size) to produce an regular-looking vertical spacing:
+
+\begin{lilypond}[]
+{
+  \repeat unfold 30 { c' d' e' d' }
+}
+\end{lilypond}
+
+The following score has a significantly smaller staff size, and consequently the inter-system space is reduced:
+
+\begin{lilypond}[staffsize=12]
+{
+  \repeat unfold 36 { c' d' e' d' }
+}
+\end{lilypond}
+
+\subsection*{Before and After the Score}
+
+\cmd{preLilyPondExample} and \cmd{postLilyPondExample} allow some code to be printed before and after the score. This may for example be used to wrap the resulting score in an environment. In the following example rules are printed:
+
+\newcommand{\preLilyPondExample}{%
+\par\bigskip
+\noindent Before the score:
+\par\medskip\hrule\par\medskip}
+\newcommand{\postLilyPondExample}{%
+\par\bigskip
+\hrule\par\medskip\noindent After the score
+\par\bigskip}
+
+\begin{verbatim}
+  \newcommand{\preLilyPondExample}{%
+  \par\bigskip
+  \noindent Before the score:
+  \par\medskip\hrule\par\medskip}
+
+  \newcommand{\postLilyPondExample}{%
+  \par\bigskip
+  \hrule\par\medskip\noindent After the score
+  \par\bigskip}
+\end{verbatim}
+
+\begin{lilypond}[]
+{
+  \repeat unfold 30 { c' d' e' d' }
+}
+\end{lilypond}
+
+\subsection*{Configuring the Inter-System Content}
+
+\let\preLilyPondExample\undefined
+\let\postLilyPondExample\undefined
+
+Using \cmd{betweenLilyPondSystem} it is possible to define a macro that is
+expanded between each system pair. It is given the index of the previous system
+as an argument to work with. The following example simply prints that index
+between the systems, but with some programming more complicated and useful
+things could be done, for example printing a rule after every third system or
+conditionally insert a page break.
+
+\newcommand{\betweenLilyPondSystem}[1]{%
+\begin{center}
+System #1
+\end{center}
+}
+
+\begin{verbatim}
+  \newcommand{\betweenLilyPondSystem}[1]{%
+  \begin{center}
+  System #1
+  \end{center}
+  }
+\end{verbatim}
+
+\bigskip
+
+\begin{lilypond}[]
+{
+  \repeat unfold 30 { c' d' e' d' }
+}
+\end{lilypond}
+
+\end{document}

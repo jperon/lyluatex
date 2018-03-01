@@ -1,0 +1,107 @@
+
+\documentclass{lyluatexexample}
+\usepackage{blindtext}
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures=TeX,Numbers=OldStyle,Scale=MatchLowercase}
+\setmainfont{Linux Libertine O}
+\setsansfont[BoldFont={Linux Biolinum O Bold}]{Linux Biolinum O}
+\setmonofont{Inconsolata}
+\begin{document}
+
+\section*{Font Handling}
+
+To demonstrate the font handling features of \lyluatex\ we will repeatedly
+include the following score from an external file.  It includes roman (lyrics,
+instrument name), sans (rehearsal mark), and mono (tempo) text, first using
+LilyPond's built-in default fonts.
+
+\lilypondfile[verbatim]{../ly/fonts}
+
+\bigskip
+The current document uses \option{fontspec} to set roman font to \emph{Linux
+Libertine O}, sans font to \emph{Linux Biolinum O}, and mono font to
+\emph{Inconsolata}. So if you compile this document yourself and don't have
+these fonts installed you will receive unexpected results.
+
+\subsection*{Passing Document Fonts to Score}
+
+With \option{pass-fonts} the currently active font families for roman, sans, and
+mono fonts are passed to LilyPond in order to achieve the most coherent
+appearance between text and music.
+
+\bigskip
+
+\lilypondfile[pass-fonts]{../ly/fonts}
+
+\bigskip
+Note that LilyPond loads fonts differently than \LaTeX\ and can only make use of
+fonts installed as system fonts, fonts that are only installed through a \LaTeX\
+distribution are not accessible to it. That means that if the document fonts are
+not installed system-wide (e.\,g. the default fonts) LilyPond will use rather
+ugly fallback fonts. This can't be demonstrated here but the section about
+explicitly setting font families will include an example.
+
+The inherent problem of fallback fonts, especially with \LaTeX's default
+settings, is the reason \option{pass-fonts} is inactive by default. But the
+general recommendation is to set \option{pass-fonts} as package option if the
+text document uses fonts that are available to LilyPond.
+
+\bigskip
+
+\sffamily \option{current-font-as-main} will use the font that is
+\emph{currently} used for typesetting as LilyPond's main (roman) font. This can
+make sure that the score's main font (and roman is usually the font used most in
+scores) matches the surrounding text. Note that this might produce surprising
+behaviour if it is not clear that the current font has changed, and it will
+effectively suppress the original roman font from the score if the current font
+is one of the two others. Additionally this \emph{may} introduce an
+inconsistency not between the score and the surrounding text but between
+different scores in a document. For all these reasons the option is by default
+set to \texttt{false}.
+
+\bigskip
+\lilypondfile[pass-fonts,current-font-as-main]{../ly/fonts}
+
+\subsection*{Setting Score Fonts Explicitly}
+
+With \option{rmfamily}, \option{sffamily}, and \option{ttfamily} specific
+families can be set to arbitrary fonts, independently from the text document.
+For the following score \option{ttfamily=\{TeXGyre Adventor\}} is
+used.\footnote{Note that this font (which is included in TeXLive) has to be
+installed if you want to successfully compile this document.} Note that this
+implicitly sets \option{pass-fonts=true}, and \emph{Linux Libertine O} and
+\emph{Linux Biolinum O} are used from the text document.
+
+\bigskip
+\lilypondfile[ttfamily={TeXGyre Adventor}]{../ly/fonts}
+
+\highlight{NOTE:} when \option{rmfamily} is set explicitly
+\option{current-font-as-main} is forced to \texttt{false} to ensure that the
+roman font is actually used. The next score sets \option{rmfamily=\{TeXGyre
+Adventor\}} and \option{current-font-as-main}, and despite the current font still being \cmd{sffamily}
+\emph{Adventor} is used as the score's main font:
+
+\bigskip
+\lilypondfile[current-font-as-main,rmfamily={TeXGyre Adventor}]{../ly/fonts}
+
+\subsection*{LilyPond's Font Fallback}
+
+If unavailable fonts are set in a LilyPond document they will \emph{silently} be
+replaced with fallback fonts that tend to cause ugly results. This will be shown
+by setting \option{rmfamily=FantasyFontOne}, \option{sffamily=FantasyFontTwo},
+and \option{tfamily=FantasyFontThree}:
+
+\bigskip
+\lilypondfile[rmfamily=FantasyFontOne,%
+sffamily=FantasyFontTwo,%
+ttfamily=FantasyFontThree]{../ly/fonts}
+
+This can happen in several contexts: apart from compiling the document on a
+different computer where the used fonts are missing it is most likely to occur
+with the \option{pass-fonts} option, when the text document uses internal
+\LaTeX\ fonts. Note in particular that this may happen implicitly when only one
+family is specified explicitly with an option and the other families are passed
+from the text document.
+
+
+\end{document}

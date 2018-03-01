@@ -1,32 +1,49 @@
-\documentclass[a5paper, fontsize=12pt]{scrbook}
-\usepackage[pass-fonts, debug]{lyluatex}
-
-\newcommand\mylily[2][1]{\lily[inline-staffsize=10, #1]{#2}}
+\documentclass{lyluatexexample}
 
 \begin{document}
 
-\begin{ly}
-  a b c
-  d e f
-\end{ly}
+\section*{Wrapping Commands}
 
-This is \mylily[voffset=10pt]{a' b' c''} a test.
+\cmd{lily} can be wrapped within another command as usual:
 
-It's possible to wrap \verb`ly` within and environment, but there are
+\begin{verbatim}
+\newcommand\mylily[2][1]{\lily[inline-staffsize=10, #1]{#2}}
+
+This is \mylily[voffset=10pt]{a' b' c''} an example.
+\end{verbatim}
+
+\newcommand\mylily[2][1]{\lily[inline-staffsize=10, #1]{#2}}
+
+This is \mylily[voffset=10pt]{a' b' c''} an example.
+
+It's possible to wrap \highlight{ly} within and environment, but there are
 several drawbacks:
 \begin{itemize}
   \item this custom environment cannot have optional parameters. To be more
   precise, if it has only optional parameters, it will be necessary to add \verb`[]`
   after \verb`\begin{MY_ENV}` if no parameter is specified ; so they're not
   optional any more…
-  \item to call \verb`ly`, you'll have to:
+  \item to call \highlight{ly}, you'll have to:
   \begin{itemize}
     \item either write \verb`\begin{ly}[] \end{ly}` (which works with
-    \verb`\begin{lilypond}[] \end{lilypond}` too) ;
-    \item or use the \TeX\ primitives \verb`\ly \endly` (not only for \verb`ly`,
+    \verb`\begin{lilypond}[]` \verb`\end{lilypond}` too) ;
+    \item or use the \TeX\ primitives \verb`\ly \endly` (not only for \highlight{ly},
     but also for other environments).
   \end{itemize}
 \end{itemize}
+
+\begin{verbatim}
+\newenvironment{myly}{%
+  This is \emph{my} lilypond environment.
+  \begin{ly}[]%
+}{%
+  \end{ly}
+}
+
+\begin{myly}
+  a b c
+\end{myly}
+\end{verbatim}
 
 \newenvironment{myly}{%
   This is \emph{my} lilypond environment.
@@ -34,6 +51,29 @@ several drawbacks:
 }{%
   \end{ly}
 }
+
+\begin{myly}
+  a b c
+\end{myly}
+
+\begin{verbatim}
+\newenvironment{lyfigure}[2][]{%
+\edef\mycaption{#2}
+\begin{figure}
+\begin{center}
+  \begin{lilypond}[#1]%
+}{%
+  \end{lilypond}
+  \caption{\mycaption}
+\end{center}
+\end{figure}
+}
+
+\begin{lyfigure}{caption}
+a' b' c
+d' e' f
+\end{lyfigure}
+\end{verbatim}
 
 \newenvironment{lyfigure}[2][]{%
 \edef\mycaption{#2}
@@ -47,6 +87,12 @@ several drawbacks:
 \end{figure}
 }
 
+\begin{lyfigure}{caption}
+a' b' c
+d' e' f
+\end{lyfigure}
+
+\begin{verbatim}
 \newenvironment{lyotherfigure}[1][]{%
 \edef\option{#1}
 \figure
@@ -59,14 +105,23 @@ several drawbacks:
 \endfigure
 }
 
-\begin{myly}
-  a b c
-\end{myly}
-
-\begin{lyfigure}{caption}
-a' b' c
+\begin{lyotherfigure}[]
 d' e' f
-\end{lyfigure}
+a' b' c
+\end{lyotherfigure}
+\end{verbatim}
+
+\newenvironment{lyotherfigure}[1][]{%
+\edef\option{#1}
+\figure
+\center
+  \ly
+}{%
+  \endly%
+  \def\empty{}\ifx\option\empty\else\caption{\option}\fi
+\endcenter
+\endfigure
+}
 
 \begin{lyotherfigure}[]
 d' e' f

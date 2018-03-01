@@ -1,22 +1,21 @@
-\documentclass{scrartcl}
-\usepackage{lyluatex}
+\documentclass{lyluatexexample}
 \newcommand{\postLilyPondExample}{\par\bigskip\hrule\par\bigskip}
 \begin{document}
 
-\section*{Indent Handling}
+\section*{Dynamic Indent}
 
 This document demonstrates the use of \texttt{indent} and \texttt{autoindent},
 partially in combination with \texttt{print-only}.
 
-\texttt{indent=2cm} indents the first line, but if the resulting score contains
+\texttt{indent=1cm} indents the first line, but if the resulting score contains
 only one system this indent is suppressed (issuing a warning on the console):
 
-\begin{lilypond}[indent=2cm]
+\begin{lilypond}[indent=1cm]
   \set Staff.instrumentName = "Violin"
   \repeat unfold 12 { c' d' e' d' }
 \end{lilypond}
 
-\begin{lilypond}[indent=2cm]
+\begin{lilypond}[indent=1cm]
   {
     \set Staff.instrumentName = "Violin"
     c' d' e' d'
@@ -119,25 +118,5 @@ The \texttt{autoindent} option is active by default but will be deactivated if
 more LilyPond compilations and therefore compilation time. But it will only
 apply and be executed if the score exceeds the protrusion limit, so it can only
 occur in circumstances where multiple LilyPond runs are expected anyway.
-
-\newpage
-\paragraph{Known Issues:}
-If \texttt{autoindent} is implicitly set like in the following example, and
-\texttt{max-protrusion=0cm} then the indented first system doesn't correctly
-refer to the text margin (\texttt{=0cm}) but to the staff symbol of the
-surrounding systems:
-
-\begin{lilypond}[indent=1cm,print-only={3,1,2},max-protrusion=0cm]
-  \set Staff.instrumentName = "Violin"
-  \repeat unfold 19 { c' d' e' d' }
-\end{lilypond}
-
-This does only happen with the \emph{implicit} autoindent after a deactivated
-indent. Regular files are autoindented correctly:
-
-\begin{lilypond}[max-protrusion=0cm]
-  \set Staff.instrumentName = "Violin"
-  \repeat unfold 19 { c' d' e' d' }
-\end{lilypond}
 
 \end{document}
