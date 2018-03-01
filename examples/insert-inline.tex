@@ -1,17 +1,53 @@
-\documentclass{scrartcl}
+\documentclass{lyluatexexample}
 
-\usepackage{lyluatex}
-\usepackage{fontspec}
-\usepackage{libertine}
-\usepackage{lilyglyphs}
+\usepackage[colorlinks]{hyperref}
 \begin{document}
 
+\section*{Insert Scores Inline}
 
-With the \texttt{insert=inline} option it is simple to insert arbitrary
-notational fragments in the
-\lilypond[insert=inline,voffset=-1pt, nostaff,staffsize=12]{ e'8 d'16 e' }
-continuous text of a document.
-This is a \lilyDynamics{f} extension to the \lilyglyphs\ package.
+With the \option{insert=inline} option it is simple to insert arbitrary
+notational fragments in the \lilypond{ e'8 d'16 e' } continuous text of a
+document. By default the staffsize is scaled to be 2/3 of the staffsize a
+regular score would have at this point. This means if the \option{staffsize}
+option is modified globally or locally then the staffsize of the inline score is
+changed too.
+
+In order to make the size of inline scores independent from the regular
+staffsize the option \option{inline-staffsize} can be used the same way as
+\option{staffsize}. \lilypond[inline-staffsize=8]{ e'8 d'16 e' } has the inline
+staffsize manually set to \texttt{8}.
+
+\paragraph{Alignment and padding} By default inline scores are vertically
+centered to a line 1/2em above the text's baseline. \lilypond[valign=top]{ e'8
+d'16 e' } but the score can also be aligned \lilypond[valign=bottom]{ e'8 d'16
+e' } to the top or the baseline of the text.
+
+Unfortunately this can only consider the borders of the \emph{image} and not
+those of the \emph{score} or the staff lines. To alleviate this situation a
+specific vertical offset can be given with \option{voffset=-3pt} (or any other
+\TeX\ lengths). This offset is calculated after the alignment.
+\lilypond[valign=bottom,voffset=-6pt]{ e'8 d'16 e' } is inserted with
+\option{valign=bottom,voffset=-4pt}.
+
+Horizontally inline scores are padded by \option{hpadding=0.75ex} -- except if
+they happen to appear at the beginning or end of a line, as can be seen in the
+last score in the previous paragraph. \lilypond[hpadding=2em]{ e'8 d'16 e' }
+Increasing the \option{hpadding} will ensure more space around the score.
+
+\paragraph{Bare Inline scores} \option{insert=bare-inline} will remove all the
+staff elements (staff symbol, time signature, clef) by implicitly applying
+\option{nostaff}, which is most useful for including notational symbols like
+characters in the paragraph.
+\lilypond[insert=bare-inline,%
+inline-staffsize=14,%
+voffset=-1pt,%
+hpadding=0.25ex%
+]{s2.\startTrillSpan s4\stopTrillSpan}
+This actually works like the \option{lilyglyphs}
+package\footnote{\url{https://github.com/uliska/lilyglyphs}} but with the
+possibility of inserting arbitrary LilyPond material without having to prepare
+precompiled PDF images.
+
 
 
 \end{document}
