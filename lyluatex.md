@@ -1138,6 +1138,18 @@ please refer to
 [`musicxml2ly` documentation](http://lilypond.org/doc/v2.18/Documentation/usage/invoking-musicxml2ly)
 for more information.
 
+# Wrapping \lyluatex\ commands
+
+\cmd{lilypond} and \highlight{lilypond} are aliases for a command and an
+environment that \lyluatex\ defines internally,
+respectively \cmd{lily} and \highlight{ly}.
+
+\cmd{lily} can be wrapped within another command in an usual way;
+but \highlight{ly} is quite a special environments,
+which makes it a bit unusual to wrap.
+You'll find more about this point in \linkexample{wrappingcommands}{Wrapping
+Commands}
+
 # Index
 
 \printindex
