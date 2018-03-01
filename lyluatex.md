@@ -391,7 +391,7 @@ It is the user's responsibility to only request pages/systems that are actually
 present in the score, otherwise \LaTeX\ will raise an error.
 
 \lyMargin{Examples:}
-Usage examples for this option can be found in \protect\hyperlink{ex-print-only}{Choosing Systems}.
+Usage examples for this option can be found in \linkexample{print-only}{Choosing Systems}.
 
 ## Score Layout
 
@@ -699,7 +699,7 @@ will only be applied when a protrusion limit is given and exceeded. Intermediate
 scores are cached and won't be unnecessarily recompiled.
 
 \lyMargin{Examples:}
-A comprehensive set of examples demonstrating the dynamic indent behaviour is available in \protect\hyperlink{ex-dynamic-indent}{Dynamic Indent}.
+A comprehensive set of examples demonstrating the dynamic indent behaviour is available in \linkexample{dynamic-indent}{Dynamic Indent}.
 
 #### Vertical Alignment of Fullpage Scores
 
@@ -825,7 +825,7 @@ implicitly disabled.
 
 \lyMargin{Examples:}
 Demonstrations of the different font handling features are available in
-\protect\hyperlink{ex-fonts}{Font Handling}.
+\linkexample{fonts}{Font Handling}.
 
 ### Staff Display
 
