@@ -1134,9 +1134,11 @@ end
 
 function Score:write_latex(do_compile)
     if self['raw-pdf'] then
-        if self.insert ~= 'fullpage' then
+        if self.insert == 'systems' then
             latex.systems_list(self.output, self.protrusion_left, self.range)
-        else token.set_macro('lysystems', self.output, 'global')
+        elseif self.insert == 'fullpage' then
+           token.set_macro('lyscore', self.output, 'global')
+        else token.set_macro('lyscore', self.output..'-1', 'global')
         end
         return
     end
