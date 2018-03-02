@@ -277,12 +277,21 @@ function bbox.read(filename)
 end
 
 function bbox.parse(filename, line_width)
+    local function ps2pt(ps_units)
+        -- 1psu = 1/72in (PostScript Unit, used in the .eps bounding box)
+        -- 1pt = 1/72.26999in (LaTeX/LilyPond points)
+        return ps_units * 1.003749861
+    end
     local f = io.open(filename..'.eps', 'r')
     if not f then return end
     local bbline = ''
     while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
     f:close()
     local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    x_1 = ps2pt(x_1)
+    x_2 = ps2pt(x_2)
+    y_1 = ps2pt(y_1)
+    y_2 = ps2pt(y_2)
     local bb = {
         ['protrusion'] = -x_1,
         ['r_protrusion'] = x_2 + 1 - math.floor(line_width),
