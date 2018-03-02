@@ -373,13 +373,23 @@ function latex.label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
 end
 
-function latex.systems_list(filename, hoffset, range)
-    local texoutput
-    if hoffset then texoutput = hoffset..'pt,' else texoutput = '' end
-    for i = 1, #range - 1 do texoutput = texoutput..filename..'-'..range[i]..',' end
-    texoutput = texoutput..filename..'-'..range[#range]
-    token.set_macro('lysystems', texoutput, 'global')
+function latex.set_lyscore(raw, insert, filename, hoffset, range)
+    if raw then
+        if insert ~= 'fullpage' then  -- systems and inline
+            local texoutput
+            -- hoffset exists only if insert=systems.
+            if hoffset then texoutput = hoffset..'pt,' else texoutput = '' end
+            -- with insert=inline, there shouldn't be several systems,
+            -- but it could occur (the user is warned).
+            for i = 1, #range - 1 do texoutput = texoutput..filename..'-'..range[i]..',' end
+            texoutput = texoutput..filename..'-'..range[#range]
+            token.set_macro('lyscore', texoutput, 'global')
+        else token.set_macro('lyscore', filename, 'global')
+        end
+    else token.set_macro('lyscore', nil, 'global')
+    end
 end
+
 
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
 function latex.verbatim(verbatim, ly_code, intertext, version)
@@ -1133,15 +1143,8 @@ function Score:tex_margin_top()
 end
 
 function Score:write_latex(do_compile)
-    if self['raw-pdf'] then
-        if self.insert == 'systems' then
-            latex.systems_list(self.output, self.protrusion_left, self.range)
-        elseif self.insert == 'fullpage' then
-           token.set_macro('lyscore', self.output, 'global')
-        else token.set_macro('lyscore', self.output..'-1', 'global')
-        end
-        return
-    end
+    latex.set_lyscore(self['raw-pdf'], self.insert, self.output, self.protrusion_left, self.range)
+    if self['raw-pdf'] then return end
     latex.filename(self.printfilename, self.insert, self.input_file)
     latex.verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
     if do_compile and not self:check_compilation() then return end
