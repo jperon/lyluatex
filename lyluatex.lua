@@ -253,10 +253,11 @@ end
 
 
 local function set_lyscore(insert, filename, hoffset, range)
-    ly.score = {}
+    ly.score = {nsystems = 1}
     if insert ~= 'fullpage' then  -- systems and inline
         if hoffset then ly.score.hoffset = hoffset..'pt'end
         for i = 1, #range do table.insert(ly.score, filename..'-'..range[i]) end
+        ly.score.nsystems = #range
     else ly.score[1] = filename
     end
 end
