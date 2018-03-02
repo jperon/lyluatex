@@ -252,12 +252,16 @@ This item will be skipped!
 end
 
 
-local function set_lyscore(insert, filename, hoffset, range)
-    ly.score = {nsystems = 1}
+local function set_lyscore(insert, filename, hoffset)
+    ly.score = {nsystems = 0}
     if insert ~= 'fullpage' then  -- systems and inline
         if hoffset then ly.score.hoffset = hoffset..'pt'end
-        for i = 1, #range do table.insert(ly.score, filename..'-'..range[i]) end
-        ly.score.nsystems = #range
+        local function systems()  -- iterator over systems pdfs
+            ly.score.nsystems = ly.score.nsystems + 1
+            local system = filename..'-'..ly.score.nsystems
+            if lfs.isfile(system..'.pdf') then return system end
+        end
+        for s in systems do table.insert(ly.score, s) end
     else ly.score[1] = filename
     end
 end
@@ -1073,7 +1077,7 @@ function Score:process()
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
-    set_lyscore(self.insert, self.output, self.protrusion_left, self.range)
+    set_lyscore(self.insert, self.output, self.protrusion_left)
     if not self['raw-pdf'] then self:write_latex(do_compile) end
     self:write_to_filelist()
     if not self.debug then self:delete_intermediate_files() end
