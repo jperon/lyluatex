@@ -1,4 +1,4 @@
--- luacheck: ignore ly log self luatexbase internalversion font fonts tex kpse status
+-- luacheck: ignore ly log self luatexbase internalversion font fonts tex token kpse status
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '0',
@@ -374,9 +374,11 @@ function latex.label(label, labelprefix)
 end
 
 function latex.systems_list(filename, hoffset, range)
-    tex.sprint(hoffset..'pt,')
-    for i = 1, #range - 1 do tex.sprint(filename..'-'..range[i]..',') end
-    tex.sprint(filename..'-'..range[#range])
+    local texoutput
+    if hoffset then texoutput = hoffset..'pt,' else texoutput = '' end
+    for i = 1, #range - 1 do texoutput = texoutput..filename..'-'..range[i]..',' end
+    texoutput = texoutput..filename..'-'..range[#range]
+    token.set_macro('lysystems', texoutput, 'global')
 end
 
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
@@ -1132,9 +1134,10 @@ end
 
 function Score:write_latex(do_compile)
     if self['raw-pdf'] then
-        if self.insert == 'systems' then
+        if self.insert ~= 'fullpage' then
             latex.systems_list(self.output, self.protrusion_left, self.range)
-        else tex.sprint(self.output) end
+        else token.set_macro('lysystems', self.output, 'global')
+        end
         return
     end
     latex.filename(self.printfilename, self.insert, self.input_file)
