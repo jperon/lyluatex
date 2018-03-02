@@ -12,8 +12,8 @@ local err, warn, info, log = luatexbase.provides_module({
 local md5 = require 'md5'
 local lfs = require 'lfs'
 
-local ly = {}
 local latex = {}
+local ly = {}
 local Score = {}
 
 local FILELIST
@@ -252,6 +252,16 @@ This item will be skipped!
 end
 
 
+local function set_lyscore(insert, filename, hoffset, range)
+    ly.score = {}
+    if insert ~= 'fullpage' then  -- systems and inline
+        if hoffset then ly.score.hoffset = hoffset..'pt'end
+        for i = 1, #range do table.insert(ly.score, filename..'-'..range[i]) end
+    else ly.score[1] = filename
+    end
+end
+
+
 local function splitext(str, ext) return str:match('(.*)%.'..ext..'$') or str end
 
 
@@ -371,23 +381,6 @@ end
 
 function latex.label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
-end
-
-function latex.set_lyscore(raw, insert, filename, hoffset, range)
-    if raw then
-        if insert ~= 'fullpage' then  -- systems and inline
-            local texoutput
-            -- hoffset exists only if insert=systems.
-            if hoffset then texoutput = hoffset..'pt,' else texoutput = '' end
-            -- with insert=inline, there shouldn't be several systems,
-            -- but it could occur (the user is warned).
-            for i = 1, #range - 1 do texoutput = texoutput..filename..'-'..range[i]..',' end
-            texoutput = texoutput..filename..'-'..range[#range]
-            token.set_macro('lyscore', texoutput, 'global')
-        else token.set_macro('lyscore', filename, 'global')
-        end
-    else token.set_macro('lyscore', nil, 'global')
-    end
 end
 
 
@@ -1079,7 +1072,8 @@ function Score:process()
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
-    self:write_latex(do_compile)
+    set_lyscore(self.insert, self.output, self.protrusion_left, self.range)
+    if not self['raw-pdf'] then self:write_latex(do_compile) end
     self:write_to_filelist()
     if not self.debug then self:delete_intermediate_files() end
 end
@@ -1143,8 +1137,6 @@ function Score:tex_margin_top()
 end
 
 function Score:write_latex(do_compile)
-    latex.set_lyscore(self['raw-pdf'], self.insert, self.output, self.protrusion_left, self.range)
-    if self['raw-pdf'] then return end
     latex.filename(self.printfilename, self.insert, self.input_file)
     latex.verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
     if do_compile and not self:check_compilation() then return end

@@ -219,6 +219,12 @@
   \let\repeat\ly@oldrepeat%
 }
 
+\newcommand{\lyscore}[1]{\directlua{
+  local i = tonumber('#1') or '#1'
+  if i == '' then i = 1 end
+  tex.sprint(ly.score[i] or '')
+}}
+
 % Commands for compatibility with lilypond-book
 \let\lilypondfile\includely%
 \protected\def\lilypond{%
