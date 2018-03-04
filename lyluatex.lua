@@ -282,20 +282,50 @@ function bbox.parse(filename, line_width)
         -- 1pt = 1/72.26999in (LaTeX/LilyPond points)
         return ps_units * 1.003749861
     end
-    local f = io.open(filename..'.eps', 'r')
-    if not f then return end
-    local bbline = ''
-    while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
-    f:close()
-    local x_1, y_1, x_2, y_2 = string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+
+    local function get_bb()
+        -- get "LoRes" BoundingBox from EPS file
+        local f = io.open(filename..'.eps', 'r')
+        if not f then return end
+        local bbline = ''
+        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
+        f:close()
+        x_1, y_1, x_2, y_2 =
+            string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+
+        -- try to get HiResBoundingBox from PDF (if 'gs' works)
+        local p = io.popen('gs -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..filename..'.pdf 2>&1', 'r')
+        if p then
+            p:read()
+            local bbline = p:read()
+            p:close()
+            hr_x_1, hr_y_1, hr_x_2, hr_y_2 =
+                string.match(bbline,
+                  '(%--%d+%.%d+)%s(%--%d+%.%d+)%s(%--%d+%.%d+)%s(%--%d+%.%d+)')
+            -- The HiRes BoundingBox retrieved from the PDF differs from the
+            -- BoundingBox present in the EPS file. In the PDF (0|0) is the
+            -- Lower Left corner while in the EPX (0|0) represents the top
+            -- edge at the start of the staff symbol.
+            -- Therefore we shift the HiRes results by the (truncated)
+            -- points of the EPS bounding box.
+            x_1 = hr_x_1 + x_1
+            x_2 = hr_x_2 + x_1
+            y_1 = hr_y_1 + y_1
+            y_2 = hr_y_2 + y_1
+        end
+      return x_1, y_1, x_2, y_2
+    end
+
+    x_1, y_1, x_2, y_2 = get_bb()
+    -- convert PostScript Units (Bounding Box) to LaTeX pt
     x_1 = ps2pt(x_1)
-    x_2 = ps2pt(x_2)
     y_1 = ps2pt(y_1)
+    x_2 = ps2pt(x_2)
     y_2 = ps2pt(y_2)
     local bb = {
         ['protrusion'] = -x_1,
-        ['r_protrusion'] = x_2 + 1 - math.floor(line_width),
-        ['width'] = x_2 + 1,
+        ['r_protrusion'] = x_2 - line_width,
+        ['width'] = x_2,
         ['height'] = y_2 - y_1
     }
     f = io.open(filename..'.bbox', 'w')
