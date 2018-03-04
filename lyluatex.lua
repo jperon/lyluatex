@@ -313,15 +313,10 @@ function bbox.parse(filename, line_width)
             y_1 = hr_y_1 + y_1
             y_2 = hr_y_2 + y_1
         end
-      return x_1, y_1, x_2, y_2
+      return ps2pt(x_1), ps2pt(y_1), ps2pt(x_2), ps2pt(y_2)
     end
 
     x_1, y_1, x_2, y_2 = get_bb()
-    -- convert PostScript Units (Bounding Box) to LaTeX pt
-    x_1 = ps2pt(x_1)
-    y_1 = ps2pt(y_1)
-    x_2 = ps2pt(x_2)
-    y_2 = ps2pt(y_2)
     local bb = {
         ['protrusion'] = -x_1,
         ['r_protrusion'] = x_2 - line_width,
