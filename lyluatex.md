@@ -703,6 +703,18 @@ Handling automatic indent requires up to three recompilations of a score, but it
 will only be applied when a protrusion limit is given and exceeded. Intermediate
 scores are cached and won't be unnecessarily recompiled.
 
+\lyIssue{NOTE:}
+
+Cacluations regarding automatic indent rely on the High Resolution Bounding Box
+retrieved from the final PDF file of the score. This is done using Ghostscript
+with the `gs` invocation.  If this should not be available a low resolution
+bounding box is used instead, which can lead to rounding errors. Note that under
+certain circumstandes these rounding errors may not only lead to less accurate
+alignment but to wrong decisions in the alignment process. If you encounter
+wrong results please try to create a Minimal Working Example and submit it to
+\lyluatex's issue
+tracker^[[https://github.com/jperon/lyluatex/issues](https://github.com/jperon/lyluatex/issues)].
+
 \lyMargin{Examples:}
 A comprehensive set of examples demonstrating the dynamic indent behaviour is available in \linkexample{dynamic-indent}{Dynamic Indent}.
 
