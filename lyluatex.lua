@@ -257,9 +257,11 @@ local function set_lyscore(insert, filename, hoffset)
     if insert ~= 'fullpage' then  -- systems and inline
         if hoffset then ly.score.hoffset = hoffset..'pt'end
         local function systems()  -- iterator over systems pdfs
-            ly.score.nsystems = ly.score.nsystems + 1
-            local system = filename..'-'..ly.score.nsystems
-            if lfs.isfile(system..'.pdf') then return system end
+            local system = filename..'-'..ly.score.nsystems + 1
+            if lfs.isfile(system..'.pdf') then
+                ly.score.nsystems = ly.score.nsystems + 1
+                return system
+            end
         end
         for s in systems do table.insert(ly.score, s) end
     else ly.score[1] = filename
