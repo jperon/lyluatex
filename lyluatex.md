@@ -1166,6 +1166,32 @@ which makes it a bit unusual to wrap.
 You'll find more about this point in \linkexample{wrappingcommands}{Wrapping
 Commands}
 
+## Providing Raw filenames
+
+\lyluatex's default mode of operations is to directly insert scores into the
+document.  For this the generated PDF files of the scores are transparently
+wrapped in \cmd{includegraphics} or \cmd{includepdf} commands and given
+appropriate layout.
+
+\lyOption{raw-pdf}{false}
+However, for more control over the placement and handling of the scores,
+especially for package developers, \option{raw-pdf} provides the option to make
+available the raw file name(s) to be processed and wrapped at will. When
+\option{raw-pdf} is set \lyluatex\ will implicitly and temporarily define a
+command
+
+\lyCmd{lyscore}
+
+taking one mandatory argument, which may be empty. In this case
+\cmd{lyscore\{\}} expands to the filename of the first system of the score while
+\cmd{lyscore\{N\}} will return the filename of the N-th system and
+\cmd{lyscore\{nsystems\}} returns the number of systems the score produced.
+Finally \cmd{lyscore\{hoffset\}} returns `<hoffset>pt` as a distance to be used
+to place the system horizontally and have the option to handle protrusion.
+
+\lyMargin{Examples:}
+Examples on how raw filenames can be wrapped in secondary commands can be found in \linkexample{wrappingcommands}{Wrapping Commands}.
+
 \printindex
 \addcontentsline{toc}{section}{Index}
 
