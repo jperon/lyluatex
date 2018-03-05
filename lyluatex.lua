@@ -12,8 +12,8 @@ local err, warn, info, log = luatexbase.provides_module({
 local md5 = require 'md5'
 local lfs = require 'lfs'
 
-local ly = {}
 local latex = {}
+local ly = {}
 local obj = {}
 local Score = {}
 
@@ -261,6 +261,23 @@ local function readlinematching(s, f)
         return result
     end
 end
+    
+
+local function set_lyscore(insert, filename, hoffset)
+    ly.score = {nsystems = 0}
+    if insert ~= 'fullpage' then  -- systems and inline
+        if hoffset then ly.score.hoffset = hoffset..'pt'end
+        local function systems()  -- iterator over systems pdfs
+            local system = filename..'-'..ly.score.nsystems + 1
+            if lfs.isfile(system..'.pdf') then
+                ly.score.nsystems = ly.score.nsystems + 1
+                return system
+            end
+        end
+        for s in systems do table.insert(ly.score, s) end
+    else ly.score[1] = filename
+    end
+end
 
 
 local function splitext(str, ext) return str:match('(.*)%.'..ext..'$') or str end
@@ -384,13 +401,6 @@ function latex.label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
 end
 
-function latex.systems_list(filename, hoffset, range)
-    local texoutput
-    if hoffset then texoutput = hoffset..'pt,' else texoutput = '' end
-    for i = 1, #range - 1 do texoutput = texoutput..filename..'-'..range[i]..',' end
-    texoutput = texoutput..filename..'-'..range[#range]
-    token.set_macro('lysystems', texoutput, 'global')
-end
 
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
 function latex.verbatim(verbatim, ly_code, intertext, version)
@@ -1094,7 +1104,8 @@ function Score:process()
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
-    self:write_latex(do_compile)
+    set_lyscore(self.insert, self.output, self.protrusion_left)
+    if not self['raw-pdf'] then self:write_latex(do_compile) end
     self:write_to_filelist()
     if not self.debug then self:delete_intermediate_files() end
 end
@@ -1158,15 +1169,6 @@ function Score:tex_margin_top()
 end
 
 function Score:write_latex(do_compile)
-    if self['raw-pdf'] then
-        if self.insert == 'systems' then
-            latex.systems_list(self.output, self.protrusion_left, self.range)
-        elseif self.insert == 'fullpage' then
-           token.set_macro('lyscore', self.output, 'global')
-        else token.set_macro('lyscore', self.output..'-1', 'global')
-        end
-        return
-    end
     latex.filename(self.printfilename, self.insert, self.input_file)
     latex.verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
     if do_compile and not self:check_compilation() then return end
