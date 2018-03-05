@@ -14,6 +14,7 @@ local lfs = require 'lfs'
 
 local ly = {}
 local latex = {}
+local obj = {}
 local Score = {}
 
 local FILELIST
@@ -252,6 +253,16 @@ This item will be skipped!
 end
 
 
+local function readlinematching(s, f)
+    if f then
+        local result = ''
+        while result and not result:find(s) do result = f:read() end
+        f:close()
+        return result
+    end
+end
+
+
 local function splitext(str, ext) return str:match('(.*)%.'..ext..'$') or str end
 
 
@@ -262,73 +273,39 @@ function bbox.get(filename, line_width)
     return bbox.read(filename) or bbox.parse(filename, line_width)
 end
 
-function bbox.read(filename)
-    local f = io.open(filename..'.bbox', 'r')
-    if f then
-        local bb = {
-            ['protrusion'] = f:read('*l'),
-            ['r_protrusion'] = f:read('*l'),
-            ['width'] = f:read('*l'),
-            ['height'] = f:read('*l')
-        }
-        f:close()
-        return bb
-    end
-end
-
 function bbox.parse(filename, line_width)
-    local function ps2pt(ps_units)
-        -- 1psu = 1/72in (PostScript Unit, used in the .eps bounding box)
-        -- 1pt = 1/72.26999in (LaTeX/LilyPond points)
-        return ps_units * 1.003749861
+    -- get BoundingBox from EPS file
+    local bbline = readlinematching('^%%%%BoundingBox', io.open(filename..'.eps', 'r'))
+    if not bbline then return end
+    local x_1, y_1, x_2, y_2 = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    -- try to get HiResBoundingBox from PDF (if 'gs' works)
+    bbline = readlinematching(
+        '^%%%%HiResBoundingBox',
+        io.popen('gs -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..filename..'.pdf 2>&1', 'r')
+    )
+    if bbline then
+        local pbb = bbline:gmatch('(%d+%.%d+)')
+        -- The HiRes BoundingBox retrieved from the PDF differs from the
+        -- BoundingBox present in the EPS file. In the PDF (0|0) is the
+        -- Lower Left corner while in the EPS (0|0) represents the top
+        -- edge at the start of the staff symbol.
+        -- Therefore we shift the HiRes results by the (truncated)
+        -- points of the EPS bounding box.
+        x_1, y_1, x_2, y_2 = pbb() + x_1, pbb() + y_1, pbb() + x_1, pbb() + y_1
+    else warn([[gs couldn't be launched; there could be rounding errors.]])
     end
-
-    local function get_bb()
-        -- get "LoRes" BoundingBox from EPS file
-        local f = io.open(filename..'.eps', 'r')
-        if not f then return end
-        local bbline = ''
-        while not bbline:find('^%%%%BoundingBox') do bbline = f:read() end
-        f:close()
-        x_1, y_1, x_2, y_2 =
-            string.match(bbline, '(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
-
-        -- try to get HiResBoundingBox from PDF (if 'gs' works)
-        local p = io.popen('gs -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..filename..'.pdf 2>&1', 'r')
-        if p then
-            p:read()
-            local bbline = p:read()
-            p:close()
-            hr_x_1, hr_y_1, hr_x_2, hr_y_2 =
-                string.match(bbline,
-                  '(%--%d+%.%d+)%s(%--%d+%.%d+)%s(%--%d+%.%d+)%s(%--%d+%.%d+)')
-            -- The HiRes BoundingBox retrieved from the PDF differs from the
-            -- BoundingBox present in the EPS file. In the PDF (0|0) is the
-            -- Lower Left corner while in the EPX (0|0) represents the top
-            -- edge at the start of the staff symbol.
-            -- Therefore we shift the HiRes results by the (truncated)
-            -- points of the EPS bounding box.
-            x_1 = hr_x_1 + x_1
-            x_2 = hr_x_2 + x_1
-            y_1 = hr_y_1 + y_1
-            y_2 = hr_y_2 + y_1
-        end
-      return ps2pt(x_1), ps2pt(y_1), ps2pt(x_2), ps2pt(y_2)
-    end
-
-    x_1, y_1, x_2, y_2 = get_bb()
     local bb = {
-        ['protrusion'] = -x_1,
-        ['r_protrusion'] = x_2 - line_width,
-        ['width'] = x_2,
-        ['height'] = y_2 - y_1
+        ['protrusion'] = -convert_unit(x_1..'bp'),
+        ['r_protrusion'] = convert_unit(x_2..'bp') - line_width,
+        ['width'] = convert_unit(x_2..'bp'),
+        ['height'] = convert_unit(y_2..'bp') - convert_unit(y_1..'bp')
     }
-    f = io.open(filename..'.bbox', 'w')
-    f:write(bb.protrusion..'\n'..bb.r_protrusion..'\n'..
-            bb.width..'\n'..bb.height..'\n')
-    f:close()
+    obj.serialize(bb, filename..'.bbox')
     return bb
 end
+
+function bbox.read(f) return obj.deserialize(f..'.bbox') end
+
 
 --[[ =============== Functions that output LaTeX code ===================== ]]
 
@@ -434,6 +411,29 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
         f:close()
         tex.sprint('\\input{'..fname..'}')
         if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
+    end
+end
+
+
+--[[ =============== Functions that operate on objects ==================== ]]
+
+function obj.deserialize(f) if lfs.isfile(f) then return dofile(f) end end
+
+function obj.serialize(o, f)
+    f = io.open(f, 'w')
+    if not f then return end
+    f:write('local o = '..obj.str(o)..'\nreturn o')
+    f:close()
+end
+
+function obj.str(o)
+    if type(o) == "number" then return o
+    elseif type(o) == "string" then return string.format("%q", o)
+    elseif type(o) == "table" then
+        local r = '{\n'
+        for k, v in pairs(o) do r = r.."  ["..obj.str(k).."] = "..obj.str(v)..",\n" end
+        return r.."}\n"
+    else error("cannot convert " .. type(o).." to string")
     end
 end
 
@@ -877,18 +877,8 @@ function Score:lilypond_cmd(ly_code)
 end
 
 function Score:lilypond_version(number)
-    local p = io.popen(self.program..' --version', 'r')
-    if not p then
-      err([[
-LilyPond could not be started.
-Please check that LuaLaTeX is started with the
---shell-escape option.
-]]
-        )
-    end
-    local result = p:read()
-    p:close()
-    if result and result:match('GNU LilyPond') then
+    local result = readlinematching('GNU LilyPond', io.popen(self.program..' --version', 'r'))
+    if result then
         if number then return result:match('%d+%.%d+%.?%d*')
         else
             info(
@@ -900,8 +890,9 @@ Please check that LuaLaTeX is started with the
     else
         err([[
 LilyPond could not be started.
-Please check that 'program' points
-to a valid LilyPond executable.
+Please check that LuaLaTeX is started with the
+--shell-escape option, and that 'program'
+points to a valid LilyPond executable.
 ]]
         )
     end
