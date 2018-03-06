@@ -267,7 +267,11 @@ local function set_lyscore(score)
     ly.score = score
     ly.score.nsystems = ly.score:count_systems()
     if insert ~= 'fullpage' then  -- systems and inline
-        ly.score.hoffset = ly.score.protrusion..'pt'
+        local hoffset = ly.score.protrusion or 0
+        if hoffset == '' then hoffset = 0 end
+        print("Hoffset")
+        print(hoffset)
+        ly.score.hoffset = hoffset..'pt'
         for s = 1, ly.score.nsystems do
             table.insert(ly.score, ly.score.output..'-'..s)
         end
