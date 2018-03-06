@@ -28,13 +28,10 @@ features.
 
 \lyluatex's main features include:
 
-* Fully automatic management of using LilyPond to compile musical scores from
-  within the \LaTeX\ run
+* Using LilyPond to compile musical scores directly from within the \LaTeX\ run
 * Intelligent caching of engraved scores, avoiding recompilation when possible
-* Fully automatic matching of layout and appearance to perfectly fit the scores
-  into the text document
-* Comprehensive configuration of the scores through options which work on global
-  or per-score level
+* Matching of layout and appearance to perfectly fit the scores into the text document
+* Comprehensive configuration through global and per-score options
 
 ## Installation
 
@@ -79,16 +76,14 @@ that documents are generally compiled from their actual directory, i.e. without
 referring to it through a path.
 
 \lyIssue{NOTE:} \lyluatex\ requires that \LuaLaTeX\ is started with the
-`--shell-escape` command line option to enable the execution of arbitrary
-shell commands, which is necessary to let LilyPond compile the inserted scores
-on-the-fly.
-However, this opens a significant security hole,
-and only fully trusted input files should be compiled.
-You may mitigate (but not totally remove) this security hole by adding
-`lilypond` to `shell_escape_commands`, and using `--shell-restricted` instead
-of `--shell-escape`:
-look at the documentation of your \TeX\ distribution. For example, on Debian
-Linux with TeXLive:
+`--shell-escape` command line option to enable the execution of arbitrary shell
+commands, which is necessary to let LilyPond compile the inserted scores
+on-the-fly and to perform some auxiliary shell operations. However, this opens a
+significant security hole, and only fully trusted input files should be
+compiled. You may mitigate (but not totally remove) this security hole by adding
+`lilypond` to `shell_escape_commands`, and using `--shell-restricted` instead of
+`--shell-escape`: look at the documentation of your \TeX\ distribution. For
+example, on Debian Linux with TeXLive:
 
 ```sh
 % export shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond
@@ -105,10 +100,7 @@ automatically take care of compiling the scores if necessary -- making use of an
 intelligent caching mechanism --, and it will match the score's layout to that
 of the text document.  \lyluatex\ will produce PDF image files which are
 automatically included within the current paragraph, in their own paragraphs or
-as full pages, but more sophisticated integrations are possible in combination
-with the
-`musicexamples`^[[https://github.com/uliska/musicexamples](https://github.com/uliska/musicexamples)]
-package.
+as full pages.
 
 \lyluatex\ aims at being an upwards-compatible drop-in replacement for the
 `lilypond-book` preprocessor shipping with
@@ -121,8 +113,7 @@ be directly usable with \lyluatex, with some caveats:
 - `\musicxmlfile` has \option{no-articulation-directions},
   \option{no-beaming}, \option{no-page-layout} and \option{no-rest-positions}
   set to `true` by default, to increase chances of getting something
-  acceptable. Nevertheless, please read the [note](#musicxml) about this
-  command.
+  acceptable. Nevertheless, please read the note about this command below.
 
 
 \lyMargin{lilypond\index{lilypond}}
@@ -199,9 +190,8 @@ following order:
 * relative to all given include paths (see [LilyPond Include Paths](#include-paths)))
 * relative to all paths visible to \LaTeX\ (like the package search)
 
-### MusicXML inclusion {#musicxml}
 
-\lyCmd{musicxmlfile}
+\lyCmd{musicxmlfile}\label{musicxml}
 Finally there is a command to include scores encoded as
 [MusicXML](https://www.musicxml.com/) files.  These will be converted to
 LilyPond input by LilyPond's `musicxml2ly` script and then compiled by
@@ -299,9 +289,9 @@ score as a sequence of images, one for each system.  This allows \LaTeX\ to have
 the systems flow over page breaks and to adjust the space between systems to
 vertically justify the systems on the page.
 
-Insertion mode can be controlled with the \option{insert} option, whose three
-valid values are \option{systems} (default), \option{fullpage}, and
-\option{inline}.
+Insertion mode can be controlled with the \option{insert} option, whose  valid
+values are \option{systems} (default), \option{fullpage}, \option{inline}, and
+\option{bare-inline}.
 
 ### System-by-System
 
@@ -443,11 +433,11 @@ actual line width of the text, which also works in multicolumn settings.  See
 staves to the text.
 
 \lyOption{staffsize}{default}
-Set the staffsize of the score.  By default (`[staffsize=default]` or simply
-`[staffsize]`) this is calculated relative to the size of the current text font,
-so it will give a consistent relation to the text at any font size.  Absolute
-sizes can be given as a number, which is interpreted as `pt`. For example
-LilyPond's own default staff size is `20`.
+Set the staffsize of the score.  By default (`[staffsize=default]`,
+`[staffsize]` or simply omitted) this is calculated relative to the size of the
+current text font, so it will give a consistent relation to the text at any font
+size.  Absolute sizes can be given as a number, which is interpreted as `pt`.
+For example LilyPond's own default staff size is `20`.
 
 \lyOption{ragged-right}{default}
 Set the score to ragged-right systems.
@@ -463,7 +453,7 @@ single-system scores). \option{noragged-right} is equivalent to
 Defines indentation of first system (same as LilyPond's `indent`).
 By default, with \option{insert=fullpage}, scores are indented;
 otherwise, they aren't.
-\option{noindent} is equivalent to \option{indent=0pt}.
+\option{noindent} is equivalent to \option{indent=0pt}.  Please also see the section about [Dynamic Indentation](#indent).
 
 \lyOption{quote}{false}
 This option, which is there for compatibility with `lilypond-book`,
@@ -840,15 +830,14 @@ fonts that are installed as system fonts. For any font that is installed in the
 \lyOption{current-font-as-main}{false}
 Use the font family *currently* used for typesetting as LilyPond's main font.
 
-\lyOption{current-font-as-main}{false} By default \option{pass-fonts} matches,
-roman, sans, and mono fonts, but with \option{current-font-as-main=false} the
-font that is *currently* used for typesetting is passed to LilyPond as its
-“main” roman font.  This ensures that the score's main font is consistent with
-the surrounding text.  However, this behaviour may not be desirable because it
-effectively removes the roman font from the LilyPond score, and it may make the
-*scores* look inconsistent with each other.  Therefore \lyluatex\ by default
-passes the text documetn's three font families to their directy LilyPond
-counterparts.
+By default \option{pass-fonts} matches, roman, sans, and mono fonts, but with
+\option{current-font-as-main=false} the font that is *currently* used for
+typesetting is passed to LilyPond as its “main” roman font.  This ensures that
+the score's main font is consistent with the surrounding text.  However, this
+behaviour may not be desirable because it effectively removes the roman font
+from the LilyPond score, and it may make the *scores* look inconsistent with
+each other.  Therefore \lyluatex\ by default passes the text document's three
+font families to their directy LilyPond counterparts.
 
 \lyOption{rmfamily}{}
 \lyOption{sffamily}{}
@@ -1090,7 +1079,7 @@ present in the temporary directory, an approach that avoids unnecessary
 recompilation while ensuring that any updates to the content or the parameters
 of a score will trigger a new score.
 
-\lyOption{tmpdir}{tmp\_ly}
+\lyOption{tmpdir}{tmp-ly}
 The directory that is used for this purpose can be set with the \option{tmpdir}
 option.  Its value is a relative path starting from the *current working
 directory*, i.e. the directory from which \LuaLaTeX\ has been started, not
