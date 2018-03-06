@@ -261,21 +261,19 @@ local function readlinematching(s, f)
         return result
     end
 end
-    
 
-local function set_lyscore(insert, filename, hoffset)
-    ly.score = {nsystems = 0}
+
+local function set_lyscore(score)
+    ly.score = score
+    ly.score.nsystems = ly.score:count_systems()
     if insert ~= 'fullpage' then  -- systems and inline
-        if hoffset then ly.score.hoffset = hoffset..'pt'end
-        local function systems()  -- iterator over systems pdfs
-            local system = filename..'-'..ly.score.nsystems + 1
-            if lfs.isfile(system..'.pdf') then
-                ly.score.nsystems = ly.score.nsystems + 1
-                return system
-            end
+        local hoffset = ly.score.protrusion or 0
+        if hoffset == '' then hoffset = 0 end
+        ly.score.hoffset = hoffset..'pt'
+        for s = 1, ly.score.nsystems do
+            table.insert(ly.score, ly.score.output..'-'..s)
         end
-        for s in systems do table.insert(ly.score, s) end
-    else ly.score[1] = filename
+    else ly.score[1] = ly.score.output
     end
 end
 
@@ -1104,7 +1102,7 @@ function Score:process()
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
-    set_lyscore(self.insert, self.output, self.protrusion_left)
+    set_lyscore(self)
     if not self['raw-pdf'] then self:write_latex(do_compile) end
     self:write_to_filelist()
     if not self.debug then self:delete_intermediate_files() end
