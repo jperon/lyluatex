@@ -140,3 +140,4 @@ sympy-plots-for-*.tex/
 
 # lyluatex temp directories
 *tmp-ly/
+/lyluatex.tex
