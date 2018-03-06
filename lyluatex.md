@@ -1184,13 +1184,20 @@ command
 
 taking one mandatory argument, which may be empty. In this case
 \cmd{lyscore\{\}} expands to the filename of the first system of the score while
-\cmd{lyscore\{N\}} will return the filename of the N-th system and
-\cmd{lyscore\{nsystems\}} returns the number of systems the score produced.
-Finally \cmd{lyscore\{hoffset\}} returns `<hoffset>pt` as a distance to be used
-to place the system horizontally and have the option to handle protrusion.
+\cmd{lyscore\{N\}} will return the filename of the N-th system. The special
+keywords  \cmd{lyscore\{nsystems\}} and \cmd{lyscore\{hoffset\}} return the
+number of systems in the score and `<hoffset>pt` as a distance to be applied to
+handle protrusion.
+
+Additionally any \lyluatex\ option can be used to retrieve the corresponding
+given or calculated value. For example \cmd{lyscore\{valign\}} will return
+`top`, `center`, or `bottom`. By accessing these options it is possible to make
+use of information that is not part of the actual generated score but that would
+otherwise be used by \lyluatex's \LaTeX\ wrapping.
 
 \lyMargin{Examples:}
-Examples on how raw filenames can be wrapped in secondary commands can be found in \linkexample{wrappingcommands}{Wrapping Commands}.
+Examples on how raw filenames can be wrapped in secondary commands can be found
+in \linkexample{insert-raw-pdf}{Wrapping Raw PDF Filenames}.
 
 \printindex
 \addcontentsline{toc}{section}{Index}

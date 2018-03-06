@@ -1,0 +1,141 @@
+\documentclass{lyluatexexample}
+\usepackage{pgffor}
+\begin{document}
+
+
+\section*{Wrapping Raw PDF Filenames}
+
+With the \option{raw-pdf} option it is possible to create wrapping commands that
+circumvent \lyluatex's layout considerations by working with the raw PDF
+filename of the generated score. This is especially useful for developing
+packages or personal class and style files. For this scores generated with
+\option{raw-pdf} define a command \cmd{lyscore} that can be used in the wrapping
+commands or environments.
+
+All examples in this document could also be realized using “default” \lyluatex\
+without \option{raw-pdf}, but they are intended to show how this low-level
+access can be used to retrieve the information from the generated score in order
+to build custom versions of commands that don't have to adhere to \lyluatex's
+pre-built strategies of including the score in the document
+
+The easiest way to use a “raw” score is to simply access \cmd{lyscore} in a
+command and pass it to an \cmd{includegraphics} macro:
+
+\begin{verbatim}
+  \newcommand\lilyinline[2][]{%
+  \lily[raw-pdf,%
+  insert=bare-inline,%
+  inline-staffsize=8,%
+  hpadding=0.25ex,#1]{
+  \omit Stem
+  #2}%
+  \includegraphics{\lyscore{}}%
+  }
+\end{verbatim}
+
+\newcommand\lilyinline[2][]{%
+\lily[raw-pdf,insert=bare-inline,inline-staffsize=8,hpadding=0.25ex,#1]{
+  \omit Stem
+  #2}%
+\includegraphics{\lyscore{}}%
+}
+
+This basically is a way to provide pre-configured commands. In this case
+\lilyinline{ c'8 d' c' d'} it is used to pre-configure an inline
+type, entered as \verb+\lilyinline{ c'8 d' c' d'}+.
+
+
+\bigskip \cmd{lyscore} takes one mandatory argument which can be empty -- as in
+the example above --, receive a number, one of the keywords \texttt{nsystems}
+and \texttt{hoffset}, or any of the score's options. If passed a number it will
+return the filename of the N-th system. With \texttt{nsystems} the number of
+systems in the generated score will be returned, while \texttt{hoffset}
+generates the code that shifts the score to the left to accommodate protrusion.
+
+The following example takes an optional argument with options that are passed to
+\lyluatex, and one mandatory argument which expects the system to be used. It
+prints the given system centered in a figure and uses the file name as the
+caption and makes use of the score's \texttt{label}. Figure \ref{centered} shows
+the centering of a short fragment, figure \ref{fifth} the selection of the fifth
+system from a larger score.
+
+\begin{verbatim}
+  \newenvironment{centeredlilypondsystem}[2][]{%
+  \def\usesystem{#2}
+  \begin{figure}
+  \begin{center}
+    \begin{lilypond}[raw-pdf,#1]%
+  }{%
+    \end{lilypond}
+    \includegraphics{\lyscore{\usesystem}}
+    \caption{\lyscore{\usesystem}.pdf}
+    \label{\lyscore{label}}
+  \end{center}
+  \end{figure}
+  }
+
+  \begin{centeredlilypondsystem}[label=centered]{1}
+  c'1 d' e'
+  \end{centeredlilypondsystem}
+
+  \begin{centeredlilypondsystem}[label=fifth]{5}
+  \repeat unfold 8 { c'1 \break }
+  \end{centeredlilypondsystem}
+\end{verbatim}
+
+\newenvironment{centeredlilypondsystem}[2][]{%
+\def\usesystem{#2}
+\begin{figure}
+\begin{center}
+  \begin{lilypond}[raw-pdf,#1]%
+}{%
+  \end{lilypond}
+  \includegraphics{\lyscore{\usesystem}}
+  \caption{\lyscore{\usesystem}.pdf}
+  \label{\lyscore{label}}
+\end{center}
+\end{figure}
+}
+
+\begin{centeredlilypondsystem}[label=centered]{1}
+c'1 d' e'
+\end{centeredlilypondsystem}
+
+\begin{centeredlilypondsystem}[label=fifth]{5}
+\repeat unfold 8 { c'1 \break }
+\end{centeredlilypondsystem}
+
+
+Finally there's an example showing how to iterate over the systems of a score
+using \cmd{foreach} from the \option{pgffor} package. It iterates over all the
+systems in the given score, prints them using the protrusion adjustment seen
+before, and if the system is the third it prints this information, otherwise
+just a line break:
+
+\begin{verbatim}
+\newcommand\myforlily[2][]{%
+\lily[insert=systems,raw-pdf,#1]{#2}%
+\foreach \n in {1,...,\lyscore{nsystems}}%
+    {\noindent\hspace*{\lyscore{hoffset}}\includegraphics{\lyscore{\n}}%
+    \ifthenelse{\equal{\n}{3}}{\par Third system\par}{\\}
+    }%
+}
+
+\myforlily[staffsize=24]{
+\set Staff.instrumentName = "Vl. "
+\repeat unfold 4 { c'1 \break } }
+\end{verbatim}
+
+\newcommand\myforlily[2][]{%
+\lily[insert=systems,raw-pdf,#1]{#2}%
+\foreach \n in {1,...,\lyscore{nsystems}}%
+    {\noindent\hspace*{\lyscore{hoffset}}\includegraphics{\lyscore{\n}}%
+    \ifthenelse{\equal{\n}{3}}{\par\bigskip Third system\par\bigskip}{\\}
+    }%
+}
+
+\myforlily[staffsize=24]{
+\set Staff.instrumentName = "Vl. "
+\repeat unfold 4 { c'1 \break } }
+
+\end{document}
