@@ -1,6 +1,7 @@
 ---
 documentclass: lyluatexmanual
 title: "\\lyluatex"
+subtitle: "1.0b"
 author:
 - Fr. Jacques Peron
 - Urs Liska
