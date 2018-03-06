@@ -38,6 +38,28 @@ features.
 
 ## Installation
 
+### For a single document
+
+Copy `lyluatex.sty` and `lyluatex.lua` into the folder containing the document
+you wish to typeset.
+
+### For all documents compiled with your LaTeX distribution
+
+#### TeXLive version
+
+Just run this command :
+
+```
+tlmgr install lyluatex
+```
+
+#### Latest version
+
+Copy `lyluatex.sty` and `lyluatex.lua` from this repository into your `TEXMF`
+tree, or clone this repostory into your `TEXMF` tree using Git, then run
+`mktexlsr`. Note that in this case your local copy will shadow the version
+possibly installed in your \TeX\ distribution.
+
 # Usage
 
 \lyluatex\ is loaded with the command `\usepackage{lyluatex}` which also accepts
