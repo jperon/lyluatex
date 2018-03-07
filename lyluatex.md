@@ -103,17 +103,25 @@ automatically included within the current paragraph, in their own paragraphs or
 as full pages.
 
 \lyluatex\ aims at being an upwards-compatible drop-in replacement for the
-`lilypond-book` preprocessor shipping with
+\highlight{lilypond-book} preprocessor shipping with
 LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
 which means that any documents prepared for use with `lilypond-book` should
 be directly usable with \lyluatex, with some caveats:
 
 - \option{fragment} is the default: see [Automatic wrapping](#autowrap) for
   more details about this;
-- `\musicxmlfile` has \option{no-articulation-directions},
+- \lyluatex\ has an option \option{insert}, which defaults to \option{systems}
+  for \cmd{begin\{lilypond\}} \cmd{end\{lilypond\}}, but to \option{inline}
+  for \cmd{lilypond}; the last one by default reduces staff size and includes
+  only the first system if there are several ones;
+- \cmd{musicxmlfile} has \option{no-articulation-directions},
   \option{no-beaming}, \option{no-page-layout} and \option{no-rest-positions}
   set to `true` by default, to increase chances of getting something
   acceptable. Nevertheless, please read the note about this command below.
+
+So, if you want \lyluatex\ to mimic as much as possible
+\highlight{lilypond-book}, you should load it with options as follows:
+\cmd{usepackage[nofragment, insert=systems]\{lyluatex\}}.
 
 
 \lyMargin{lilypond\index{lilypond}}
