@@ -761,7 +761,7 @@ function Score:check_protrusion(bbox_func)
     -- Note: we can't *reliably* determine this with ragged one-system scores,
     -- possibly resulting in unnecessarily short lines when right protrusion is
     -- present
-    lp.stave_overflow_right = max(lp.stave_extent - math.floor(self.original_lw), 0)
+    lp.stave_overflow_right = max(lp.stave_extent - self.original_lw, 0)
     -- Check if image as a whole protrudes over max-right-protrusion
     lp.overflow_right = max(lp.total_extent - lp.available, 0)
     lp.shorten = max(lp.stave_overflow_right, lp.overflow_right)
