@@ -123,8 +123,7 @@ local function convert_unit(value)
         local n, u = value:match('^%d*%.?%d*'), value:match('%a+')
         if n == '' then n = 1 end
         return tonumber(n) * tex.dimen[u] / tex.sp("1pt")
-    else
-        return tonumber(value) or tex.sp(value) / tex.sp("1pt")
+    else return ('%f'):format(tonumber(value) or tex.sp(value) / tex.sp("1pt"))
     end
 end
 
@@ -266,7 +265,7 @@ end
 local function set_lyscore(score)
     ly.score = score
     ly.score.nsystems = ly.score:count_systems()
-    if insert ~= 'fullpage' then  -- systems and inline
+    if score.insert ~= 'fullpage' then  -- systems and inline
         local hoffset = ly.score.protrusion or 0
         if hoffset == '' then hoffset = 0 end
         ly.score.hoffset = hoffset..'pt'
@@ -310,10 +309,10 @@ function bbox.parse(filename, line_width)
     else warn([[gs couldn't be launched; there could be rounding errors.]])
     end
     local bb = {
-        ['protrusion'] = -convert_unit(x_1..'bp'),
-        ['r_protrusion'] = convert_unit(x_2..'bp') - line_width,
-        ['width'] = convert_unit(x_2..'bp'),
-        ['height'] = convert_unit(y_2..'bp') - convert_unit(y_1..'bp')
+        ['protrusion'] = -convert_unit(("%fbp"):format(x_1)),
+        ['r_protrusion'] = convert_unit(("%fbp"):format(x_2)) - line_width,
+        ['width'] = convert_unit(("%fbp"):format(x_2)),
+        ['height'] = convert_unit(("%fbp"):format(y_2)) - convert_unit(("%fbp"):format(y_1))
     }
     obj.serialize(bb, filename..'.bbox')
     return bb
@@ -353,7 +352,7 @@ function latex.includeinline(pdfname, height, valign, hpadding, voffset)
     end
     tex.sprint(
         string.format(
-            [[\hspace{%spt}\raisebox{%spt}{\includegraphics{%s-1.pdf}}\hspace{%spt}]],
+            [[\hspace{%fpt}\raisebox{%fpt}{\includegraphics{%s-1.pdf}}\hspace{%fpt}]],
             hpadding, v_base + voffset, pdfname, hpadding
         )
     )
@@ -376,14 +375,14 @@ function latex.includesystems(filename, range, protrusion, gutter, staffsize, in
         if not lfs.isfile(filename..'-'..system..'.pdf') then break end
         texoutput = texoutput..
             string.format([[
-\noindent\hspace*{%spt}\includegraphics{%s}%%
+\noindent\hspace*{%fpt}\includegraphics{%s}%%
 ]],
                 h_offset + gutter, filename..'-'..system
             )
         if index < #range then
             texoutput = texoutput..
                 string.format([[
-\ifx\betweenLilyPondSystem\undefined\par\vspace{%spt plus %spt minus %spt}%%
+\ifx\betweenLilyPondSystem\undefined\par\vspace{%fpt plus %fpt minus %fpt}%%
 \else\betweenLilyPondSystem{%s}\fi%%
 ]],
                     staffsize / 4, staffsize / 12, staffsize / 16,
