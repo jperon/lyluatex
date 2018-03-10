@@ -310,7 +310,9 @@ paragraph and a variable skip depending on the staffsize.
 
 \lyCmd{betweenLilyPondSystem}
 However, if a macro \cmd{betweenLilyPondSystem} is defined it will be expanded
-between each system. This macro must accept one argument, which will be the
+between each system. This macro is documented in
+[LilyPond documentation](http://lilypond.org/doc/v2.18/Documentation/usage/latex).
+It must accept one argument, which will be the
 number of systems already printed in the score (‘1’ after the first system).
 With this information it is possible to respond individually to systems (e.g.
 “print a horizontal rule after each third system” or “force page breaks after
