@@ -1,6 +1,4 @@
-\documentclass{lyluatexexample}
-\newcommand{\postLilyPondExample}{\par\bigskip\hrule\par\bigskip}
-\begin{document}
+\def\postLilyPondExample{\par\bigskip\hrule\par\bigskip}
 
 \section*{Dynamic Indent}
 
@@ -118,5 +116,3 @@ The \texttt{autoindent} option is active by default but will be deactivated if
 more LilyPond compilations and therefore compilation time. But it will only
 apply and be executed if the score exceeds the protrusion limit, so it can only
 occur in circumstances where multiple LilyPond runs are expected anyway.
-
-\end{document}

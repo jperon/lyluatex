@@ -1,6 +1,8 @@
 *~
 test*.pdf
+examples/tmp.tex
 lyluatex*.pdf
+lyluatex-tmp.tex
 tmp-ly
 *.zip
 ctan

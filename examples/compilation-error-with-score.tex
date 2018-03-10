@@ -1,7 +1,3 @@
-\documentclass{scrartcl}
-\usepackage[nofragment]{lyluatex}
-\begin{document}
-
 \section*{Handling LilyPond Failures -- With Score}
 
 The following block of LilyPond code will cause LilyPond to exit reporting
@@ -15,16 +11,14 @@ a “failed compilation“ but still produce a correct score file.  Without the
 \end{lilypond}
 \end{verbatim}
 
-\begin{lilypond}[debug=false]
+\begin{lilypond}[nofragment, debug=false]
 \version "5.11"
 { c' }
 \end{lilypond}
 
 \emph{With} the \texttt{debug} option log files are produced and referenced in the warning.
 
-\begin{lilypond}[debug]
+\begin{lilypond}[nofragment, debug]
 \version "5.11"
 { c' }
 \end{lilypond}
-
-\end{document}

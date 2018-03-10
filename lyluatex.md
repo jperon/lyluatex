@@ -76,17 +76,19 @@ that documents are generally compiled from their actual directory, i.e. without
 referring to it through a path.
 
 \lyIssue{NOTE:} \lyluatex\ requires that \LuaLaTeX\ is started with the
-`--shell-escape` command line option to enable the execution of arbitrary shell
-commands, which is necessary to let LilyPond compile the inserted scores
-on-the-fly and to perform some auxiliary shell operations. However, this opens a
-significant security hole, and only fully trusted input files should be
-compiled. You may mitigate (but not totally remove) this security hole by adding
-`lilypond` to `shell_escape_commands`, and using `--shell-restricted` instead of
-`--shell-escape`: look at the documentation of your \TeX\ distribution. For
-example, on Debian Linux with TeXLive:
+`--shell-escape` command line option to enable the execution of arbitrary
+shell commands, which is necessary to let LilyPond compile the inserted scores
+on-the-fly and to perform some auxiliary shell operations.
+However, this opens a significant security hole,
+and only fully trusted input files should be compiled.
+You may mitigate (but not totally remove) this security hole by adding
+`lilypond` and `gs` to `shell_escape_commands`, and using `--shell-restricted`
+instead of `--shell-escape`:
+look at the documentation of your \TeX\ distribution.
+For example, on Debian Linux with TeXLive:
 
 ```sh
-% export shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond
+% export shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond,gs
 % lualatex --shell-restricted DOCUMENT.tex
 ```
 
@@ -330,7 +332,7 @@ With \option{verbatim}, \cmd{preLilyPondExample} will take place after the
 verbatim block, just before the score.
 
 \lyMargin{Examples:}
-For a demonstration of the system-by-system options see \linkexample{insert-systems}{Insert Systems}.
+For a demonstration of the system-by-system options see [Insert Systems](#insert-systems).
 
 ### Fullpage
 
@@ -389,7 +391,7 @@ Inserts some space to the left and right of the included score (except at line
 start or end).
 
 \lyMargin{Examples:}
-Examples can be found in \linkexample{insert-inline}{Insert Inline}.
+Examples can be found in [Insert Inline](#insert-inline).
 
 ### Choosing Systems/Pages
 
@@ -417,7 +419,7 @@ It is the user's responsibility to only request pages/systems that are actually
 present in the score, otherwise \LaTeX\ will raise an error.
 
 \lyMargin{Examples:}
-Usage examples for this option can be found in \linkexample{print-only}{Choosing Systems}.
+Usage examples for this option can be found in [Choosing Systems](#print-only).
 
 ## Score Layout
 
@@ -737,7 +739,7 @@ wrong results please try to create a Minimal Working Example and submit it to
 tracker^[[https://github.com/jperon/lyluatex/issues](https://github.com/jperon/lyluatex/issues)].
 
 \lyMargin{Examples:}
-A comprehensive set of examples demonstrating the dynamic indent behaviour is available in \linkexample{dynamic-indent}{Dynamic Indent}.
+A comprehensive set of examples demonstrating the dynamic indent behaviour is available in [Dynamic Indent](#dynamic-indent).
 
 #### Vertical Alignment of Fullpage Scores
 
@@ -862,7 +864,7 @@ implicitly disabled.
 
 \lyMargin{Examples:}
 Demonstrations of the different font handling features are available in
-\linkexample{fonts}{Font Handling}.
+[Font Handling](#fonts).
 
 ### Staff Display
 
@@ -1183,8 +1185,7 @@ respectively \cmd{lily} and \highlight{ly}.
 \cmd{lily} can be wrapped within another command in an usual way;
 but \highlight{ly} is quite a special environments,
 which makes it a bit unusual to wrap.
-You'll find more about this point in \linkexample{wrappingcommands}{Wrapping
-Commands}
+You'll find more about this point in [Wrapping Commands](#wrappingcommands)
 
 ## Providing Raw filenames
 
@@ -1217,15 +1218,30 @@ otherwise be used by \lyluatex's \LaTeX\ wrapping.
 
 \lyMargin{Examples:}
 Examples on how raw filenames can be wrapped in secondary commands can be found
-in \linkexample{insert-raw-pdf}{Wrapping Raw PDF Filenames}.
+in [Wrapping Raw PDF Filenames](#insert-raw-pdf).
 
 \printindex
 \addcontentsline{toc}{section}{Index}
 
 # Examples
 
-The remaining pages of this manual are imported from the example documents
-stored in the `examples` subdirectory of the repository. It is not full clear
-where they end up when the package is included in \LaTeX\ distributions.
+\linkexample{insert-systems}{Insert Systems}
+\include{examples/insert-systems}
 
-\input{examples/examples-include.tex}
+\linkexample{insert-inline}{Insert Inline}
+\include{examples/insert-inline}
+
+\linkexample{print-only}{Choosing Systems}
+\include{examples/print-only}
+
+\linkexample{dynamic-indent}{Dynamic Indent Handling}
+\include{examples/dynamic-indent}
+
+\linkexample{fonts}{Font Handling}
+\include{examples/fonts}
+
+\linkexample{wrappingcommands}{Wrapping Commands}
+\include{examples/wrappingcommands}
+
+\linkexample{insert-raw-pdf}{Wrapping Raw PDF Filenames}
+\include{examples/insert-raw-pdf}

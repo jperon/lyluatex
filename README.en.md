@@ -41,46 +41,46 @@ The argument `staffsize`, which is optional, changes the size of the score.  You
 can change the size for all the subsequent scores in a document by placing the
 following command before your first include statement to be so affected:
 
-    \def\staffsize{24}
+    \lysetoption{staffsize}{24}
 
 Next, you simply need to compile the document normally with the command
 `lualatex -shell-escape` :
 
     lualatex -shell-escape DOCUMENT.TEX
 
-Another "more secure" option is to add `lilypond` to default allowed commands :
+Another "more secure" option is to add `lilypond` and `gs` to default allowed commands :
 
-    shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond lualatex DOCUMENT.TEX
+    shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond,gs lualatex DOCUMENT.TEX
 
 On systems with low RAM, when working on big documents, you could encounter
 *buffer overflows* in `lilypond` calls. In that case, first compile with option
 `-draftmode`, then compile again without this option.
 
-You can also input music directly into your docoment with the `ly` environment.
+You can also input music directly into your docoment with the `lilypond` environment.
 This is only recommended for relatively short snippets.  For example:
 
-    \begin{ly}
+    \begin{lilypond}
     \relative c' { c d e f g a b c }
-    \end{ly}
+    \end{lilypond}
 
 Finally, for truly short snippets, there is also the `\lily` command.  Example:
 
-    \lily[staffsize=12]{c' d' g'}
+    \lilypond[staffsize=12]{c' d' g'}
 
-**Nota bene:** The `\lily` command *does not* support blocks of LilyPond code
-with explicit `\score` blocks.  Such code must be included with the `ly`
-environment or as a separate file.
+**Nota bene:** The `\lilypond` command *does not* support blocks of LilyPond
+code with explicit `\score` blocks.  Such code must be included with the
+`lilypond` environment or as a separate file.
 
 See the document `test.en.tex` for an example.
 
 ## Migration from `lilypond-book`
 
-In order to facilitate the migration from `lilypond-book`, `lyluatex` defines
-the command `\lilypondfile` with the same arguments as `\includely`.  There is
-also the environment `lilypond` which is the same as `ly`, and the command
-`\lilypond` should work as with `lilypond-book`.
+In order to facilitate the migration from `lilypond-book`, `\lilypondfile`,
+the environment `lilypond` and the command `\lilypond` should work nearly
+as with `lilypond-book` ; for even more identical behaviour, call `lyluatex`
+like follows:
 
-In this manner, documents typeset with `lilypond-book` can be adapted to use
-`lyluatex` without much difficulty.  Just keep in mind that apart from the
-`staffsize` parameter, the optional parameters that `lilypond-book` supports are
-not supported by `lyluatex` (at least for now).
+    \usepackage[program=/opt/lilypond-dev/lilypond]{lyluatex}
+
+That way, documents typeset with `lilypond-book` can be adapted to use
+`lyluatex` without much difficulty.
