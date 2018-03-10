@@ -17,7 +17,6 @@
 
 \RequirePackage{makeidx}
 \makeindex
-\RequirePackage[colorlinks=true]{hyperref}
 
 \newcommand{\linkexample}[2]{
     \addcontentsline{toc}{subsection}{#2}

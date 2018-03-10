@@ -1,3 +1,2 @@
 $pdf_mode="1";
-$pdflatex="TEXINPUTS='..:' lualatex --shell-escape %O %S";
-$makeindex ["makeindex %O -o %D %S"]
+$pdflatex="./compile-example.lua %S";

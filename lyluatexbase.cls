@@ -8,6 +8,7 @@
 \RequirePackage{listings}
 \RequirePackage{minted}
 \RequirePackage{pgffor}
+\RequirePackage[colorlinks=true]{hyperref}
 \lysetoption{includepaths}{./, ly/}
 
 

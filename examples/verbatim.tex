@@ -1,8 +1,7 @@
-\lysetoption{%
-  verbatim,
-  intertext=The “intertext” option can be used to print some text between the code and the score%
-}
 \section*{Print LilyPond code}
+
+\lysetoption{verbatim}{true}
+\lysetoption{intertext}{The “intertext” option can be used to print some text between the code and the score}
 
 The \texttt{verbatim} option causes the LilyPond code to be printed before the score.  The current issue is that the content of \texttt{\textbackslash lilypond} and the \texttt{lilypond} environment are passed as one line.
 
@@ -33,7 +32,5 @@ The contents of included \emph{files} already work properly:
 
 \lilypondfile[intertext={Yet another content}]{Sphinx/Sphinx}
 
-\lysetoption{%
-  verbatim=false,
-  intertext=
-}
+\lysetoption{verbatim}{false}
+\lysetoption{intertext}{}
