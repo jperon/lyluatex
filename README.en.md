@@ -71,8 +71,6 @@ Finally, for truly short snippets, there is also the `\lily` command.  Example:
 code with explicit `\score` blocks.  Such code must be included with the
 `lilypond` environment or as a separate file.
 
-See the document `test.en.tex` for an example.
-
 ## Migration from `lilypond-book`
 
 In order to facilitate the migration from `lilypond-book`, `\lilypondfile`,

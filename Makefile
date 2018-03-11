@@ -7,7 +7,7 @@ manual:
 	latexmk lyluatex
 
 clean:
-	git clean -fxd
+	git clean -fXd
 
 ctan: manual
 	mkdir -p ./ctan/lyluatex
