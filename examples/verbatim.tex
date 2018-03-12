@@ -1,11 +1,14 @@
 \documentclass{scrartcl}
 \usepackage{libertine}
 \usepackage{minted}
-\usepackage[verbatim,
-intertext={The “intertext” option can be used to print some text between the code and the score}]{lyluatex}
+\usepackage[includepaths={./, ../ly/}, relative]{lyluatex}
+
 \begin{document}
 
 \section*{Print LilyPond code}
+
+\lysetoption{verbatim}{true}
+\lysetoption{intertext}{The “intertext” option can be used to print some text between the code and the score}
 
 The \texttt{verbatim} option causes the LilyPond code to be printed before the score.  The current issue is that the content of \texttt{\textbackslash lilypond} and the \texttt{lilypond} environment are passed as one line.
 
@@ -13,9 +16,7 @@ The \texttt{verbatim} option causes the LilyPond code to be printed before the s
 
 \hrule
 
-\textbf{NOTE:} The local \texttt{intertext} option doesn't work properly yet: it will only work when set to an empty string or to a single word. Setting it to a string enclosed in curly braces or quotation marks will make the option ignored.
-
-\begin{lilypond}[intertext={This change of content does not have any effect}]
+\begin{lilypond}[intertext=This one will have another content]
 {
 c d e d
 }
@@ -36,6 +37,9 @@ The contents of included \emph{files} already work properly:
 
 \lysetverbenv{\begin{minted}{TeX}}{\end{minted}}
 
-\lilypondfile[intertext={This change of content does not have any effect}]{../ly/Sphinx/Sphinx}
+\lilypondfile[intertext={Yet another content}]{Sphinx/Sphinx}
+
+\lysetoption{verbatim}{false}
+\lysetoption{intertext}{}
 
 \end{document}

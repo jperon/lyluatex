@@ -1,0 +1,3 @@
+\documentclass{lyluatexexample}
+
+\begin{document}

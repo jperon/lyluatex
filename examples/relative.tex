@@ -1,5 +1,5 @@
 \documentclass{scrartcl}
-\usepackage[relative]{lyluatex}
+\usepackage[includepaths={./, ../ly/}, relative]{lyluatex}
 \begin{document}
 
 \section*{Relative mode}
@@ -24,5 +24,6 @@ and \texttt{relative=0} uses the plain \texttt{c} as origin pitch.
 
 \lilypond[relative=0]{ \clef bass c d e d }
 
-\lilypondfile[debug]{../ly/AveMariaDeLourdes/AveMariaDeLourdes}
+\lilypondfile[debug]{Ave Maria De Lourdes/Ave Maria De Lourdes}
+
 \end{document}

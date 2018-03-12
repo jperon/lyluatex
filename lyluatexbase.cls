@@ -2,7 +2,14 @@
 \ProvidesClass{lyluatexbase}
 
 \LoadClass[DIV=11]{scrartcl}
-\usepackage{lyluatex}
+\RequirePackage{lyluatex}
+\RequirePackage{blindtext}
+\RequirePackage{libertine}
+\RequirePackage{listings}
+\RequirePackage{minted}
+\RequirePackage{pgffor}
+\RequirePackage[colorlinks=true]{hyperref}
+\lysetoption{includepaths}{./, ly/}
 
 
 % Common formatting elements for manual and examples

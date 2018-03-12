@@ -3,9 +3,9 @@
 
 \LoadClass{lyluatexbase}
 
-\usepackage{fontspec}
-\usepackage{microtype}
-\usepackage{libertine}
+\RequirePackage{fontspec}
+\RequirePackage{microtype}
+\RequirePackage{libertine}
 \setmonofont[Scale=MatchLowercase,StylisticSet=1]{InconsolataN}
 \defaultfontfeatures{
 	Ligatures=TeX,
@@ -15,8 +15,10 @@
 }
 \frenchspacing
 
-\usepackage{makeidx}
+\RequirePackage{makeidx}
 \makeindex
-\usepackage[colorlinks=true]{hyperref}
 
-\newcommand{\linkexample}[2]{\protect\hyperlink{examples/#1.pdf.1}{#2}}
+\newcommand{\linkexample}[2]{
+    \addcontentsline{toc}{subsection}{#2}
+    \hypertarget{#1}{}
+}

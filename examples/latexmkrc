@@ -1,0 +1,2 @@
+$pdf_mode="1";
+$pdflatex="TEXINPUTS='..:' lualatex --shell-escape %O %S";

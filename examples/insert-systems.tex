@@ -1,5 +1,4 @@
 \documentclass{lyluatexexample}
-
 \begin{document}
 
 \section*{Insert System-by-System}
@@ -26,11 +25,11 @@ The following score has a significantly smaller staff size, and consequently the
 
 \cmd{preLilyPondExample} and \cmd{postLilyPondExample} allow some code to be printed before and after the score. This may for example be used to wrap the resulting score in an environment. In the following example rules are printed:
 
-\newcommand{\preLilyPondExample}{%
+\def\preLilyPondExample{%
 \par\bigskip
 \noindent Before the score:
 \par\medskip\hrule\par\medskip}
-\newcommand{\postLilyPondExample}{%
+\def\postLilyPondExample{%
 \par\bigskip
 \hrule\par\medskip\noindent After the score
 \par\bigskip}
@@ -65,7 +64,7 @@ between the systems, but with some programming more complicated and useful
 things could be done, for example printing a rule after every third system or
 conditionally insert a page break.
 
-\newcommand{\betweenLilyPondSystem}[1]{%
+\def\betweenLilyPondSystem#1{%
 \begin{center}
 System #1
 \end{center}
@@ -86,5 +85,7 @@ System #1
   \repeat unfold 30 { c' d' e' d' }
 }
 \end{lilypond}
+
+\let\betweenLilyPondSystem\undefined
 
 \end{document}

@@ -1,12 +1,12 @@
-
 \documentclass{lyluatexexample}
 \usepackage{blindtext}
 \usepackage{fontspec}
+\begin{document}
+
 \defaultfontfeatures{Ligatures=TeX,Numbers=OldStyle,Scale=MatchLowercase}
 \setmainfont{Linux Libertine O}
 \setsansfont[BoldFont={Linux Biolinum O Bold}]{Linux Biolinum O}
 \setmonofont{Inconsolata}
-\begin{document}
 
 \section*{Font Handling}
 
@@ -15,7 +15,7 @@ include the following score from an external file.  It includes roman (lyrics,
 instrument name), sans (rehearsal mark), and mono (tempo) text, first using
 LilyPond's built-in default fonts.
 
-\lilypondfile[verbatim]{../ly/fonts}
+\lilypondfile[verbatim]{fonts}
 
 \bigskip
 The current document uses \option{fontspec} to set roman font to \emph{Linux
@@ -31,7 +31,7 @@ appearance between text and music.
 
 \bigskip
 
-\lilypondfile[pass-fonts]{../ly/fonts}
+\lilypondfile[pass-fonts]{fonts}
 
 \bigskip
 Note that LilyPond loads fonts differently than \LaTeX\ and can only make use of
@@ -60,7 +60,7 @@ different scores in a document. For all these reasons the option is by default
 set to \texttt{false}.
 
 \bigskip
-\lilypondfile[pass-fonts,current-font-as-main]{../ly/fonts}
+\lilypondfile[pass-fonts,current-font-as-main]{fonts}
 
 \subsection*{Setting Score Fonts Explicitly}
 
@@ -73,7 +73,7 @@ implicitly sets \option{pass-fonts=true}, and \emph{Linux Libertine O} and
 \emph{Linux Biolinum O} are used from the text document.
 
 \bigskip
-\lilypondfile[ttfamily={TeXGyre Adventor}]{../ly/fonts}
+\lilypondfile[ttfamily={TeXGyre Adventor}]{fonts}
 
 \highlight{NOTE:} when \option{rmfamily} is set explicitly
 \option{current-font-as-main} is forced to \texttt{false} to ensure that the
@@ -82,7 +82,7 @@ Adventor\}} and \option{current-font-as-main}, and despite the current font stil
 \emph{Adventor} is used as the score's main font:
 
 \bigskip
-\lilypondfile[current-font-as-main,rmfamily={TeXGyre Adventor}]{../ly/fonts}
+\lilypondfile[current-font-as-main,rmfamily={TeXGyre Adventor}]{fonts}
 
 \subsection*{LilyPond's Font Fallback}
 
@@ -94,7 +94,7 @@ and \option{tfamily=FantasyFontThree}:
 \bigskip
 \lilypondfile[rmfamily=FantasyFontOne,%
 sffamily=FantasyFontTwo,%
-ttfamily=FantasyFontThree]{../ly/fonts}
+ttfamily=FantasyFontThree]{fonts}
 
 This can happen in several contexts: apart from compiling the document on a
 different computer where the used fonts are missing it is most likely to occur
@@ -102,6 +102,5 @@ with the \option{pass-fonts} option, when the text document uses internal
 \LaTeX\ fonts. Note in particular that this may happen implicitly when only one
 family is specified explicitly with an option and the other families are passed
 from the text document.
-
 
 \end{document}
