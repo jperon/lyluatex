@@ -1,3 +1,7 @@
+\documentclass{scrartcl}
+\usepackage[includepaths={./, ../ly/}, nofragment]{lyluatex}
+\begin{document}
+
 \section*{Handling LilyPond Failures -- With Score}
 
 The following block of LilyPond code will cause LilyPond to exit reporting
@@ -22,3 +26,5 @@ a “failed compilation“ but still produce a correct score file.  Without the
 \version "5.11"
 { c' }
 \end{lilypond}
+
+\end{document}

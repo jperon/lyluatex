@@ -3,7 +3,7 @@ test:
 
 manual:
 	pandoc -s -V fontfamily=libertine --toc-depth=4 -o lyluatex-tmp.tex lyluatex.md
-	./latex-flatten.py lyluatex-tmp.tex lyluatex.tex
+	./insert-examples.lua lyluatex-tmp.tex lyluatex.tex
 	latexmk lyluatex
 
 clean:

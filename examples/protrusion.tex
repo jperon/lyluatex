@@ -1,3 +1,9 @@
+\documentclass{scrartcl}
+\usepackage{blindtext}
+\usepackage[includepaths={./, ../ly/}]{lyluatex}
+
+\begin{document}
+
 The default behaviour of \texttt{lyluatex} is to align the staff symbol to the
 text width and have any protruding elements (left and right) protrude into the
 margin.
@@ -139,3 +145,5 @@ print-only=1,
   c'1 ~ \break c'
 }
 \end{lilypond}
+
+\end{document}

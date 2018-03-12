@@ -1,3 +1,10 @@
+\documentclass{scrartcl}
+\usepackage{libertine}
+\usepackage{minted}
+\usepackage[includepaths={./, ../ly/}, relative]{lyluatex}
+
+\begin{document}
+
 \section*{Print LilyPond code}
 
 \lysetoption{verbatim}{true}
@@ -34,3 +41,5 @@ The contents of included \emph{files} already work properly:
 
 \lysetoption{verbatim}{false}
 \lysetoption{intertext}{}
+
+\end{document}

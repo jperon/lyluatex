@@ -1225,23 +1225,19 @@ in [Wrapping Raw PDF Filenames](#insert-raw-pdf).
 
 # Examples
 
-\linkexample{insert-systems}{Insert Systems}
-\include{examples/insert-systems}
+Those examples and others may be found in
+[the package repository](https://github.com/jperon/lyluatex/).
 
-\linkexample{insert-inline}{Insert Inline}
-\include{examples/insert-inline}
+\includeexample{insert-systems}{Insert Systems}
 
-\linkexample{print-only}{Choosing Systems}
-\include{examples/print-only}
+\includeexample{insert-inline}{Insert Inline}
 
-\linkexample{dynamic-indent}{Dynamic Indent Handling}
-\include{examples/dynamic-indent}
+\includeexample{print-only}{Choosing Systems}
 
-\linkexample{fonts}{Font Handling}
-\include{examples/fonts}
+\includeexample{dynamic-indent}{Dynamic Indent Handling}
 
-\linkexample{wrappingcommands}{Wrapping Commands}
-\include{examples/wrappingcommands}
+\includeexample{fonts}{Font Handling}
 
-\linkexample{insert-raw-pdf}{Wrapping Raw PDF Filenames}
-\include{examples/insert-raw-pdf}
+\includeexample{wrappingcommands}{Wrapping Commands}
+
+\includeexample{insert-raw-pdf}{Wrapping Raw PDF Filenames}

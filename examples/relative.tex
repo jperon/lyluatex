@@ -1,3 +1,7 @@
+\documentclass{scrartcl}
+\usepackage[includepaths={./, ../ly/}, relative]{lyluatex}
+\begin{document}
+
 \section*{Relative mode}
 
 With the \texttt{relative} option pitches entered in fragments are parsed in
@@ -21,3 +25,5 @@ and \texttt{relative=0} uses the plain \texttt{c} as origin pitch.
 \lilypond[relative=0]{ \clef bass c d e d }
 
 \lilypondfile[debug]{Ave Maria De Lourdes/Ave Maria De Lourdes}
+
+\end{document}
