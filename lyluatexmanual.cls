@@ -1,5 +1,11 @@
+%Lyluatex LaTeX class for the manual.
+%
+% Copyright (C) 2015-2018 jperon and others (see CONTRIBUTORS.md)
+% License: MIT
+% This file is part of lyluatex.
+
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{lyluatexmanual}
+\ProvidesClass{lyluatexmanual}[2018/03/12 v1.0b]  %%LYLUATEX_DATE LYLUATEX_VERSION
 
 \LoadClass{lyluatexbase}
 

@@ -102,3 +102,7 @@ like follows:
 
 That way, documents typeset with `lilypond-book` can be adapted to use
 `lyluatex` without much difficulty.
+
+# Credits
+
+Cf. [Contributors.md](Contributors.md)

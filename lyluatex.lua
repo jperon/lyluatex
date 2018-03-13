@@ -1,11 +1,11 @@
 -- luacheck: ignore ly log self luatexbase internalversion font fonts tex token kpse status
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
-    version            = '1.0b',
-    date               = "2018/03/12",
+    version            = '1.0b',  --LYLUATEX_VERSION
+    date               = "2018/03/12",  --LYLUATEX_DATE
     description        = "Module lyluatex.",
-    author             = "The Gregorio Project  − Jacques Peron <cataclop@hotmail.com>",
-    copyright          = "2008-2018 - The Gregorio Project",
+    author             = "The Gregorio Project  − (see Contributors.md)",
+    copyright          = "2015-2018 - jperon and others",
     license            = "MIT",
 })
 

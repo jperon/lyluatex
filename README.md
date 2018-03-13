@@ -110,3 +110,7 @@ identique encore, utilisez la commande suivante pour appeler `lyluatex` :
 
 De la sorte, les documents saisis auparavant avec l'aide de `lilypond-book`
 devraient s'utiliser sans grande difficulté avec `lyluatex`.
+
+# Remerciements
+
+Cf. [Contributors.md](Contributors.md)
