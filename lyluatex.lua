@@ -994,15 +994,20 @@ end
 function Score:ly_paper()
     local papersize = '#(set-paper-size "'..(self.papersize or 'lyluatexfmt')..'")'
     if self.insert == 'fullpage' then
+        local first_page_number = tex.count['c@page']
+        if self['first-page-number'] then
+            first_page_number = self['first-page-number'] end
+        local pfpn = 'f'
+        if self['print-first-page-number'] then pfpn = 't' end
         local ppn = 'f'
         if self['print-page-number'] then ppn = 't' end
         return string.format([[
 %s
 print-page-number = ##%s
-print-first-page-number = ##t
+print-first-page-number = ##%s
 first-page-number = %s
 %s]],
-            papersize, ppn, tex.count['c@page'], self:ly_margins()
+            papersize, ppn, pfpn, first_page_number, self:ly_margins()
 	    )
     elseif self.papersize then return papersize
     end
