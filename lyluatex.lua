@@ -832,6 +832,10 @@ function Score:flatten_content(ly_code)
         including referenced files (if they can be opened.
         Other files (from LilyPond's include path) are considered
         irrelevant for the purpose of a hashsum.) --]]
+
+    -- Replace percent signs with another character that doesn't
+    -- meddle with Lua's gsub escape character.
+    ly_code = ly_code:gsub('%%', '#')
     local f
     local includepaths = self.includepaths
     if self.input_file then includepaths = self.includepaths..','..dirname(self.input_file) end
