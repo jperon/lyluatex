@@ -1047,9 +1047,10 @@ which should work equally in UNIX/Linux and Windows.
 
 \lyOption{includepaths}{./}
 
-With the \option{includepaths} option a comma-separated list of search paths can
-be specified.  These paths will be used by \lyluatex\ to locate external files,
-and relative paths are searched for in the following order:
+With the \option{includepaths} option a comma-separated list (enclosed in curly
+brackets) of search paths can be specified.  These paths will be used by
+\lyluatex\ to locate external files, and relative paths are searched for in the
+following order:
 
 * relative to the current `.tex` file's directory (i. e. the file from which
   the score is included)
@@ -1060,6 +1061,12 @@ Additionally the list of include paths is passed to LilyPond's include path, so
 they can be used for including files from within the LilyPond code.  Paths
 starting with the tilde will implicitly be expanded to absolute paths in that
 process.
+
+```TeX
+\lysetoption{includepaths}{\string~/lilypond-lib}
+
+\lilypondfile[includepaths={\string~/lilypond-lib,/home/johndoe/project-lib}]
+```
 
 ### LilyPond Executable{#program}
 
