@@ -1167,6 +1167,17 @@ skipped, but nothing will be included in the document.  If on the other hand
 \option{showfailed} is set to `true` only a warning is issued and a box with an
 informative text is typeset into the resulting document.
 
+### Forcing (Re-)Compilation
+
+\lyOption{force-compilation}{false}
+
+In some cases \lyluatex's heuristics to determine the need for recompilation may
+fail, especially when not all relevant code is included through LilyPond's
+\cmd{include} command, in which cases \lyluatex\ may consider the content
+unchanged. In such cases the \option{force-compilation} option skips the checks
+and unconditionally recompiles the score, which may be a better solution than
+to (selectively) delete the scores from the \option{tmpdir} directory.
+
 ## MusicXML options
 
 \lyOption{xml2ly}{musicxml2ly}
