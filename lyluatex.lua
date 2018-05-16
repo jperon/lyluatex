@@ -38,6 +38,7 @@ local DIM_OPTIONS = {
 local HASHIGNORE = {
     'autoindent',
     'cleantmp',
+    'force-compilation',
     'hpadding',
     'max-left-protrusion',
     'max-right-protrusion',
@@ -858,6 +859,7 @@ function Score:header()
 end
 
 function Score:is_compiled()
+    if self['force-compilation'] then return false end
     return lfs.isfile(self.output..'.pdf') or self:count_systems(true) ~= 0
 end
 
@@ -1098,9 +1100,10 @@ function Score:process()
     -- with bbox.read check_ptrotrusion will only execute with
     -- a prior compilation, otherwise it will be ignored
     local do_compile = not self:check_protrusion(bbox.read)
-    if do_compile then
+    if self['force-compilation'] or do_compile then
         repeat
             self:run_lilypond(self:header()..self:content())
+            self['force-compilation'] = false
             if self:is_compiled() then table.insert(self.output_names, self.output)
             else
                 self:clean_failed_compilation()
