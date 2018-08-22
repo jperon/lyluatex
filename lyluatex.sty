@@ -16,6 +16,7 @@
 \RequirePackage{environ}
 \RequirePackage{currfile}
 \RequirePackage{pdfpages}
+\RequirePackage{ifnextok}
 
 \RequirePackage{metalogo}
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
@@ -212,12 +213,14 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newenvironment{ly}[1][noarg]{%
+\newenvironment{ly@ly}[1][noarg]{%
   \edef\options{#1}%
-  \directlua{ly.env_begin([[#1]])}%
+  \ly@bufferenv%
 }{%
-  \directlua{ly.env_end()}%
+  \endly@bufferenv%
 }
+\def\ly{\IfNextToken[{\ly@ly}{\ly@ly[]}}
+\def\endly{\endly@ly}
 
 \newcommand*{\lily}[2][]{%
   \edef\options{#1}%
