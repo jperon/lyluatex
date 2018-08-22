@@ -55,7 +55,7 @@ tlmgr install lyluatex
 Copy `lyluatex.sty` and `lyluatex.lua` from this repository into your
 `TEXMFHOME` tree, or clone this repostory into your `TEXMFHOME` tree using Git.
 In many cases this will be `$HOME/texmf`, and \lyluatex\ should be located below
-`$TEXMFHOME/tex/luatex`. It is important that this is the `luatex` tree because
+`$TEXMFHOME/tex/luatex`. It is important that this is the `luatex` tree:
 otherwise \LuaLaTeX\ will still find the version from TeXLive first and use that
 instead of your local clone.
 
