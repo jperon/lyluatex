@@ -1291,22 +1291,6 @@ function ly.declare_package_options(options)
 end
 
 
-function ly.env_begin(opts)
-    ly.state = 'env'
-    ly.env_no_args = opts == 'noarg'
-    if ly.env_no_args then tex.sprint(40, [[\ly@compilely]])
-    else tex.sprint(40, [[\ly@bufferenv]])
-    end
-end
-
-
-function ly.env_end()
-    if ly.env_no_args then tex.sprint(40, [[\endly@compilely]])
-    else tex.sprint(40, [[\endly@bufferenv]])
-    end
-end
-
-
 function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. ]]

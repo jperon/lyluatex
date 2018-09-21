@@ -23,6 +23,22 @@
 \edef\ly@false{false}\def\ly@istwosided{\if@twoside\else\ly@false\fi}
 \savecatcodetable 40
 
+% Copied from ifnextok.sty.
+% We use \providecommand instead of \newcommand and \def in order
+% to avoid overriding ifnextok if it is already loaded.
+\providecommand{\IfNextToken}[3]{%
+  \let\nextok@match= #1%
+  \def\nextok@if{#2}\def\nextok@else{#3}%
+  \futurelet\@let@token\nextok@decide%
+}
+\providecommand\nextok@decide{%
+  \ifx\@let@token\nextok@match
+    \expandafter\nextok@if
+  \else
+    \expandafter\nextok@else
+  \fi%
+}
+
 % Options
 \catcode`-=11
 \directlua{
@@ -212,12 +228,14 @@
 }
 
 % Parametrized command and environment for included LilyPond fragment
-\newenvironment{ly}[1][noarg]{%
+\newenvironment{ly@ly}[1][noarg]{%
   \edef\options{#1}%
-  \directlua{ly.env_begin([[#1]])}%
+  \ly@bufferenv%
 }{%
-  \directlua{ly.env_end()}%
+  \endly@bufferenv%
 }
+\def\ly{\IfNextToken[{\ly@ly}{\ly@ly[]}}
+\def\endly{\endly@ly}
 
 \newcommand*{\lily}[2][]{%
   \edef\options{#1}%
