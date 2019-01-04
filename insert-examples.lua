@@ -11,7 +11,7 @@ local latex = [[
 local function texoutput(n, i)
     local c = {}
     local f = io.open('examples/'..n..'.tex')
-    local iter = f:read('*a'):gmatch('[^\n]*')
+    local iter = f:read('*a'):gmatch('[^\n]+')
     f:close()
     repeat until iter() == [[\begin{document}]]
     for l in iter do
