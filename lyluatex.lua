@@ -38,6 +38,7 @@ local DIM_OPTIONS = {
 local HASHIGNORE = {
     'autoindent',
     'cleantmp',
+    'do-not-print',
     'force-compilation',
     'hpadding',
     'max-left-protrusion',
@@ -102,9 +103,9 @@ end
 
 
 local function contains(table_var, value)
-    for _, v in pairs(table_var) do
-        if v == value then return true
-        elseif v == 'false' and value == false then return true
+    for k, v in pairs(table_var) do
+        if v == value then return k
+        elseif v == 'false' and value == false then return k
         end
     end
 end
@@ -229,7 +230,7 @@ local function range_parse(range, nsystems)
     if num then return {num} end
     -- if nsystems is set, we have insert=systems
     if nsystems ~= 0 and range:sub(-1) == '-' then range = range..nsystems end
-    if not range:match('^%d+%s*-%s*%d*$') then
+    if not (range == '' or range:match('^%d+%s*-%s*%d*$')) then
         warn([[
 Invalid value '%s' for item
 in list of page ranges. Possible entries:
@@ -534,20 +535,29 @@ end
 
 function Score:calc_range()
     local nsystems = self:count_systems(true)
-    if self['print-only'] == '' then
-        if nsystems == 0 then self['print-only'] = '1-'
-        else self['print-only'] = '1-'..nsystems
-        end
-    end
-    local result = {}
-    if tonumber(self['print-only']) then result = {self['print-only']}
-    else
-        for _, r in pairs(self['print-only']:explode(',')) do
+    local printonly, donotprint = self['print-only'], self['do-not-print']
+    if printonly == '' then printonly = '1-' end
+    local result = tonumber(printonly) and {tonumber(printonly)} or {}
+    if not result[1] then
+        for _, r in pairs(printonly:explode(',')) do
             local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
             if range then
                 for _, v in pairs(range) do table.insert(result, v) end
             end
         end
+    end
+    local rm_result = tonumber(donotprint) and {tonumber(donotprint)} or {}
+    if not rm_result[1] then
+        for _, r in pairs(donotprint:explode(',')) do
+            local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+            if range then
+                for _, v in pairs(range) do table.insert(rm_result, v) end
+            end
+        end
+    end
+    for _, v in pairs(rm_result) do
+        local k = contains(result, v)
+        if k then table.remove(result, k) end
     end
     return result
 end

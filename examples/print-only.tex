@@ -5,10 +5,11 @@
 
 \section*{Print only Selected Systems or Pages}
 
-The \texttt{print-only} option allows to limit the printed systems or pages from
-a score. A typical use case is to print a score interspersed with comments.  The
-advantage of this approach is that the score is compiled only once while the
-individual systems are simply reused by \LaTeX.
+The \texttt{print-only} and \texttt{do-not-print} options allow to limit
+the printed systems or pages from a score. A typical use case is to print
+a score interspersed with comments.  The advantage of this approach is that
+the score is compiled only once while the individual systems are simply
+reused by \LaTeX.
 
 Throughout this document we'll demonstrate the different options to
 select systems from the following score:
@@ -39,12 +40,20 @@ Each element of the list can include any of the forms described above:\\
 
 \lilypondfile[print-only={3,5-7,4,7-}]{eight-systems.ly}
 
+\texttt{do-not-print} does the opposite: it prevents the list of systems from
+being printed. It might be used alone, or in combination with
+\texttt{print-only}:\\
+\texttt{print-only=3-,do-not-print=6}
+
+\lilypondfile[print-only=3-,do-not-print=6]{eight-systems.ly}
+
 The functionality is identical with fullpage scores where the selection applies
 to \emph{pages} instead. This can for example be used when the “score” file
 contains a number of individual pieces (e.g. songs for a song book), and
 individual selections are to be printed.
 
-Systems have some specific behaviour with regard to \emph{indent}, but this is demonstrated in its own file \texttt{dynamic-indent.tex}.
+Systems have some specific behaviour with regard to \emph{indent},
+but this is demonstrated in its own file \texttt{dynamic-indent.tex}.
 
 \let\postLilyPondExample\undefined
 
