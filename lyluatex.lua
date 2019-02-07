@@ -892,7 +892,7 @@ function Score:lilypond_cmd(ly_code)
         input = self.output..".ly 2>&1"
         mode = 'r'
     end
-    local cmd = self.program.." "..
+    local cmd = '"'..self.program..'" '..
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
@@ -908,7 +908,7 @@ function Score:lilypond_cmd(ly_code)
 end
 
 function Score:lilypond_version(number)
-    local result = readlinematching('GNU LilyPond', io.popen(self.program..' --version', 'r'))
+    local result = readlinematching('GNU LilyPond', io.popen('"'..self.program..'" --version', 'r'))
     if result then
         if number then return result:match('%d+%.%d+%.?%d*')
         else
