@@ -896,6 +896,7 @@ function Score:lilypond_cmd(ly_code)
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
+    if self['optimize-pdf'] and self:lilypond_has_TeXGS() then cmd = cmd.."-O TeX-GS " end
     if self.input_file then
         cmd = cmd..'-I "'..dirname(self.input_file):gsub('^%./', lfs.currentdir()..'/')..'" '
     end
@@ -905,6 +906,10 @@ function Score:lilypond_cmd(ly_code)
     cmd = cmd..'-o "'..self.output..'" '..input
     debug("Command:\n"..cmd)
     return cmd, mode
+end
+
+function Score:lilypond_has_TeXGS()
+    return readlinematching('TeX%-GS', io.popen('"'..self.program..'" --help', 'r'))
 end
 
 function Score:lilypond_version(number)
@@ -1070,6 +1075,12 @@ function Score:ly_version() return self['ly-version'] end
 
 function Score:optimize_pdf()
     if not self['optimize-pdf'] then return end
+    if self:lilypond_has_TeXGS() then
+        info(
+            "Remember to run 'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.",
+            tex.jobname..'-final.pdf', tex.jobname..'.pdf'
+        )
+    end
     local pdf2ps, ps2pdf, path
     for file in lfs.dir(self.tmpdir) do
         path = self.tmpdir..'/'..file
