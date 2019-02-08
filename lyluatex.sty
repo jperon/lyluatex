@@ -239,7 +239,7 @@
 \def\ly{\IfNextToken[{\ly@ly}{\ly@ly[]}}
 \def\endly{\endly@ly}
 
-\newcommand*{\lily}[2][]{%
+\newcommand{\lily}[2][]{%
   \edef\options{#1}%
   \let\ly@oldrepeat\repeat\def\repeat{}% Fix #51
   \directlua{ly.state = 'cmd'}%
