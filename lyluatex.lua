@@ -1048,7 +1048,7 @@ function Score:ly_preamble()
 end
 
 function Score:ly_raggedright()
-    if not self['ragged-right'] == 'default' then
+    if self['ragged-right'] ~= 'default' then
         if self['ragged-right'] then return 'ragged-right = ##t'
         else return 'ragged-right = ##f'
         end
