@@ -1075,10 +1075,17 @@ function Score:ly_version() return self['ly-version'] end
 
 function Score:optimize_pdf()
     if not self['optimize-pdf'] then return end
-    if self:lilypond_has_TeXGS() then
-        info(
-            "Remember to run 'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.",
-            tex.jobname..'-final.pdf', tex.jobname..'.pdf'
+    if self:lilypond_has_TeXGS() and not ly.final_optimization_message then
+        ly.final_optimization_message = true
+        luatexbase.add_to_callback(
+            'stop_run',
+            function()
+                info(
+                    "Optimization enabled: remember to run 'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.",
+                    tex.jobname..'-final.pdf', tex.jobname..'.pdf'
+                )
+            end,
+            'lyluatex optimize-pdf'
         )
     end
     local pdf2ps, ps2pdf, path
