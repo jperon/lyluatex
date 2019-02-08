@@ -1359,10 +1359,11 @@ function ly.file_musicxml(input_file, options)
     local i = io.popen(ly.get_option('xml2ly')..' --out=-'..xmlopts..' "'..file..'"', 'r')
     if not i then
         err([[
-LilyPond could not be started.
+%s could not be started.
 Please check that LuaLaTeX is started with the
 --shell-escape option.
-]]
+]],
+            ly.get_option('xml2ly')
         )
     end
     ly.score = Score:new(i:read('*a'), options, file)

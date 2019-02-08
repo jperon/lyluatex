@@ -211,7 +211,7 @@
 }{%
   \lyscoreend%
   \ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
-  \\
+  \hspace{0pt}\\
 }
 
 \NewEnviron{ly@compilely}{%
@@ -232,6 +232,7 @@
 % Parametrized command and environment for included LilyPond fragment
 \newenvironment{ly@ly}[1][noarg]{%
   \edef\options{#1}%
+  \directlua{ly.state = 'env'}%
   \ly@bufferenv%
 }{%
   \endly@bufferenv%
