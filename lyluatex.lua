@@ -897,7 +897,7 @@ function Score:lilypond_cmd(ly_code)
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
     if self.input_file then
-        cmd = cmd..'-I "'..dirname(self.input_file):gsub('%./', lfs.currentdir()..'/')..'" '
+        cmd = cmd..'-I "'..dirname(self.input_file):gsub('^%./', lfs.currentdir()..'/')..'" '
     end
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
         cmd = cmd..'-I "'..dir:gsub('^%./', lfs.currentdir()..'/')..'" '
