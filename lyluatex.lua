@@ -13,7 +13,10 @@ local md5 = require 'md5'
 local lfs = require 'lfs'
 
 local latex = {}
-local ly = {}
+local ly = {
+    err = err,
+    varwidth_available = kpse.find_file('varwidth.sty')
+}
 local obj = {}
 local Score = {}
 
@@ -1248,7 +1251,6 @@ end
 
 --[[ ========================== Public functions ========================== ]]
 
-ly.score_content = {}
 function ly.buffenv_begin()
 
     function ly.buffenv(line)

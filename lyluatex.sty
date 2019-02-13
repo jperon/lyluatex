@@ -16,6 +16,7 @@
 \RequirePackage{environ}
 \RequirePackage{currfile}
 \RequirePackage{pdfpages}
+\IfFileExists{varwidth.sty}{\RequirePackage{varwidth}}{}
 
 \RequirePackage{metalogo}
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
@@ -207,11 +208,31 @@
 \newcommand\lyscorebegin{\directlua{ly.buffenv_begin()}}
 \newcommand\lyscoreend{\directlua{ly.buffenv_end()}}
 \newenvironment{ly@bufferenv}{%
+  \directlua{
+    ly.insert_inline = string.match([[\options]], 'insert.*inline')
+    if ly.insert_inline then
+      if ly.varwidth_available then
+        tex.print([[
+          \string\begin{varwidth}{\string\linewidth}
+        ]])
+      else
+        ly.insert_inline = false
+        ly.err(
+          [[You have required 'insert=inline' with lilypond environment,
+          but package 'varwidth' wasn't found; either install it, or disable
+          this option.]]
+        )
+      end
+    end
+  }
   \lyscorebegin%
 }{%
   \lyscoreend%
   \ly@compilescore{ly.fragment(ly.score_content, [[\options]])}%
   \hspace{0pt}\\
+  \directlua{
+    if ly.insert_inline then tex.print([[\string\end{varwidth}]]) end
+  }%
 }
 
 \NewEnviron{ly@compilely}{%
