@@ -147,7 +147,7 @@ local function extract_includepaths(includepaths)
     table.insert(includepaths, 1, cfd)
     for i, path in ipairs(includepaths) do
         -- delete initial space (in case someone puts a space after the comma)
-        includepaths[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME"))
+        includepaths[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME")):gsub('^%.%.', './..')
     end
     return includepaths
 end
