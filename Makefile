@@ -2,6 +2,7 @@ test:
 	lualatex -interaction=nonstopmode -shell-escape test.tex
 
 manual:
+	@lua -e "if tonumber(io.popen('pandoc -v'):read():gsub('pandoc (.*)', '%1'):sub(1,1)) < 2 then print('Pandoc >= 2 required') ; os.exit(1) ; end"
 	pandoc -s -V fontfamily=libertine --toc-depth=4 -o lyluatex-tmp.tex lyluatex.md
 	@echo Inserting examples
 	@./insert-examples.lua lyluatex-tmp.tex lyluatex.tex || echo "Lua not found. Please make sure it's accessible in your PATH."
