@@ -301,7 +301,8 @@ function bbox.parse(filename, line_width)
     -- get BoundingBox from EPS file
     local bbline = readlinematching('^%%%%BoundingBox', io.open(filename..'.eps', 'r'))
     if not bbline then return end
-    local x_1, y_1, x_2, y_2 = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    --FIX #192: local x_1, y_1, x_2, y_2 = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    local x_1, _, x_2, _ = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
     -- try to get HiResBoundingBox from PDF (if 'gs' works)
     bbline = readlinematching(
         '^%%%%HiResBoundingBox',
@@ -315,14 +316,15 @@ function bbox.parse(filename, line_width)
         -- edge at the start of the staff symbol.
         -- Therefore we shift the HiRes results by the (truncated)
         -- points of the EPS bounding box.
-        x_1, y_1, x_2, y_2 = pbb() + x_1, pbb() + y_1, pbb() + x_1, pbb() + y_1
+        --FIX #192: x_1, y_1, x_2, y_2 = pbb() + x_1, pbb() + y_1, pbb() + x_1, pbb() + y_1
+        x_1, x_2 = pbb() + x_1, pbb() + x_1
     else warn([[gs couldn't be launched; there could be rounding errors.]])
     end
     local bb = {
         ['protrusion'] = -convert_unit(("%fbp"):format(x_1)),
         ['r_protrusion'] = convert_unit(("%fbp"):format(x_2)) - line_width,
         ['width'] = convert_unit(("%fbp"):format(x_2)),
-        ['height'] = convert_unit(("%fbp"):format(y_2)) - convert_unit(("%fbp"):format(y_1))
+        --FIX #192: ['height'] = convert_unit(("%fbp"):format(y_2)) - convert_unit(("%fbp"):format(y_1))
     }
     obj.serialize(bb, filename..'.bbox')
     return bb
