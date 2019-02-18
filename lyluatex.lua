@@ -1082,7 +1082,8 @@ function Score:optimize_pdf()
             'stop_run',
             function()
                 info(
-                    "Optimization enabled: remember to run 'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.",
+                    [[Optimization enabled: remember to run
+                    'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.]],
                     tex.jobname..'-final.pdf', tex.jobname..'.pdf'
                 )
             end,
