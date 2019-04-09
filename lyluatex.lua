@@ -1322,11 +1322,14 @@ function ly.declare_package_options(options)
         exopt = exopt..k..'='..(v[1] or '')..','
     end
     tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
-    mkdirs(options.tmpdir[1])
-    FILELIST = options.tmpdir[1]..'/'..splitext(status.log_name, 'log')..'.list'
-    os.remove(FILELIST)
 end
 
+function ly.make_list_file()
+    local tmpdir = ly.get_option('tmpdir')
+    mkdirs(tmpdir)
+    FILELIST = tmpdir..'/'..splitext(status.log_name, 'log')..'.list'
+    os.remove(FILELIST)
+end
 
 function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
