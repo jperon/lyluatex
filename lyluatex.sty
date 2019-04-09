@@ -123,7 +123,7 @@
 \directlua{ly.make_list_file()}
 \directlua{
   if ly.get_option('cleantmp') then
-    luatexbase.add_to_callback('stop_run', ly.ly.declare_package_options, 'lyluatex cleantmp')
+    luatexbase.add_to_callback('stop_run', ly.clean_tmp_dir, 'lyluatex cleantmp')
     luatexbase.add_to_callback('stop_run', ly.conclusion_text, 'lyluatex conclusion')
   end
 }
