@@ -970,43 +970,50 @@ function Score:ly_linewidth() return self['line-width'] end
 function Score:ly_staffsize() return self.staffsize end
 
 function Score:ly_margins()
+
+    local function horizontal_margins()
+        if self.twoside then
+            return string.format([[
+inner-margin = %s\pt]], self:tex_margin_inner())
+        else
+            return string.format([[
+left-margin = %s\pt]], self:tex_margin_left())
+        end
+    end
+
     local tex_top = self['extra-top-margin'] + self:tex_margin_top()
     local tex_bottom = self['extra-bottom-margin'] + self:tex_margin_bottom()
     if self.fullpagealign == 'crop' then
         return string.format([[
-top-margin = %s\pt
-bottom-margin = %s\pt
-inner-margin = %s\pt
-left-margin = %s\pt
-]],
-            tex_top, tex_bottom, self:tex_margin_inner(), self:tex_margin_left()
+    top-margin = %s\pt
+    bottom-margin = %s\pt
+    %s]],
+            tex_top, tex_bottom, horizontal_margins()
         )
     elseif self.fullpagealign == 'staffline' then
         local top_distance = 4 * tex_top / self.staffsize + 2
         local bottom_distance = 4 * tex_bottom / self.staffsize + 2
         return string.format([[
-top-margin = 0\pt
-bottom-margin = 0\pt
-inner-margin = %s\pt
-left-margin = %s\pt
-top-system-spacing =
+    top-margin = 0\pt
+    bottom-margin = 0\pt
+    %s
+    top-system-spacing =
     #'((basic-distance . %s)
         (minimum-distance . %s)
         (padding . 0)
         (stretchability . 0))
-top-markup-spacing =
+    top-markup-spacing =
     #'((basic-distance . %s)
         (minimum-distance . %s)
         (padding . 0)
         (stretchability . 0))
-last-bottom-spacing =
+    last-bottom-spacing =
     #'((basic-distance . %s)
         (minimum-distance . %s)
         (padding . 0)
         (stretchability . 0))
 ]],
-            self:tex_margin_inner(),
-            self:tex_margin_left(),
+            horizontal_margins(),
             top_distance,
             top_distance,
             top_distance,
@@ -1033,9 +1040,9 @@ function Score:ly_paper()
         local ppn = self['print-page-number'] and 't' or 'f'
         return string.format([[
 %s
-print-page-number = ##%s
-print-first-page-number = ##%s
-first-page-number = %s
+    print-page-number = ##%s
+    print-first-page-number = ##%s
+    first-page-number = %s
 %s]],
             papersize, ppn, pfpn, first_page_number, self:ly_margins()
 	    )
@@ -1195,13 +1202,13 @@ function Score:tex_margin_outer()
 end
 
 function Score:tex_margin_left()
-    if self:is_odd_page() then return self:tex_margin_inner()
+    if self:is_odd_page() or not self.twopage then return self:tex_margin_inner()
     else return self:tex_margin_outer()
     end
 end
 
 function Score:tex_margin_right()
-    if self:is_odd_page() then return self:tex_margin_outer()
+    if self:is_odd_page() or not self.twopage then return self:tex_margin_outer()
     else return self:tex_margin_inner()
     end
 end
