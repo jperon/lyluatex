@@ -86,6 +86,7 @@ local LY_HEAD = [[
 }
 \layout{
     <<<staffprops>>>
+    <<<fixbadlycroppedstaffgroupbrackets>>>
 }
 
 %%Follows original score
@@ -929,6 +930,17 @@ points to a valid LilyPond executable.
 ]]
         )
     end
+end
+
+function Score:ly_fixbadlycroppedstaffgroupbrackets()
+    return self.fix_badly_cropped_staffgroup_brackets and [[\context {
+        \Score
+        \override SystemStartBracket.after-line-breaking =
+        #(lambda (grob)
+            (let ((Y-off (ly:grob-property grob 'Y-extent)))
+                (ly:grob-set-property! grob 'Y-extent
+                  (cons (- (car Y-off) 1.7) (+ (cdr Y-off) 1.7)))))
+    }]]
 end
 
 function Score:ly_fonts()
