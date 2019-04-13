@@ -63,6 +63,10 @@
         ['exampleindent'] = {'gutter', ly.is_alias},
         ['leftgutter'] = {'', ly.is_dim}, ['rightgutter'] = {'', ly.is_dim},
     ['hpadding'] = {'0.75ex', ly.is_dim},
+    ['include_after_body'] = {'false'},
+    ['include_before_body'] = {'false'},
+    ['include_footer'] = {'false'},
+    ['include_header'] = {'false'},
     ['includepaths'] = {'./'},
     ['indent'] = {'', ly.is_dim},
         ['noindent'] = {'default', ly.is_neg},
@@ -251,6 +255,15 @@
     '\luatexluaescapestring{\detokenize{#1}}',
     '\luatexluaescapestring{\detokenize{#2}}'
   }}%
+}
+
+% Environments to record custom headers and footers to be included in fragments
+\newenvironment{lysavefrag}[1]{%
+  \edef\filename{#1}
+  \lyscorebegin%
+}{%
+  \lyscoreend%
+  \directlua{ly.write_to_file('\filename'..'.ly', table.concat(ly.score_content,'\string\n'))}%
 }
 
 % Commands to transform or define lilypond environments so that it isn't necessary to add empty [].

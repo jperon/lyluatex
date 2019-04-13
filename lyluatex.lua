@@ -87,6 +87,7 @@ local LY_HEAD = [[
     <<<staffprops>>>
     <<<fixbadlycroppedstaffgroupbrackets>>>
 }
+<<<header>>>
 
 %%Follows original score
 ]]
@@ -154,6 +155,19 @@ local function fontinfo(id) return fontdata[id] or font.fonts[id] end
 
 local function font_default_staffsize()
     return fontinfo(font.current()).size/39321.6
+end
+
+
+local function includes_parse(list)
+    local includes = ''
+    if list then
+        list = list:explode(',')
+        for _, included_file in ipairs(list) do
+            warn(included_file)
+            includes = includes .. '\\include "'..included_file..'.ly"\n'
+        end
+    end
+    return includes
 end
 
 
@@ -475,6 +489,10 @@ end
 
 function Score:calc_properties()
     self:calc_staff_properties()
+    -- add includes to lilypond code
+    self.ly_code = includes_parse(self.include_before_body)
+        .. self.ly_code
+        .. includes_parse(self.include_after_body)
     -- fragment and relative
     if self.relative and not self.fragment then
         -- local option takes precedence over global option
@@ -798,6 +816,7 @@ end
 
 function Score:content()
     local n = ''
+    local ly_code = self.ly_code
     if self.relative then
         self.fragment = 'true'  -- in case it would serve later
         if self.relative < 0 then
@@ -805,9 +824,9 @@ function Score:content()
         elseif self.relative > 0 then
             for _ = 1, self.relative do n = n.."'" end
         end
-        return string.format([[\relative c%s {%s}]], n, self.ly_code)
-    elseif self.fragment then return [[{]]..self.ly_code..[[}]]
-    else return self.ly_code
+        return string.format([[\relative c%s {%s}]], n, ly_code)
+    elseif self.fragment then return [[{]]..ly_code..[[}]]
+    else return ly_code
     end
 end
 
@@ -846,7 +865,7 @@ function Score:flatten_content(ly_code)
     -- meddle with Lua's gsub escape character.
     ly_code = ly_code:gsub('%%', '#')
     local f
-    local includepaths = self.includepaths
+    local includepaths = self.includepaths..','..self.tmpdir
     if self.input_file then includepaths = self.includepaths..','..dirname(self.input_file) end
     for iline in ly_code:gmatch('\\include%s*"[^"]*"') do
         f = io.open(locate(iline:match('\\include%s*"([^"]*)"'), includepaths, '.ly') or '')
@@ -856,6 +875,10 @@ function Score:flatten_content(ly_code)
         end
     end
     return ly_code
+end
+
+function Score:footer()
+    return includes_parse(self.include_footer)
 end
 
 function Score:header()
@@ -949,6 +972,10 @@ function Score:ly_fonts()
             self.ttfamily
         )
     end
+end
+
+function Score:ly_header()
+    return includes_parse(self.include_header)
 end
 
 function Score:ly_indent()
@@ -1143,7 +1170,7 @@ function Score:process()
     local do_compile = not self:check_protrusion(bbox.read)
     if self['force-compilation'] or do_compile then
         repeat
-            self:run_lilypond(self:header()..self:content())
+            self:run_lilypond(self:header()..self:content()..self:footer())
             self['force-compilation'] = false
             if self:is_compiled() then table.insert(self.output_names, self.output)
             else
@@ -1469,11 +1496,16 @@ function ly.set_local_options(opts)
     return options
 end
 
-
 function ly.set_property(k, v)
     k, v = process_options(k, v)
     if k then Score[k] = v end
 end
 
+function ly.write_to_file(file, content)
+    local f = io.open(Score.tmpdir..'/'..file, 'w')
+    if not f then err('Unable to write to file %s', file) end
+    f:write(content)
+    f:close()
+end
 
 return ly
