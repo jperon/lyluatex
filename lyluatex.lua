@@ -17,7 +17,6 @@ local ly = {
     err = err,
     varwidth_available = kpse.find_file('varwidth.sty')
 }
-local obj = {}
 local Score = {}
 
 local FILELIST
@@ -300,12 +299,25 @@ function bbox.get(filename, line_width)
     return bbox.read(filename) or bbox.parse(filename, line_width)
 end
 
+function bbox.calc(x_1, x_2, y_1, y_2, line_width)
+    local bb = {
+        ['protrusion'] = -convert_unit(("%fbp"):format(x_1)),
+        ['r_protrusion'] = convert_unit(("%fbp"):format(x_2)) - line_width,
+        ['width'] = convert_unit(("%fbp"):format(x_2))
+    }
+    --FIX #192: height is only calculated if really needed, to prevent errors with huge scores.
+    function bb.__index(_, k)
+        if k == 'height' then return convert_unit(("%fbp"):format(y_2)) - convert_unit(("%fbp"):format(y_1)) end
+    end
+    setmetatable(bb, bb)
+    return bb
+end
+
 function bbox.parse(filename, line_width)
     -- get BoundingBox from EPS file
     local bbline = readlinematching('^%%%%BoundingBox', io.open(filename..'.eps', 'r'))
     if not bbline then return end
-    --FIX #192: local x_1, y_1, x_2, y_2 = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
-    local x_1, _, x_2, _ = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    local x_1, y_1, x_2, y_2 = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
     -- try to get HiResBoundingBox from PDF (if 'gs' works)
     bbline = readlinematching(
         '^%%%%HiResBoundingBox',
@@ -319,21 +331,24 @@ function bbox.parse(filename, line_width)
         -- edge at the start of the staff symbol.
         -- Therefore we shift the HiRes results by the (truncated)
         -- points of the EPS bounding box.
-        --FIX #192: x_1, y_1, x_2, y_2 = pbb() + x_1, pbb() + y_1, pbb() + x_1, pbb() + y_1
-        x_1, x_2 = pbb() + x_1, pbb() + x_1
+        x_1, y_1, x_2, y_2 = pbb() + x_1, pbb() + y_1, pbb() + x_1, pbb() + y_1
     else warn([[gs couldn't be launched; there could be rounding errors.]])
     end
-    local bb = {
-        ['protrusion'] = -convert_unit(("%fbp"):format(x_1)),
-        ['r_protrusion'] = convert_unit(("%fbp"):format(x_2)) - line_width,
-        ['width'] = convert_unit(("%fbp"):format(x_2)),
-        --FIX #192: ['height'] = convert_unit(("%fbp"):format(y_2)) - convert_unit(("%fbp"):format(y_1))
-    }
-    obj.serialize(bb, filename..'.bbox')
-    return bb
+    local f = io.open(filename .. '.bbox', 'w')
+    f:write(
+        string.format("return %s, %s, %s, %s, %s", x_1, y_1, x_2, y_2, line_width)
+    )
+    f:close()
+    return bbox.calc(x_1, x_2, y_1, y_2, line_width)
 end
 
-function bbox.read(f) return obj.deserialize(f..'.bbox') end
+function bbox.read(f)
+    f = f .. '.bbox'
+    if lfs.isfile(f) then
+        local x_1, y_1, x_2, y_2, line_width = dofile(f)
+        return bbox.calc(x_1, x_2, y_1, y_2, line_width)
+    end
+end
 
 
 --[[ =============== Functions that output LaTeX code ===================== ]]
@@ -433,29 +448,6 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
         f:close()
         tex.sprint('\\input{'..fname..'}')
         if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
-    end
-end
-
-
---[[ =============== Functions that operate on objects ==================== ]]
-
-function obj.deserialize(f) if lfs.isfile(f) then return dofile(f) end end
-
-function obj.serialize(o, f)
-    f = io.open(f, 'w')
-    if not f then return end
-    f:write('local o = '..obj.str(o)..'\nreturn o')
-    f:close()
-end
-
-function obj.str(o)
-    if type(o) == "number" then return o
-    elseif type(o) == "string" then return string.format("%q", o)
-    elseif type(o) == "table" then
-        local r = '{\n'
-        for k, v in pairs(o) do r = r.."  ["..obj.str(k).."] = "..obj.str(v)..",\n" end
-        return r.."}\n"
-    else error("cannot convert " .. type(o).." to string")
     end
 end
 
@@ -1142,7 +1134,7 @@ end
 function Score:process()
     self:check_properties()
     self:calc_properties()
-    -- with bbox.read check_ptrotrusion will only execute with
+    -- with bbox.read check_protrusion will only execute with
     -- a prior compilation, otherwise it will be ignored
     local do_compile = not self:check_protrusion(bbox.read)
     if self['force-compilation'] or do_compile then
