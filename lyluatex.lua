@@ -863,6 +863,15 @@ function Score:header()
     for element in LY_HEAD:gmatch('<<<(%w+)>>>') do
         header = header:gsub('<<<'..element..'>>>', self['ly_'..element](self) or '')
     end
+    if self['write-headers'] then
+        local saved_headers = header
+                                    :gsub([[%\include "lilypond%-book%-preamble.ly"]], '')
+                                    :gsub([[%#%(define inside%-lyluatex %#t%)]], '')
+                                    :gsub('\n+', '\n')
+        local f = io.open(self.output.."-headers.ly", 'w')
+        f:write(saved_headers)
+        f:close()
+    end
     return header
 end
 
