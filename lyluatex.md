@@ -75,7 +75,14 @@ any other \LaTeX\ engine will fail.
 
 \lyIssue{Note:} In order to avoid unexpected behaviour it is strongly suggested
 that documents are generally compiled from their actual directory, i.e. without
-referring to it through a path.
+referring to it through a path. Building *out-of-tree* isn't supported, though
+it should be possible with the following workarounds:
+
+1. `includepaths={..}`: (for example, if you build from a subdirectory of main
+   directory) tell lyluatex to search the parent directory;
+2. if the book contain figures, enter only the name of the files,
+   then set two paths, e.g.: `\graphicspath{{images/}{../images/}}`,
+   so images will be found either way.
 
 \lyIssue{NOTE:} \lyluatex\ requires that \LuaLaTeX\ is started with the
 `--shell-escape` command line option to enable the execution of arbitrary
