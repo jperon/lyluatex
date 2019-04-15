@@ -2,7 +2,11 @@
 
 \begin{document}
 
+\VerbatimFootnotes
+
 \section*{Wrapping Commands}
+
+\subsection*{Command within commands}
 
 \cmd{lily} can be wrapped within another command as usual:
 
@@ -16,8 +20,13 @@ This is \mylily[voffset=10pt]{a' b' c''} an example.
 
 This is \mylily[voffset=10pt]{a' b' c''} an example.\par
 
+\subsection*{Environment within environments}
+
+\emph{It isn't possible to wrap \highlight{ly} environment within a command.}\par
+
 It's possible to wrap \highlight{ly} within and environment, but there are
-several drawbacks:
+several drawbacks\footnote{%
+Those drawbacks are:
 \begin{itemize}
   \item this custom environment cannot have optional parameters. To be more
   precise, if it has only optional parameters, it will be necessary to add \verb`[]`
@@ -30,102 +39,193 @@ several drawbacks:
     \item or use the \TeX\ primitives \verb`\ly \endly` (not only for \highlight{ly},
     but also for other environments).
   \end{itemize}
+\end{itemize}%
+}.
+
+To avoid those drawbacks, \lyluatex\ defines a special command, \verb`\lynewenvironment`,
+that behaves as you'd expect from \verb`\newenvironment`.
+
+\begin{verbatim}
+\lynewenvironment{myly}{%
+  This is \emph{my} lilypond environment.
+  \begin{ly}%
+}{%
+  \end{ly}
+}
+
+\begin{myly}
+  a b c
+\end{myly}
+\end{verbatim}
+
+\newenvironment{myly}{%
+  This is \emph{my} lilypond environment.
+  \begin{ly}%
+}{%
+  \end{ly}
+}
+
+\begin{myly}
+  a b c
+\end{myly}
+
+\begin{verbatim}
+\lynewenvironment{lyfigure}[2][]{%
+\edef\mycaption{#2}
+\begin{figure}
+\begin{center}
+  \begin{lilypond}[#1]%
+}{%
+  \end{lilypond}
+  \caption{\mycaption}
+\end{center}
+\end{figure}
+}
+
+\begin{lyfigure}{caption}
+a' b' c
+d' e' f
+\end{lyfigure}
+\end{verbatim}
+
+\lynewenvironment{lyfigure}[2][]{%
+\edef\mycaption{#2}
+\begin{figure}
+\begin{center}
+  \begin{lilypond}[#1]%
+}{%
+  \end{lilypond}
+  \caption{\mycaption}
+\end{center}
+\end{figure}
+}
+
+\begin{lyfigure}{caption}
+a' b' c
+d' e' f
+\end{lyfigure}
+
+\begin{verbatim}
+\lynewenvironment{lyotherfigure}[1][]{%
+\edef\option{#1}
+\figure
+\center
+  \ly
+}{%
+  \endly%
+  \def\empty{}\ifx\option\empty\else\caption{\option}\fi
+\endcenter
+\endfigure
+}
+
+\begin{lyotherfigure}
+d' e' f
+a' b' c
+\end{lyotherfigure}
+\end{verbatim}
+
+\lynewenvironment{lyotherfigure}[1][]{%
+\edef\option{#1}
+\figure
+\center
+  \ly
+}{%
+  \endly%
+  \def\empty{}\ifx\option\empty\else\caption{\option}\fi
+\endcenter
+\endfigure
+}
+
+\begin{lyotherfigure}
+d' e' f
+a' b' c
+\end{lyotherfigure}
+
+\textbf{Important note:} \verb`\lynewenvironment` is intended to insert \emph{LaTeX} code before
+and after the scores; due to the special behavior of \verb`ly` environment, it isn't possible
+to insert \emph{LilyPond} code that way. So this won't work:
+
+\begin{verbatim}
+  \lynewenvironment{myly}{%
+    \begin{ly}
+      a b c
+  }{%
+    \end{ly}
+  }
+\end{verbatim}
+
+To do such a thing, \lyluatex\ defines a command and four options:
+\begin{itemize}
+  \item \verb`\lysavefrag` lets one save a LilyPond fragment to be re-used afterward;
+  \item \verb`include_header`, \verb`include_footer`, \verb`include_before_body` and \verb`include_after_body` options
+        let one insert such fragments at designed places within inserted score.
 \end{itemize}
 
+So this works:
+
 \begin{verbatim}
-\newenvironment{myly}{%
-  This is \emph{my} lilypond environment.
-  \begin{ly}[]%
-}{%
+\begin{lysavefrag}{head}
+a b c
+\end{lysavefrag}
+
+\begin{lysavefrag}{foot}
+g a' b
+\end{lysavefrag}
+
+begin{ly}[
+  include_before_body={head,head},
+  include_after_body=foot,
+]
+d e f
+\end{ly}
+\end{verbatim}
+
+It's also possible to use \verb`\lynewenvironment` to wrap such a command:
+
+\begin{verbatim}
+\begin{lysavefrag}{head}
+a b c
+\end{lysavefrag}
+
+\begin{lysavefrag}{foot}
+g a' b
+\end{lysavefrag}
+  
+\lynewenvironment{yourly}[1][]{%
+  {\centering test \par}
+  \begin{ly}[
+    include_before_body={head,head},
+    include_after_body=foot,
+  ]
+}{
   \end{ly}
 }
 
-\begin{myly}
-  a b c
-\end{myly}
+\begin{yourly}
+d e f
+\end{yourly}
 \end{verbatim}
 
-\newenvironment{myly}{%
-  This is \emph{my} lilypond environment.
-  \begin{ly}[]%
-}{%
+\begin{lysavefrag}{head}
+a b c
+\end{lysavefrag}
+
+\begin{lysavefrag}{foot}
+g a' b
+\end{lysavefrag}
+  
+\lynewenvironment{yourly}[1][]{%
+  {\centering test \par}
+  \begin{ly}[
+    include_before_body={head,head},
+    include_after_body=foot,
+  ]
+}{
   \end{ly}
 }
 
-\begin{myly}
-  a b c
-\end{myly}
-
-\begin{verbatim}
-\newenvironment{lyfigure}[2][]{%
-\edef\mycaption{#2}
-\begin{figure}
-\begin{center}
-  \begin{lilypond}[#1]%
-}{%
-  \end{lilypond}
-  \caption{\mycaption}
-\end{center}
-\end{figure}
-}
-
-\begin{lyfigure}{caption}
-a' b' c
-d' e' f
-\end{lyfigure}
-\end{verbatim}
-
-\newenvironment{lyfigure}[2][]{%
-\edef\mycaption{#2}
-\begin{figure}
-\begin{center}
-  \begin{lilypond}[#1]%
-}{%
-  \end{lilypond}
-  \caption{\mycaption}
-\end{center}
-\end{figure}
-}
-
-\begin{lyfigure}{caption}
-a' b' c
-d' e' f
-\end{lyfigure}
-
-\begin{verbatim}
-\newenvironment{lyotherfigure}[1][]{%
-\edef\option{#1}
-\figure
-\center
-  \ly
-}{%
-  \endly%
-  \def\empty{}\ifx\option\empty\else\caption{\option}\fi
-\endcenter
-\endfigure
-}
-
-\begin{lyotherfigure}[]
-d' e' f
-a' b' c
-\end{lyotherfigure}
-\end{verbatim}
-
-\newenvironment{lyotherfigure}[1][]{%
-\edef\option{#1}
-\figure
-\center
-  \ly
-}{%
-  \endly%
-  \def\empty{}\ifx\option\empty\else\caption{\option}\fi
-\endcenter
-\endfigure
-}
-
-\begin{lyotherfigure}[]
-d' e' f
-a' b' c
-\end{lyotherfigure}
+\begin{yourly}
+d e f
+\end{yourly}
 
 \end{document}
