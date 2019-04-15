@@ -93,7 +93,7 @@ local LY_HEAD = [[
 ]]
 
 
---[[ ========================== Helper functions ========================== ]]
+--[[ ========================== Helper functions ========================== --]]
 -- dirty fix as info doesn't work as expected
 local oldinfo = info
 function info(...)
@@ -299,7 +299,7 @@ end
 local function splitext(str, ext) return str:match('(.*)%.'..ext..'$') or str end
 
 
---[[ ================ Bounding box calculations =========================== ]]
+--[[ ================ Bounding box calculations =========================== --]]
 
 local bbox = {}
 function bbox.get(filename, line_width)
@@ -358,7 +358,7 @@ function bbox.read(f)
 end
 
 
---[[ =============== Functions that output LaTeX code ===================== ]]
+--[[ =============== Functions that output LaTeX code ===================== --]]
 
 function latex.filename(printfilename, insert, input_file)
     if printfilename and input_file then
@@ -444,7 +444,7 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
             '.*%%%s*begin verbatim', ''):gsub(
             '%%%s*end verbatim.*', '')
         --[[ We unfortunately need an external file,
-             as verbatim environments are quite special. ]]
+             as verbatim environments are quite special. --]]
         local fname = ly.get_option('tmpdir')..'/verb.tex'
         local f = io.open(fname, 'w')
         f:write(
@@ -459,7 +459,7 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
 end
 
 
---[[ =============================== Classes =============================== ]]
+--[[ =============================== Classes =============================== --]]
 
 -- Score class
 function Score:new(ly_code, options, input_file)
@@ -1282,7 +1282,7 @@ function Score:write_to_filelist()
 end
 
 
---[[ ========================== Public functions ========================== ]]
+--[[ ========================== Public functions ========================== --]]
 
 function ly.buffenv_begin()
 
@@ -1363,7 +1363,7 @@ end
 
 function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
-    as it really doesn't mean anything as a local option. ]]
+    as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.ly')
     options = ly.set_local_options(options)
     if not file then err("File %s doesn't exist.", input_file) end
@@ -1375,7 +1375,7 @@ end
 
 function ly.file_musicxml(input_file, options)
     --[[ Here, we only take in account global option includepaths,
-    as it really doesn't mean anything as a local option. ]]
+    as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.xml')
     options = ly.set_local_options(options)
     if not file then err("File %s doesn't exist.", input_file) end
