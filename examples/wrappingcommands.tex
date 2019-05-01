@@ -82,7 +82,7 @@ that behaves as you'd expect from \verb`\newenvironment`.
 \end{figure}
 }
 
-\begin{lyfigure}{caption}
+\begin{lyfigure}{This is a caption}
 a' b' c
 d' e' f
 \end{lyfigure}
@@ -100,7 +100,7 @@ d' e' f
 \end{figure}
 }
 
-\begin{lyfigure}{caption}
+\begin{lyfigure}{This is a caption}
 a' b' c
 d' e' f
 \end{lyfigure}
@@ -141,7 +141,19 @@ d' e' f
 a' b' c
 \end{lyotherfigure}
 
-\textbf{Important note:} \verb`\lynewenvironment` is intended to insert \emph{LaTeX} code before
+\begin{verbatim}
+\begin{lyotherfigure}[This time with a caption]
+d' e' f
+a' b' c
+\end{lyotherfigure}
+\end{verbatim}
+
+\begin{lyotherfigure}[This time with a caption]
+d' e' f
+a' b' c
+\end{lyotherfigure}
+
+\textbf{Important note:} \verb`\lynewenvironment` is intended to insert \LaTeX\ code before
 and after the scores; due to the special behavior of \verb`ly` environment, it isn't possible
 to insert \emph{LilyPond} code that way. So this won't work:
 
@@ -172,8 +184,16 @@ a b c
 g a' b
 \end{lysavefrag}
 
+\begin{lysavefrag}{mymark}
+\mark \default
+\end{lysavefrag}
+
+\begin{lysavefrag}{mymark}
+\mark \default
+\end{lysavefrag}
+
 begin{ly}[
-  include_before_body={head,head},
+  include_before_body={head,mymark,head},
   include_after_body=foot,
 ]
 d e f
@@ -190,11 +210,15 @@ a b c
 \begin{lysavefrag}{foot}
 g a' b
 \end{lysavefrag}
-  
+
+\begin{lysavefrag}{mymark}
+\mark \default
+\end{lysavefrag}
+
 \lynewenvironment{yourly}[1][]{%
   {\centering test \par}
   \begin{ly}[
-    include_before_body={head,head},
+    include_before_body={head,mymark,head},
     include_after_body=foot,
   ]
 }{
@@ -213,11 +237,15 @@ a b c
 \begin{lysavefrag}{foot}
 g a' b
 \end{lysavefrag}
-  
+
+\begin{lysavefrag}{mymark}
+\mark \default
+\end{lysavefrag}
+
 \lynewenvironment{yourly}[1][]{%
   {\centering test \par}
   \begin{ly}[
-    include_before_body={head,head},
+    include_before_body={head,mymark,head},
     include_after_body=foot,
   ]
 }{
