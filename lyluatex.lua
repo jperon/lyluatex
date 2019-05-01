@@ -1029,20 +1029,39 @@ Given: %s
 end
 
 function Score:ly_paper()
+    local function get_system_count()
+        if self['system-count'] == 0 then
+            return ''
+        else
+            return 'system-count = '..self['system-count']..[[
+]]
+        end
+    end
+
+
     local papersize = '#(set-paper-size "'..(self.papersize or 'lyluatexfmt')..'")'
     if self.insert == 'fullpage' then
         local first_page_number = self['first-page-number'] or tex.count['c@page']
         local pfpn = self['print-first-page-number'] and 't' or 'f'
         local ppn = self['print-page-number'] and 't' or 'f'
         return string.format([[
-%s
+%s%s
     print-page-number = ##%s
     print-first-page-number = ##%s
     first-page-number = %s
 %s]],
-            papersize, ppn, pfpn, first_page_number, self:ly_margins()
+          get_system_count(), papersize, ppn, pfpn,
+          first_page_number, self:ly_margins()
 	    )
-    elseif self.papersize then return papersize
+    else
+        if self.papersize then
+            papersize = papersize..[[
+]]
+        else
+            papersize = ''
+        end
+
+        return string.format([[%s%s]], papersize, get_system_count())
     end
 end
 
