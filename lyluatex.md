@@ -1259,6 +1259,11 @@ Those examples and others may be found in
 \includeexample{dynamic-indent}{Dynamic Indent Handling}
 
 \includeexample{fonts}{Font Handling}
+\defaultfontfeatures{Ligatures=TeX,Numbers=OldStyle,Scale=MatchLowercase}
+\setmainfont{Linux Libertine O}
+\setsansfont[BoldFont={Linux Biolinum O Bold}]{Linux Biolinum O}
+\setmonofont{Inconsolata}
+
 
 \includeexample{wrappingcommands}{Wrapping Commands}
 
