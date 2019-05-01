@@ -469,6 +469,12 @@ By default, with \option{insert=fullpage}, scores are indented;
 otherwise, they aren't.
 \option{noindent} is equivalent to \option{indent=0pt}.  Please also see the section about [Dynamic Indentation](#indent).
 
+\lyOption{system-count}{}
+Forces LilyPond to produce a fixed number of systems. This may be useful when
+LilyPond breaks a score that can manually be squeezed to one system less, but
+it is also possible to spread out a score to more systems than LilyPond would
+consider necessary.
+
 \lyOption{quote}{false}
 This option, which is there for compatibility with `lilypond-book`,
 reduces line length of a music snippet by $2×0.4\,in$ and puts the output into
