@@ -966,16 +966,11 @@ function Score:ly_linewidth() return self['line-width'] end
 function Score:ly_staffsize() return self.staffsize end
 
 function Score:ly_margins()
-
-    local function horizontal_margins()
-        if self.twoside then
-            return string.format([[
-inner-margin = %s\pt]], self:tex_margin_inner())
-        else
-            return string.format([[
-left-margin = %s\pt]], self:tex_margin_left())
-        end
-    end
+    local horizontal_margins =
+        self.twoside and string.format([[
+            inner-margin = %s\pt]], self:tex_margin_inner())
+        or string.format([[
+            left-margin = %s\pt]], self:tex_margin_left())
 
     local tex_top = self['extra-top-margin'] + self:tex_margin_top()
     local tex_bottom = self['extra-bottom-margin'] + self:tex_margin_bottom()
@@ -984,7 +979,7 @@ left-margin = %s\pt]], self:tex_margin_left())
     top-margin = %s\pt
     bottom-margin = %s\pt
     %s]],
-            tex_top, tex_bottom, horizontal_margins()
+            tex_top, tex_bottom, horizontal_margins
         )
     elseif self.fullpagealign == 'staffline' then
         local top_distance = 4 * tex_top / self.staffsize + 2
@@ -1009,7 +1004,7 @@ left-margin = %s\pt]], self:tex_margin_left())
         (padding . 0)
         (stretchability . 0))
 ]],
-            horizontal_margins(),
+            horizontal_margins,
             top_distance,
             top_distance,
             top_distance,
@@ -1029,15 +1024,9 @@ Given: %s
 end
 
 function Score:ly_paper()
-    local function get_system_count()
-        if self['system-count'] == 0 then
-            return ''
-        else
-            return 'system-count = '..self['system-count']..[[
-]]
-        end
-    end
-
+    local system_count =
+        self['system-count'] == 0 and ''
+        or 'system-count = '..self['system-count']..'\n    '
 
     local papersize = '#(set-paper-size "'..(self.papersize or 'lyluatexfmt')..'")'
     if self.insert == 'fullpage' then
@@ -1050,7 +1039,7 @@ function Score:ly_paper()
     print-first-page-number = ##%s
     first-page-number = %s
 %s]],
-          get_system_count(), papersize, ppn, pfpn,
+          system_count, papersize, ppn, pfpn,
           first_page_number, self:ly_margins()
 	    )
     else
@@ -1061,7 +1050,7 @@ function Score:ly_paper()
             papersize = ''
         end
 
-        return string.format([[%s%s]], papersize, get_system_count())
+        return string.format([[%s%s]], papersize, system_count)
     end
 end
 
