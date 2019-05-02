@@ -63,6 +63,10 @@
         ['exampleindent'] = {'gutter', ly.is_alias},
         ['leftgutter'] = {'', ly.is_dim}, ['rightgutter'] = {'', ly.is_dim},
     ['hpadding'] = {'0.75ex', ly.is_dim},
+    ['include_after_body'] = {'false'},
+    ['include_before_body'] = {'false'},
+    ['include_footer'] = {'false'},
+    ['include_header'] = {'false'},
     ['includepaths'] = {'./'},
     ['indent'] = {'', ly.is_dim},
         ['noindent'] = {'default', ly.is_neg},
@@ -253,16 +257,37 @@
   }}%
 }
 
+% Environments to record custom headers and footers to be included in fragments
+\newenvironment{lysavefrag}[1]{%
+  \edef\filename{#1}
+  \lyscorebegin%
+}{%
+  \lyscoreend%
+  \directlua{ly.write_to_file('\filename'..'.ly', table.concat(ly.score_content,'\string\n'))}%
+}
+
+% Commands to transform or define lilypond environments so that it isn't necessary to add empty [].
+\def\lyenv#1{%
+  \expandafter\let\csname ly@env@#1\expandafter\endcsname\csname #1\endcsname%
+  \expandafter\let\csname ly@env@end#1\expandafter\endcsname\csname end#1\endcsname%
+  \expandafter\def\csname #1\endcsname{\IfNextToken[{\csname ly@env@#1\endcsname}{\csname ly@env@#1\endcsname[]}}%
+}
+\long\def\lynewenvironment#1{\@ifnextchar[{\ly@newenv@a{#1}}{\ly@newenv@a{#1}[0]}}
+\long\def\ly@newenv@a#1[#2]{\@ifnextchar[{\ly@newenv@b{#1}{#2}}{\ly@newenv@b{#1}{#2}[]}}
+\long\def\ly@newenv@b#1#2[#3]#4#5{%
+  \newenvironment{#1}[#2][#3]{#4}{#5}
+  \lyenv{#1}
+}
+
 % Parametrized command and environment for included LilyPond fragment
-\newenvironment{ly@ly}[1][noarg]{%
+\lynewenvironment{ly}[1][noarg]{%
   \edef\options{#1}%
   \directlua{ly.state = 'env'}%
   \ly@bufferenv%
 }{%
   \endly@bufferenv%
 }
-\def\ly{\IfNextToken[{\ly@ly}{\ly@ly[]}}
-\def\endly{\endly@ly}
+
 
 \newcommand{\lily}[2][]{%
   \edef\options{#1}%
