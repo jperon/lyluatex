@@ -1190,6 +1190,12 @@ function Score:process()
     else table.insert(self.output_names, self.output)
     end
     set_lyscore(self)
+    if self:count_systems() == 0 then
+        warn([[
+The score doesn't contain any music:
+this will probably cause bad output.]]
+        )
+    end
     if not self['raw-pdf'] then self:write_latex(do_compile) end
     self:write_to_filelist()
     if not self.debug then self:delete_intermediate_files() end
@@ -1274,9 +1280,12 @@ Score with more than one system included inline.
 This will probably cause bad output.]]
             )
         end
-        latex.includeinline(
-            self.output, self:bbox(1).height, self.valign, self.hpadding, self.voffset
-        )
+        local bb = self:bbox(1)
+        if bb then
+            latex.includeinline(
+                self.output, bb.height, self.valign, self.hpadding, self.voffset
+            )
+        end
     end
 end
 
