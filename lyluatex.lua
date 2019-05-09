@@ -935,15 +935,8 @@ function Score:lilypond_version(number)
                 self.output, self.program
             )
             debug(result)
+            return true
         end
-    else
-        err([[
-LilyPond could not be started.
-Please check that LuaLaTeX is started with the
---shell-escape option, and that 'program'
-points to a valid LilyPond executable.
-]]
-        )
     end
 end
 
@@ -1173,6 +1166,26 @@ end
 function Score:process()
     self:check_properties()
     self:calc_properties()
+    if not self:lilypond_version() then
+        local warning = [[
+LilyPond could not be started.
+Please check that LuaLaTeX is started with the
+--shell-escape option, and that 'program'
+points to a valid LilyPond executable.
+]]
+        if self.showfailed then
+            warn(warning)
+            tex.sprint(string.format([[
+\begin{quote}
+\minibox[frame]{LilyPond could not be started.}
+\end{quote}
+
+]]))
+            return
+        else
+            err(warning)
+        end
+    end
     -- with bbox.read check_protrusion will only execute with
     -- a prior compilation, otherwise it will be ignored
     local do_compile = not self:check_protrusion(bbox.read)
@@ -1198,7 +1211,6 @@ end
 function Score:run_lilypond(ly_code)
     if self:is_compiled() then return end
     mkdirs(dirname(self.output))
-    self:lilypond_version()
     local p = io.popen(self:lilypond_cmd(ly_code))
     if self.debug then
         local f = io.open(self.output..".log", 'w')
