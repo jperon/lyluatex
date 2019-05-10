@@ -1158,7 +1158,9 @@ be detected and handled (if possible) by \lyluatex.  The most basic problem is
 when LilyPond can't be started at all.  \lyluatex\ will correctly determine and
 report an error if \LuaLaTeX\ has been started without the
 \option{--shell-escape} option or if the \option{program} option doesn't point
-to a valid LilyPond executable.
+to a valid LilyPond executable. However, if the \option{showfailed} option is
+also set then only a *warning* is issued while instead of a score an information
+box is created in the document, informing about the problem.
 
 Two other situations that are correctly recognized are when LilyPond *reports* a
 compilation failure but still produces a (potentially useful) score, and when
