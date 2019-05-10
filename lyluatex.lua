@@ -197,7 +197,8 @@ end
 
 
 local function mkdirs(str)
-    local path = '.'
+    local path
+    if str:sub(1, 1) == '/' then path = '' else path = '.' end
     for dir in str:gmatch('([^%/]+)') do
         path = path .. '/' .. dir
         lfs.mkdir(path)
