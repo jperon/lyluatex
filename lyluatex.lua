@@ -21,6 +21,7 @@ local ly = {
 }
 local Score = {}
 
+local OPTIONS = {}
 local FILELIST
 local DIM_OPTIONS = {
     'extra-bottom-margin',
@@ -668,13 +669,13 @@ end
 
 function Score:check_properties()
     local unexpected = false
-    for k, _ in lib.orderedpairs(lib.OPTIONS) do
+    for k, _ in lib.orderedpairs(OPTIONS) do
         if self[k] == 'default' then
-            self[k] = lib.OPTIONS[k][1] or nil
+            self[k] = OPTIONS[k][1] or nil
             unexpected = not self[k]
         end
-        if not lib.contains(lib.OPTIONS[k], self[k]) and lib.OPTIONS[k][2] then
-            if type(lib.OPTIONS[k][2]) == 'function' then lib.OPTIONS[k][2](k, self[k])
+        if not lib.contains(OPTIONS[k], self[k]) and OPTIONS[k][2] then
+            if type(OPTIONS[k][2]) == 'function' then OPTIONS[k][2](k, self[k])
             else unexpected = true
             end
         end
@@ -683,7 +684,7 @@ function Score:check_properties()
 Unexpected value "%s" for option %s:
 authorized values are "%s"
 ]],
-                self[k], k, table.concat(lib.OPTIONS[k], ', ')
+                self[k], k, table.concat(OPTIONS[k], ', ')
             )
         end
     end
@@ -1089,7 +1090,7 @@ end
 
 function Score:output_filename()
     local properties = ''
-    for k, _ in lib.orderedpairs(lib.OPTIONS) do
+    for k, _ in lib.orderedpairs(OPTIONS) do
         if (not lib.contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'\n'..k..'\t'..self[k]
         end
@@ -1308,7 +1309,8 @@ end
 
 
 function ly.declare_package_options(options)
-    lib.declare_package_options(options)
+    OPTIONS = options
+    lib.declare_package_options(options, 'ly')
 end
 
 
@@ -1392,7 +1394,7 @@ end
 
 
 function ly.is_neg(k, _)
-    return lib.is_neg(k, _)
+    return lib.is_neg(OPTIONS, k)
 end
 
 
@@ -1431,7 +1433,7 @@ function ly.set_local_options(opts)
                 while v:sub(-1) ~= '}' do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
-            k, v = lib.process_options(k:gsub('^%s', ''), v:gsub('^%s', ''))
+            k, v = lib.process_options(OPTIONS, k:gsub('^%s', ''), v:gsub('^%s', ''))
             if k then
                 if options[k] then err('Option %s is set two times for the same score.', k)
                 else options[k] = v
@@ -1443,7 +1445,7 @@ function ly.set_local_options(opts)
 end
 
 function ly.set_property(k, v)
-    k, v = lib.process_options(k, v)
+    k, v = lib.process_options(OPTIONS, k, v)
     if k then Score[k] = v end
 end
 

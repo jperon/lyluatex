@@ -10,7 +10,6 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 local lib = {}
-lib.OPTIONS = {} -- will be a reference to the caller's lib.OPTIONS object
 lib.TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp', 'em',
 'ex'}
 
@@ -43,16 +42,15 @@ function lib.convert_unit(value)
 end
 
 
-function lib.declare_package_options(options)
-    lib.OPTIONS = options
+function lib.declare_package_options(options, obj_name)
     local exopt = ''
     for k, v in pairs(options) do
         tex.sprint(string.format([[
 \DeclareOptionX{%s}{\directlua{
-  ly.set_property('%s', '\luatexluaescapestring{#1}')
+  %s.set_property('%s', '\luatexluaescapestring{#1}')
 }}%%
 ]],
-            k, k
+            k, obj_name, k
         ))
         exopt = exopt..k..'='..(v[1] or '')..','
     end
@@ -88,9 +86,9 @@ or a (multiplied) TeX length (".8\linewidth")
 end
 
 
-function lib.is_neg(k, _)
+function lib.is_neg(options, k)
     local _, i = k:find('^no')
-    return i and lib.contains_key(lib.OPTIONS, k:sub(i + 1))
+    return i and lib.contains_key(options, k:sub(i + 1))
 end
 
 
@@ -130,19 +128,19 @@ function lib.orderedpairs(t)
 end
 
 
-function lib.process_options(k, v)
+function lib.process_options(options, k, v)
     if k == '' or k == 'noarg' then return end
-    if not lib.contains_key(lib.OPTIONS, k) then err('Unknown option: '..k) end
+    if not lib.contains_key(options, k) then err('Unknown option: '..k) end
     -- aliases
-    if lib.OPTIONS[k] and lib.OPTIONS[k][2] == lib.is_alias then
-        if lib.OPTIONS[k][1] == v then return
-        else k = lib.OPTIONS[k][1]
+    if options[k] and options[k][2] == lib.is_alias then
+        if options[k][1] == v then return
+        else k = options[k][1]
         end
     end
     -- boolean
     if v == 'false' then v = false end
     -- negation (for example, noindent is the negation of indent)
-    if lib.is_neg(k) then
+    if lib.is_neg(options, k) then
         if v ~= nil and v ~= 'default' then
             k = k:gsub('^no(.*)', '%1')
             v = not v
