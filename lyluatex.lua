@@ -184,28 +184,6 @@ local function orderedpairs(t)
 end
 
 
-local function process_options(k, v)
-    if k == '' or k == 'noarg' then return end
-    if not contains_key(OPTIONS, k) then err('Unknown option: '..k) end
-    -- aliases
-    if OPTIONS[k] and OPTIONS[k][2] == ly.is_alias then
-        if OPTIONS[k][1] == v then return
-        else k = OPTIONS[k][1]
-        end
-    end
-    -- boolean
-    if v == 'false' then v = false end
-    -- negation (for example, noindent is the negation of indent)
-    if ly.is_neg(k) then
-        if v ~= nil and v ~= 'default' then
-            k = k:gsub('^no(.*)', '%1')
-            v = not v
-        else return
-        end
-    end
-    return k, v
-end
-
 
 local function range_parse(range, nsystems)
     local num = tonumber(range)
