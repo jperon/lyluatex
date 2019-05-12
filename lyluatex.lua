@@ -150,81 +150,6 @@ local function locate(file, includepaths, ext)
 end
 
 
-local function max(a, b)
-    a, b = tonumber(a), tonumber(b)
-    if a > b then return a else return b end
-end
-
-
-local function min(a, b)
-    a, b = tonumber(a), tonumber(b)
-    if a < b then return a else return b end
-end
-
-
-local function mkdirs(str)
-    local path = '.'
-    for dir in str:gmatch('([^%/]+)') do
-        path = path .. '/' .. dir
-        lfs.mkdir(path)
-    end
-end
-
-
-local function orderedpairs(t)
-    local key
-    local i = 0
-    local orderedIndex = {}
-    for k in pairs(t) do table.insert(orderedIndex, k) end
-    table.sort(orderedIndex)
-    return function ()
-            i = i + 1
-            key = orderedIndex[i]
-            if key then return key, t[key] end
-        end
-end
-
-
-
-local function range_parse(range, nsystems)
-    local num = tonumber(range)
-    if num then return {num} end
-    -- if nsystems is set, we have insert=systems
-    if nsystems ~= 0 and range:sub(-1) == '-' then range = range..nsystems end
-    if not (range == '' or range:match('^%d+%s*-%s*%d*$')) then
-        warn([[
-Invalid value '%s' for item
-in list of page ranges. Possible entries:
-- Single number
-- Range (M-N, N-M or N-)
-This item will be skipped!
-]],
-            range
-        )
-        return
-    end
-    local result = {}
-    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
-    if to then
-        local dir
-        if from <= to then dir = 1 else dir = -1 end
-        for i = from, to, dir do table.insert(result, i) end
-        return result
-    else return {range}  -- N- with insert=fullpage
-    end
-end
-
-
-local function readlinematching(s, f)
-    if f then
-        local result = ''
-        while result and not result:find(s) do result = f:read() end
-        f:close()
-        return result
-    end
-end
-
-
 local function set_lyscore(score)
     ly.score = score
     ly.score.nsystems = ly.score:count_systems()
@@ -621,7 +546,7 @@ function Score:check_indent(lp)
                 self.indent = lp.overflow_left
                 lp.shorten = lib.max(lp.shorten - lp.overflow_left, 0)
             else
-                self.indent = max(self.indent - lp.overflow_left, 0)
+                self.indent = lib.max(self.indent - lp.overflow_left, 0)
             end
             lp.changed_indent = true
         end
@@ -728,10 +653,10 @@ function Score:check_protrusion(bbox_func)
     -- Note: we can't *reliably* determine this with ragged one-system scores,
     -- possibly resulting in unnecessarily short lines when right protrusion is
     -- present
-    lp.stave_overflow_right = max(lp.stave_extent - self.original_lw, 0)
+    lp.stave_overflow_right = lib.max(lp.stave_extent - self.original_lw, 0)
     -- Check if image as a whole protrudes over max-right-protrusion
     lp.overflow_right = lib.max(lp.total_extent - lp.available, 0)
-    lp.shorten = max(lp.stave_overflow_right, lp.overflow_right)
+    lp.shorten = lib.max(lp.stave_overflow_right, lp.overflow_right)
     lp.changed_indent = false
     self:check_indent(lp, bb)
     if lp.shorten > 0 or lp.changed_indent then
