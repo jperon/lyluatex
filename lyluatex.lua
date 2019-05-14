@@ -625,27 +625,7 @@ function Score:check_indent(lp)
 end
 
 function Score:check_properties()
-    local unexpected = false
-    local options = optlib.get_options('ly')
-    for k, _ in lib.orderedpairs(options) do
-        if self[k] == 'default' then
-            self[k] = options[k][1] or nil
-            unexpected = not self[k]
-        end
-        if not lib.contains(options[k], self[k]) and options[k][2] then
-            if type(options[k][2]) == 'function' then options[k][2](k, self[k])
-            else unexpected = true
-            end
-        end
-        if unexpected then
-            err([[
-Unexpected value "%s" for option %s:
-authorized values are "%s"
-]],
-                self[k], k, table.concat(options[k], ', ')
-            )
-        end
-    end
+    optlib.validate_options('ly', self)
     for _, k in pairs(TEXINFO_OPTIONS) do
         if self[k] then info([[Option %s is specific to Texinfo: ignoring it.]], k) end
     end

@@ -22,6 +22,34 @@ local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
 local optlib = {}  -- namespece for the returned table
 local OPTIONS = {} -- store global options of any module using this
 
+
+function optlib.check_local_options(prefix, opts)
+--[[
+    Parse the given options (options passed to a command/environment),
+    sanitize them against the global package options and return a table
+    with the local options that should then supersede the global options.
+--]]
+    local options = {}
+    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
+    for opt in next_opt do
+        local k, v = opt:match('([^=]+)=?(.*)')
+        if k then
+            if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
+                while v:sub(-1) ~= '}' do v = v..','..next_opt() end
+                v = v:sub(2, -2)  -- remove { }
+            end
+            k, v = optlib.sanitize_option(prefix, k:gsub('^%s', ''), v:gsub('^%s', ''))
+            if k then
+                if options[k] then err('Option %s is set two times for the same score.', k)
+                else options[k] = v
+                end
+            end
+        end
+    end
+    return options
+end
+
+
 function optlib.declare_package_options(prefix, options)
 --[[
     Declare package options along with their default and
@@ -137,30 +165,35 @@ function optlib.sanitize_option(prefix, k, v)
 end
 
 
-function optlib.check_local_options(prefix, opts)
+function optlib.validate_options(prefix, options)
 --[[
-    Parse the given options (options passed to a command/environment),
-    sanitize them against the global package options and return a table
-    with the local options that should then supersede the global options.
+    Validate the given set of options against the option declaration
+    table for the given prefix.
 --]]
-    local options = {}
-    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
-    for opt in next_opt do
-        local k, v = opt:match('([^=]+)=?(.*)')
-        if k then
-            if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
-                while v:sub(-1) ~= '}' do v = v..','..next_opt() end
-                v = v:sub(2, -2)  -- remove { }
-            end
-            k, v = optlib.sanitize_option(prefix, k:gsub('^%s', ''), v:gsub('^%s', ''))
-            if k then
-                if options[k] then err('Option %s is set two times for the same score.', k)
-                else options[k] = v
-                end
+    local unexpected = false
+    local package_opts = optlib.get_options(prefix)
+    if not package_opts then err('No module registered with prefix '..prefix) end
+    for k, _ in lib.orderedpairs(package_opts) do
+        if options[k] == 'default' then
+            -- Replace 'default' with an actual value
+            options[k] = package_opts[k][1] or nil
+            unexpected = not options[k]
+        end
+        if not lib.contains(package_opts[k], options[k]) and package_opts[k][2] then
+            -- option value is not in the array of accepted values
+            if type(package_opts[k][2]) == 'function' then package_opts[k][2](k, options[k])
+            else unexpected = true
             end
         end
+        if unexpected then
+            err([[
+    Unexpected value "%s" for option %s:
+    authorized values are "%s"
+    ]],
+                options[k], k, table.concat(package_opts[k], ', ')
+            )
+        end
     end
-    return options
 end
 
 
