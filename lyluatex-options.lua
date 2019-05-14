@@ -120,4 +120,33 @@ function optlib.sanitize_option(options, k, v)
 end
 
 
+function optlib.set_local_options(global_opts, local_opts)
+--[[
+    Parse the given local_opts (options passed to a command/environment),
+    sanitize them and merge them into the global_opts, so local
+    options supersede global ones without changing them.
+    Return a table with the effective options to be used for the given
+    element.
+--]]
+    local options = {}
+    local next_opt = local_opts:gmatch('([^,]+)')  -- iterator over options
+    for opt in next_opt do
+        local k, v = opt:match('([^=]+)=?(.*)')
+        if k then
+            if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
+                while v:sub(-1) ~= '}' do v = v..','..next_opt() end
+                v = v:sub(2, -2)  -- remove { }
+            end
+            k, v = optlib.sanitize_option(global_opts, k:gsub('^%s', ''), v:gsub('^%s', ''))
+            if k then
+                if options[k] then err('Option %s is set two times for the same score.', k)
+                else options[k] = v
+                end
+            end
+        end
+    end
+    return options
+end
+
+
 return optlib

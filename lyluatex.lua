@@ -1282,7 +1282,7 @@ function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.ly')
-    options = ly.set_local_options(options)
+    options = optlib.set_local_options(OPTIONS, options)
     if not file then err("File %s doesn't exist.", input_file) end
     local i = io.open(file, 'r')
     ly.score = Score:new(i:read('*a'), options, file)
@@ -1294,7 +1294,7 @@ function ly.file_musicxml(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.xml')
-    options = ly.set_local_options(options)
+    options = optlib.set_local_options(OPTIONS, options)
     if not file then err("File %s doesn't exist.", input_file) end
     local xmlopts = ''
     for _, opt in pairs(MXML_OPTIONS) do
@@ -1323,7 +1323,7 @@ end
 
 
 function ly.fragment(ly_code, options)
-    options = ly.set_local_options(options)
+    options = optlib.set_local_options(OPTIONS, options)
     if type(ly_code) == 'string' then
         ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     else ly_code = table.concat(ly_code, '\n')
@@ -1378,27 +1378,6 @@ end
   end
   if ly.score.sffamily == '' then ly.score.sffamily = ly.get_font_family(sf) end
   if ly.score.ttfamily == '' then ly.score.ttfamily = ly.get_font_family(tt) end
-end
-
-function ly.set_local_options(opts)
-    local options = {}
-    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
-    for opt in next_opt do
-        local k, v = opt:match('([^=]+)=?(.*)')
-        if k then
-            if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
-                while v:sub(-1) ~= '}' do v = v..','..next_opt() end
-                v = v:sub(2, -2)  -- remove { }
-            end
-            k, v = optlib.sanitize_option(OPTIONS, k:gsub('^%s', ''), v:gsub('^%s', ''))
-            if k then
-                if options[k] then err('Option %s is set two times for the same score.', k)
-                else options[k] = v
-                end
-            end
-        end
-    end
-    return options
 end
 
 function ly.set_property(k, v)
