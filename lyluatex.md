@@ -321,16 +321,19 @@ paragraph and a variable skip depending on the staffsize.
 
 \lyIssue{Note:}
 \option{insert=systems} implies the use of `lilypond-book-preamble.ly`.
-It is worth pointing out that this will *not* have any notion of pages
+It is worth pointing out that the score will *not* have any notion of pages
 anymore - resulting in the staff-staff spacing to be minimal/natural.
 Usually LilyPond will space out the inter-staff (not -system!) space
 when the page is not filled, but with \option{insert=systems}
 this will not happen.
 While this behavior is usually desirable when including score examples
-in text it may result in suboptimal output for multi-page scores when there's
+in text, it may result in suboptimal output for multi-page scores, when there's
 the typical issues of how many systems will fit on a page.
+
 Also notice that by default pages will be ragged-bottom,
-which can be avoided by defining \cmd{betweenLilyPondSystem} to somehow use `\vfill`.
+and LilyPond will not make any efforts to optimize page breaks.
+\cmd{betweenLilyPondSystem} (see below) can also be used when the space
+between systems seems too tight, for example using something like `\vfill`.
 
 \lyCmd{betweenLilyPondSystem}
 However, if a macro \cmd{betweenLilyPondSystem} is defined it will be expanded
