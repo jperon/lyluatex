@@ -626,13 +626,14 @@ end
 
 function Score:check_properties()
     local unexpected = false
-    for k, _ in lib.orderedpairs(OPTIONS) do
+    local options = optlib.get_options('ly')
+    for k, _ in lib.orderedpairs(options) do
         if self[k] == 'default' then
-            self[k] = OPTIONS[k][1] or nil
+            self[k] = options[k][1] or nil
             unexpected = not self[k]
         end
-        if not lib.contains(OPTIONS[k], self[k]) and OPTIONS[k][2] then
-            if type(OPTIONS[k][2]) == 'function' then OPTIONS[k][2](k, self[k])
+        if not lib.contains(options[k], self[k]) and options[k][2] then
+            if type(options[k][2]) == 'function' then options[k][2](k, self[k])
             else unexpected = true
             end
         end
@@ -641,7 +642,7 @@ function Score:check_properties()
 Unexpected value "%s" for option %s:
 authorized values are "%s"
 ]],
-                self[k], k, table.concat(OPTIONS[k], ', ')
+                self[k], k, table.concat(options[k], ', ')
             )
         end
     end
@@ -1047,7 +1048,7 @@ end
 
 function Score:output_filename()
     local properties = ''
-    for k, _ in lib.orderedpairs(OPTIONS) do
+    for k, _ in lib.orderedpairs(optlib.get_options('ly')) do
         if (not lib.contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'\n'..k..'\t'..self[k]
         end
@@ -1265,12 +1266,6 @@ Transcript written on %s.log.
 end
 
 
-function ly.declare_package_options(options)
-    OPTIONS = options
-    optlib.declare_package_options(options, 'ly')
-end
-
-
 function ly.make_list_file()
     local tmpdir = ly.get_option('tmpdir')
     lib.mkdirs(tmpdir)
@@ -1282,7 +1277,7 @@ function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.ly')
-    options = optlib.set_local_options(OPTIONS, options)
+    options = optlib.check_local_options('ly', options)
     if not file then err("File %s doesn't exist.", input_file) end
     local i = io.open(file, 'r')
     ly.score = Score:new(i:read('*a'), options, file)
@@ -1294,7 +1289,7 @@ function ly.file_musicxml(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.xml')
-    options = optlib.set_local_options(OPTIONS, options)
+    options = optlib.check_local_options('ly', options)
     if not file then err("File %s doesn't exist.", input_file) end
     local xmlopts = ''
     for _, opt in pairs(MXML_OPTIONS) do
@@ -1323,7 +1318,7 @@ end
 
 
 function ly.fragment(ly_code, options)
-    options = optlib.set_local_options(OPTIONS, options)
+    options = optlib.check_local_options('ly', options)
     if type(ly_code) == 'string' then
         ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     else ly_code = table.concat(ly_code, '\n')
@@ -1351,7 +1346,7 @@ end
 
 
 function ly.is_neg(k, _)
-    return optlib.is_neg(OPTIONS, k)
+    return optlib.is_neg('ly', k)
 end
 
 
@@ -1381,7 +1376,7 @@ end
 end
 
 function ly.set_property(k, v)
-    k, v = optlib.sanitize_option(OPTIONS, k, v)
+    k, v = optlib.sanitize_option('ly', k, v)
     if k then Score[k] = v end
 end
 

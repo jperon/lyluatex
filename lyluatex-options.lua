@@ -9,9 +9,6 @@ local err, warn, info, log = luatexbase.provides_module({
     license            = "MIT",
 })
 
-local optlib = {}
-local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
-
 --[[
     This module provides functionality to handle package options and make them
     configurable in a fine-grained fashion as
@@ -21,18 +18,24 @@ local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
 
 -- ]]
 
-function optlib.declare_package_options(options, prefix)
+local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
+local optlib = {}  -- namespece for the returned table
+local OPTIONS = {} -- store global options of any module using this
+
+function optlib.declare_package_options(prefix, options)
 --[[
     Declare package options along with their default and
     accepted values. To *some* extent also provide type checking.
-    - options: a definition table stored in the calling module (see below)
     - prefix: the prefix/name by which the calling Lua module is referenced
-      in the parent LaTeX document (preamble or package)
+      in the parent LaTeX document (preamble or package). (Also used as the
+      key in the OPTIONS table.)
+    - options: a definition table stored in the calling module (see below)
 
     Each entry in the 'options' table represents one package option, with each
     value being an array (table with integer indexes instead of keys). For
     details please refer to the manual.
 --]]
+    OPTIONS[prefix] = options
     local exopt = ''
     for k, v in pairs(options) do
         tex.sprint(string.format([[
@@ -45,6 +48,15 @@ function optlib.declare_package_options(options, prefix)
         exopt = exopt..k..'='..(v[1] or '')..','
     end
     tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
+end
+
+
+function optlib.get_options(prefix)
+--[[
+    Return the table with global package options for the given prefix,
+    or nil if that hasn't been stored.
+--]]
+    return OPTIONS[prefix]
 end
 
 
@@ -82,23 +94,28 @@ or a (multiplied) TeX length (".8\linewidth")
 end
 
 
-function optlib.is_neg(options, k)
+function optlib.is_neg(prefix, k)
 --[[
     Type check for a 'negative' option. This is an existing option
     name prefixed with 'no' (e.g. 'noalign')
 --]]
+
+    local options = OPTIONS[prefix]
+    if not options then err('No module registered with prefix '..prefix) end
     local _, i = k:find('^no')
     return i and lib.contains_key(options, k:sub(i + 1))
 end
 
 
-function optlib.sanitize_option(options, k, v)
+function optlib.sanitize_option(prefix, k, v)
 --[[
     Check and (if necessary) adjust the value of a given option.
     Reject undefined options
     Check 'negative' options
     Handle boolean options (empty strings or 'false'), set them to real booleans
 --]]
+    options = OPTIONS[prefix]
+    if not options then err('No module registered with prefix '..prefix) end
     if k == '' or k == 'noarg' then return end
     if not lib.contains_key(options, k) then err('Unknown option: '..k) end
     -- aliases
@@ -109,7 +126,7 @@ function optlib.sanitize_option(options, k, v)
     -- boolean
     if v == 'false' then v = false end
     -- negation (for example, noindent is the negation of indent)
-    if optlib.is_neg(options, k) then
+    if optlib.is_neg(prefix, k) then
         if v ~= nil and v ~= 'default' then
             k = k:gsub('^no(.*)', '%1')
             v = not v
@@ -120,16 +137,14 @@ function optlib.sanitize_option(options, k, v)
 end
 
 
-function optlib.set_local_options(global_opts, local_opts)
+function optlib.check_local_options(prefix, opts)
 --[[
-    Parse the given local_opts (options passed to a command/environment),
-    sanitize them and merge them into the global_opts, so local
-    options supersede global ones without changing them.
-    Return a table with the effective options to be used for the given
-    element.
+    Parse the given options (options passed to a command/environment),
+    sanitize them against the global package options and return a table
+    with the local options that should then supersede the global options.
 --]]
     local options = {}
-    local next_opt = local_opts:gmatch('([^,]+)')  -- iterator over options
+    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
     for opt in next_opt do
         local k, v = opt:match('([^=]+)=?(.*)')
         if k then
@@ -137,7 +152,7 @@ function optlib.set_local_options(global_opts, local_opts)
                 while v:sub(-1) ~= '}' do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
-            k, v = optlib.sanitize_option(global_opts, k:gsub('^%s', ''), v:gsub('^%s', ''))
+            k, v = optlib.sanitize_option(prefix, k:gsub('^%s', ''), v:gsub('^%s', ''))
             if k then
                 if options[k] then err('Option %s is set two times for the same score.', k)
                 else options[k] = v

@@ -44,7 +44,9 @@
 \catcode`-=11
 \directlua{
   ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")
-  ly.declare_package_options({
+  opt = require(
+      kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua")
+  opt.declare_package_options('ly', {
     ['addversion'] = {'false', 'true', ''},
     ['autoindent'] = {'true', 'false', ''},
     ['cleantmp'] = {'false', 'true', ''},
