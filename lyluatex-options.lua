@@ -12,12 +12,27 @@ local err, warn, info, log = luatexbase.provides_module({
 local optlib = {}
 local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
 
------------------------------------------------------------
--- Functionality for handling package and local options
--- An options table has to be stored in the calling module
--- and passed into the functions.
+--[[
+    This module provides functionality to handle package options and make them
+    configurable in a fine-grained fashion as
+    - package options
+    - local options (for individual instances of commands/environments)
+    - changed “from here on” within a document.
 
-function optlib.declare_package_options(options, obj_name)
+-- ]]
+
+function optlib.declare_package_options(options, prefix)
+--[[
+    Declare package options along with their default and
+    accepted values. To *some* extent also provide type checking.
+    - options: a definition table stored in the calling module (see below)
+    - prefix: the prefix/name by which the calling Lua module is referenced
+      in the parent LaTeX document (preamble or package)
+
+    Each entry in the 'options' table represents one package option, with each
+    value being an array (table with integer indexes instead of keys). For
+    details please refer to the manual.
+--]]
     local exopt = ''
     for k, v in pairs(options) do
         tex.sprint(string.format([[
@@ -25,7 +40,7 @@ function optlib.declare_package_options(options, obj_name)
   %s.set_property('%s', '\luatexluaescapestring{#1}')
 }}%%
 ]],
-            k, obj_name, k
+            k, prefix, k
         ))
         exopt = exopt..k..'='..(v[1] or '')..','
     end
@@ -33,10 +48,23 @@ function optlib.declare_package_options(options, obj_name)
 end
 
 
-function optlib.is_alias() end
+function optlib.is_alias()
+--[[
+    Handling noop 'alias' options, for example to provide compatibility
+    options. TODO: I don't really know how that works internally.
+--]]
+end
 
 
 function optlib.is_dim(k, v)
+--[[
+    Type checking for options that accept a LaTeX dimension.
+    This can be
+    - a number (integer or float)
+    - a number with unit
+    - a (multiplied) TeX length
+    (see error message in code for examples)
+--]]
     if v == '' or v == false or tonumber(v) then return true end
     local n, sl, u = v:match('^%d*%.?%d*'), v:match('\\'), v:match('%a+')
     -- a value of number - backslash - length is a dimension
@@ -55,12 +83,22 @@ end
 
 
 function optlib.is_neg(options, k)
+--[[
+    Type check for a 'negative' option. This is an existing option
+    name prefixed with 'no' (e.g. 'noalign')
+--]]
     local _, i = k:find('^no')
     return i and lib.contains_key(options, k:sub(i + 1))
 end
 
 
 function optlib.sanitize_option(options, k, v)
+--[[
+    Check and (if necessary) adjust the value of a given option.
+    Reject undefined options
+    Check 'negative' options
+    Handle boolean options (empty strings or 'false'), set them to real booleans
+--]]
     if k == '' or k == 'noarg' then return end
     if not lib.contains_key(options, k) then err('Unknown option: '..k) end
     -- aliases
