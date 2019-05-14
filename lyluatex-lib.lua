@@ -13,8 +13,14 @@ local lib = {}
 lib.TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp', 'em',
 'ex'}
 
+-------------------------
+-- General tool functions
 
 function lib.contains(table_var, value)
+--[[
+  Returns the key if the given table contains the given value, or nil.
+  A value of 'false' (string) is considered equal to false (Boolean).
+--]]
     for k, v in pairs(table_var) do
         if v == value then return k
         elseif v == 'false' and value == false then return k
@@ -24,6 +30,7 @@ end
 
 
 function lib.contains_key(table_var, key)
+-- Returs true if the given key is present in the table, nil otherwise.
     for k in pairs(table_var) do
         if k == key then return true end
     end
@@ -31,6 +38,10 @@ end
 
 
 function lib.convert_unit(value)
+--[[
+  Convert a LaTeX unit, if possible.
+  TODO: Understand what this *really* does, what is accepted and returned.
+--]]
     if not value then return 0
     elseif value == '' then return false
     elseif value:match('\\') then
@@ -41,6 +52,29 @@ function lib.convert_unit(value)
     end
 end
 
+
+function lib.dirname(str)
+--[[
+  Return the left part of a string up to and including the last slash.
+  If no slash is present (no path components) return an empty string
+--]]
+    return str:gsub("(.*/)(.*)", "%1") or ''
+end
+
+
+local fontdata = fonts.hashes.identifiers
+function lib.fontinfo(id) 
+--[[
+  Return a LuaTeX font object based on the given ID
+--]]
+    return fontdata[id] or font.fonts[id]
+end
+
+
+-----------------------------------------------------------
+-- Functionality for handling package and local options
+-- An options table has to be stored in the calling module
+-- and passed into the functions.
 
 function lib.declare_package_options(options, obj_name)
     local exopt = ''
@@ -56,13 +90,6 @@ function lib.declare_package_options(options, obj_name)
     end
     tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
 end
-
-
-function lib.dirname(str) return str:gsub("(.*/)(.*)", "%1") or '' end
-
-
-local fontdata = fonts.hashes.identifiers
-function lib.fontinfo(id) return fontdata[id] or font.fonts[id] end
 
 
 function lib.is_alias() end
