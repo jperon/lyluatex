@@ -1390,7 +1390,7 @@ function ly.set_local_options(opts)
                 while v:sub(-1) ~= '}' do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
-            k, v = optlib.process_options(OPTIONS, k:gsub('^%s', ''), v:gsub('^%s', ''))
+            k, v = optlib.sanitize_option(OPTIONS, k:gsub('^%s', ''), v:gsub('^%s', ''))
             if k then
                 if options[k] then err('Option %s is set two times for the same score.', k)
                 else options[k] = v
@@ -1402,7 +1402,7 @@ function ly.set_local_options(opts)
 end
 
 function ly.set_property(k, v)
-    k, v = optlib.process_options(OPTIONS, k, v)
+    k, v = optlib.sanitize_option(OPTIONS, k, v)
     if k then Score[k] = v end
 end
 

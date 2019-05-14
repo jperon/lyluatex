@@ -60,7 +60,7 @@ function optlib.is_neg(options, k)
 end
 
 
-function optlib.process_options(options, k, v)
+function optlib.sanitize_option(options, k, v)
     if k == '' or k == 'noarg' then return end
     if not lib.contains_key(options, k) then err('Unknown option: '..k) end
     -- aliases
