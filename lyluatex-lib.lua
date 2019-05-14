@@ -63,59 +63,11 @@ end
 
 
 local fontdata = fonts.hashes.identifiers
-function lib.fontinfo(id) 
+function lib.fontinfo(id)
 --[[
   Return a LuaTeX font object based on the given ID
 --]]
     return fontdata[id] or font.fonts[id]
-end
-
-
------------------------------------------------------------
--- Functionality for handling package and local options
--- An options table has to be stored in the calling module
--- and passed into the functions.
-
-function lib.declare_package_options(options, obj_name)
-    local exopt = ''
-    for k, v in pairs(options) do
-        tex.sprint(string.format([[
-\DeclareOptionX{%s}{\directlua{
-  %s.set_property('%s', '\luatexluaescapestring{#1}')
-}}%%
-]],
-            k, obj_name, k
-        ))
-        exopt = exopt..k..'='..(v[1] or '')..','
-    end
-    tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
-end
-
-
-function lib.is_alias() end
-
-
-function lib.is_dim(k, v)
-    if v == '' or v == false or tonumber(v) then return true end
-    local n, sl, u = v:match('^%d*%.?%d*'), v:match('\\'), v:match('%a+')
-    -- a value of number - backslash - length is a dimension
-    -- invalid input will be prevented in by the LaTeX parser already
-    if n and sl and u then return true end
-    if n and lib.contains(lib.TEX_UNITS, u) then return true end
-    err([[
-Unexpected value "%s" for dimension %s:
-should be either a number (for example "12"),
-a number with unit, without space ("12pt"),
-or a (multiplied) TeX length (".8\linewidth")
-]],
-        v, k
-    )
-end
-
-
-function lib.is_neg(options, k)
-    local _, i = k:find('^no')
-    return i and lib.contains_key(options, k:sub(i + 1))
 end
 
 
@@ -155,58 +107,6 @@ function lib.orderedpairs(t)
 end
 
 
-function lib.process_options(options, k, v)
-    if k == '' or k == 'noarg' then return end
-    if not lib.contains_key(options, k) then err('Unknown option: '..k) end
-    -- aliases
-    if options[k] and options[k][2] == lib.is_alias then
-        if options[k][1] == v then return
-        else k = options[k][1]
-        end
-    end
-    -- boolean
-    if v == 'false' then v = false end
-    -- negation (for example, noindent is the negation of indent)
-    if lib.is_neg(options, k) then
-        if v ~= nil and v ~= 'default' then
-            k = k:gsub('^no(.*)', '%1')
-            v = not v
-        else return
-        end
-    end
-    return k, v
-end
-
-
-function lib.range_parse(range, nsystems)
-    local num = tonumber(range)
-    if num then return {num} end
-    -- if nsystems is set, we have insert=systems
-    if nsystems ~= 0 and range:sub(-1) == '-' then range = range..nsystems end
-    if not (range == '' or range:match('^%d+%s*-%s*%d*$')) then
-        warn([[
-Invalid value '%s' for item
-in list of page ranges. Possible entries:
-- Single number
-- Range (M-N, N-M or N-)
-This item will be skipped!
-]],
-            range
-        )
-        return
-    end
-    local result = {}
-    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
-    if to then
-        local dir
-        if from <= to then dir = 1 else dir = -1 end
-        for i = from, to, dir do table.insert(result, i) end
-        return result
-    else return {range}  -- N- with insert=fullpage
-    end
-end
-
-
 function lib.readlinematching(s, f)
     if f then
         local result = ''
@@ -220,6 +120,5 @@ end
 function lib.splitext(str, ext)
   return str:match('(.*)%.'..ext..'$') or str
 end
-
 
 return lib

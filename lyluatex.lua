@@ -10,6 +10,9 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
+local optlib = require(
+  kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua")
+
 
 local md5 = require 'md5'
 local lfs = require 'lfs'
@@ -147,6 +150,35 @@ local function locate(file, includepaths, ext)
     if not lfs.isfile(result) and ext and file:match('%.[^%.]+$') ~= ext then return locate(file..ext, includepaths) end
     if not lfs.isfile(result) then result = kpse.find_file(file) end
     return result
+end
+
+
+local function range_parse(range, nsystems)
+    local num = tonumber(range)
+    if num then return {num} end
+    -- if nsystems is set, we have insert=systems
+    if nsystems ~= 0 and range:sub(-1) == '-' then range = range..nsystems end
+    if not (range == '' or range:match('^%d+%s*-%s*%d*$')) then
+        warn([[
+Invalid value '%s' for item
+in list of page ranges. Possible entries:
+- Single number
+- Range (M-N, N-M or N-)
+This item will be skipped!
+]],
+            range
+        )
+        return
+    end
+    local result = {}
+    local from, to = tonumber(range:match('^%d+')), tonumber(range:match('%d+$'))
+    if to then
+        local dir
+        if from <= to then dir = 1 else dir = -1 end
+        for i = from, to, dir do table.insert(result, i) end
+        return result
+    else return {range}  -- N- with insert=fullpage
+    end
 end
 
 
@@ -422,7 +454,7 @@ function Score:calc_range()
     local result = tonumber(printonly) and {tonumber(printonly)} or {}
     if not result[1] then
         for _, r in pairs(printonly:explode(',')) do
-            local range = lib.range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+            local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
             if range then
                 for _, v in pairs(range) do table.insert(result, v) end
             end
@@ -431,7 +463,7 @@ function Score:calc_range()
     local rm_result = tonumber(donotprint) and {tonumber(donotprint)} or {}
     if not rm_result[1] then
         for _, r in pairs(donotprint:explode(',')) do
-            local range = lib.range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+            local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
             if range then
                 for _, v in pairs(range) do table.insert(rm_result, v) end
             end
@@ -1235,7 +1267,7 @@ end
 
 function ly.declare_package_options(options)
     OPTIONS = options
-    lib.declare_package_options(options, 'ly')
+    optlib.declare_package_options(options, 'ly')
 end
 
 
@@ -1309,17 +1341,17 @@ function ly.get_option(opt) return Score[opt] end
 
 
 function ly.is_alias()
-    return lib.is_alias()
+    return optlib.is_alias()
 end
 
 
 function ly.is_dim(k, v)
-    lib.is_dim(k, v)
+    optlib.is_dim(k, v)
 end
 
 
 function ly.is_neg(k, _)
-    return lib.is_neg(OPTIONS, k)
+    return optlib.is_neg(OPTIONS, k)
 end
 
 
@@ -1358,7 +1390,7 @@ function ly.set_local_options(opts)
                 while v:sub(-1) ~= '}' do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
-            k, v = lib.process_options(OPTIONS, k:gsub('^%s', ''), v:gsub('^%s', ''))
+            k, v = optlib.process_options(OPTIONS, k:gsub('^%s', ''), v:gsub('^%s', ''))
             if k then
                 if options[k] then err('Option %s is set two times for the same score.', k)
                 else options[k] = v
@@ -1370,7 +1402,7 @@ function ly.set_local_options(opts)
 end
 
 function ly.set_property(k, v)
-    k, v = lib.process_options(OPTIONS, k, v)
+    k, v = optlib.process_options(OPTIONS, k, v)
     if k then Score[k] = v end
 end
 
