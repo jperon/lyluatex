@@ -128,8 +128,8 @@
     ['verbose'] = {'false', 'true', ''},
     ['xml2ly'] = {'musicxml2ly'},
   })
-  ly.attach_Score_table()
 }
+\directlua{ly.attach_Score_table()}
 \directlua{ly.make_list_file()}
 \directlua{
   if opt.get_option('ly', 'cleantmp') then
