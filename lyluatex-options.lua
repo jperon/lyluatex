@@ -183,6 +183,14 @@ function optlib.is_num(_, _, v)
 end
 
 
+function optlib.is_str(_, _, v)
+--[[
+    Type check for string options
+--]]
+    return type(v) == 'string'
+end
+
+
 function optlib.sanitize_option(prefix, k, v)
 --[[
     Check and (if necessary) adjust the value of a given option.
