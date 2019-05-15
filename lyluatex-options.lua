@@ -221,38 +221,54 @@ function optlib.set_option(prefix, k, v)
     sanitize_option).
 --]]
     k, v = optlib.sanitize_option(prefix, k, v)
-    if k then optlib.get_options(prefix)[k] = v end
+    if k then
+        optlib.get_options(prefix)[k] = v
+        optlib.validate_option(prefix, k)
+    end
 end
 
 
-function optlib.validate_options(prefix, options)
+function optlib.validate_option(prefix, key, options_obj)
+--[[
+    Validate an (already sanitized) option against its expected values.
+    With options_obj a local options table can be provided,
+    otherwise the global options stored in OPTIONS are checked.
+--]]
+    local package_opts = optlib.get_declarations(prefix)
+    local options = options_obj or optlib.get_options(prefix)
+
+    if options[key] == 'default' then
+        -- Replace 'default' with an actual value
+        options[key] = package_opts[key][1] or nil
+        unexpected = not options[key]
+    end
+    if not lib.contains(package_opts[key], options[key]) and package_opts[key][2] then
+        -- option value is not in the array of accepted values
+        if type(package_opts[key][2]) == 'function' then package_opts[key][2](prefix, key, options[key])
+        else unexpected = true
+        end
+    end
+    if unexpected then
+        err([[
+  Unexpected value "%s" for option %s:
+  authorized values are "%s"
+  ]],
+            options[key], key, table.concat(package_opts[key], ', ')
+        )
+    end
+end
+
+
+function optlib.validate_options(prefix, options_obj)
 --[[
     Validate the given set of options against the option declaration
     table for the given prefix.
+    With options_obj a local options table can be provided,
+    otherwise the global options stored in OPTIONS are checked.
 --]]
-    local unexpected = false
     local package_opts = optlib.get_declarations(prefix)
-    if not package_opts then err('No module registered with prefix '..prefix) end
     for k, _ in lib.orderedpairs(package_opts) do
-        if options[k] == 'default' then
-            -- Replace 'default' with an actual value
-            options[k] = package_opts[k][1] or nil
-            unexpected = not options[k]
-        end
-        if not lib.contains(package_opts[k], options[k]) and package_opts[k][2] then
-            -- option value is not in the array of accepted values
-            if type(package_opts[k][2]) == 'function' then package_opts[k][2](prefix, k, options[k])
-            else unexpected = true
-            end
-        end
-        if unexpected then
-            err([[
-    Unexpected value "%s" for option %s:
-    authorized values are "%s"
-    ]],
-                options[k], k, table.concat(package_opts[k], ', ')
-            )
-        end
+        optlib.validate_option(prefix, k, options_obj)
     end
 end
 
