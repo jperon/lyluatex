@@ -105,6 +105,9 @@ local function debug(...)
 end
 
 
+local function basename(str) return str:gsub(".*/(.*)", "%1") or '' end
+
+
 local function contains(table_var, value)
     for k, v in pairs(table_var) do
         if v == value then return k
@@ -133,7 +136,7 @@ local function convert_unit(value)
 end
 
 
-local function dirname(str) return str:gsub("(.*/)(.*)", "%1") or '' end
+local function dirname(str) return str:gsub("(.*/).*", "%1") or '' end
 
 
 local function extract_includepaths(includepaths)
@@ -183,9 +186,9 @@ end
 
 
 local function mkdirs(str)
-    local path = '.'
+    local path = str:sub(1, 1) == '/' and '/' or ''
     for dir in str:gmatch('([^%/]+)') do
-        path = path .. '/' .. dir
+        path = (path:len() > 0 and (path .. '/') or '') .. dir
         lfs.mkdir(path)
     end
 end
@@ -863,12 +866,14 @@ function Score:header()
     for element in LY_HEAD:gmatch('<<<(%w+)>>>') do
         header = header:gsub('<<<'..element..'>>>', self['ly_'..element](self) or '')
     end
-    if self['write-headers'] then
+    local wh_dest = self['write-headers']
+    if wh_dest then
+        mkdirs(wh_dest)
         local saved_headers = header
                                     :gsub([[%\include "lilypond%-book%-preamble.ly"]], '')
                                     :gsub([[%#%(define inside%-lyluatex %#t%)]], '')
                                     :gsub('\n+', '\n')
-        local f = io.open(self.output.."-headers.ly", 'w')
+        local f = io.open(wh_dest..'/'..splitext(basename(self.input_file), 'ly').."-lyluatex-headers.ily", 'w')
         f:write(saved_headers)
         f:close()
     end
