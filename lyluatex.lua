@@ -9,6 +9,8 @@ local err, warn, info, log = luatexbase.provides_module({
     license            = "MIT",
 })
 
+local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
+
 local md5 = require 'md5'
 local lfs = require 'lfs'
 
@@ -19,8 +21,8 @@ local ly = {
 }
 local Score = {}
 
-local FILELIST
 local OPTIONS = {}
+local FILELIST
 local DIM_OPTIONS = {
     'extra-bottom-margin',
     'extra-top-margin',
@@ -60,7 +62,6 @@ local MXML_OPTIONS = {
     'verbose',
 }
 local TEXINFO_OPTIONS = {'doctitle', 'nogettext', 'texidoc'}
-local TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp', 'em', 'ex'}
 local LY_HEAD = [[
 %%File header
 \version "<<<version>>>"
@@ -87,6 +88,7 @@ local LY_HEAD = [[
     <<<staffprops>>>
     <<<fixbadlycroppedstaffgroupbrackets>>>
 }
+<<<header>>>
 
 %%Follows original score
 ]]
@@ -105,40 +107,6 @@ local function debug(...)
 end
 
 
-local function basename(str) return str:gsub(".*/(.*)", "%1") or '' end
-
-
-local function contains(table_var, value)
-    for k, v in pairs(table_var) do
-        if v == value then return k
-        elseif v == 'false' and value == false then return k
-        end
-    end
-end
-
-
-local function contains_key(table_var, key)
-    for k in pairs(table_var) do
-        if k == key then return true end
-    end
-end
-
-
-local function convert_unit(value)
-    if not value then return 0
-    elseif value == '' then return false
-    elseif value:match('\\') then
-        local n, u = value:match('^%d*%.?%d*'), value:match('%a+')
-        if n == '' then n = 1 end
-        return tonumber(n) * tex.dimen[u] / tex.sp("1pt")
-    else return ('%f'):format(tonumber(value) or tex.sp(value) / tex.sp("1pt"))
-    end
-end
-
-
-local function dirname(str) return str:gsub("(.*/).*", "%1") or '' end
-
-
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
     local cfd = Score.currfiledir:gsub('^$', './')
@@ -151,12 +119,21 @@ local function extract_includepaths(includepaths)
 end
 
 
-local fontdata = fonts.hashes.identifiers
-local function fontinfo(id) return fontdata[id] or font.fonts[id] end
-
-
 local function font_default_staffsize()
-    return fontinfo(font.current()).size/39321.6
+    return lib.fontinfo(font.current()).size/39321.6
+end
+
+
+local function includes_parse(list)
+    local includes = ''
+    if list then
+        list = list:explode(',')
+        for _, included_file in ipairs(list) do
+            warn(included_file)
+            includes = includes .. '\\include "'..included_file..'.ly"\n'
+        end
+    end
+    return includes
 end
 
 
@@ -207,28 +184,6 @@ local function orderedpairs(t)
         end
 end
 
-
-local function process_options(k, v)
-    if k == '' or k == 'noarg' then return end
-    if not contains_key(OPTIONS, k) then err('Unknown option: '..k) end
-    -- aliases
-    if OPTIONS[k] and OPTIONS[k][2] == ly.is_alias then
-        if OPTIONS[k][1] == v then return
-        else k = OPTIONS[k][1]
-        end
-    end
-    -- boolean
-    if v == 'false' then v = false end
-    -- negation (for example, noindent is the negation of indent)
-    if ly.is_neg(k) then
-        if v ~= nil and v ~= 'default' then
-            k = k:gsub('^no(.*)', '%1')
-            v = not v
-        else return
-        end
-    end
-    return k, v
-end
 
 
 local function range_parse(range, nsystems)
@@ -285,9 +240,6 @@ local function set_lyscore(score)
 end
 
 
-local function splitext(str, ext) return str:match('(.*)%.'..ext..'$') or str end
-
-
 --[[ ================ Bounding box calculations =========================== --]]
 
 local bbox = {}
@@ -297,13 +249,13 @@ end
 
 function bbox.calc(x_1, x_2, y_1, y_2, line_width)
     local bb = {
-        ['protrusion'] = -convert_unit(("%fbp"):format(x_1)),
-        ['r_protrusion'] = convert_unit(("%fbp"):format(x_2)) - line_width,
-        ['width'] = convert_unit(("%fbp"):format(x_2))
+        ['protrusion'] = -lib.convert_unit(("%fbp"):format(x_1)),
+        ['r_protrusion'] = lib.convert_unit(("%fbp"):format(x_2)) - line_width,
+        ['width'] = lib.convert_unit(("%fbp"):format(x_2))
     }
     --FIX #192: height is only calculated if really needed, to prevent errors with huge scores.
     function bb.__index(_, k)
-        if k == 'height' then return convert_unit(("%fbp"):format(y_2)) - convert_unit(("%fbp"):format(y_1)) end
+        if k == 'height' then return lib.convert_unit(("%fbp"):format(y_2)) - lib.convert_unit(("%fbp"):format(y_1)) end
     end
     setmetatable(bb, bb)
     return bb
@@ -311,11 +263,11 @@ end
 
 function bbox.parse(filename, line_width)
     -- get BoundingBox from EPS file
-    local bbline = readlinematching('^%%%%BoundingBox', io.open(filename..'.eps', 'r'))
+    local bbline = lib.readlinematching('^%%%%BoundingBox', io.open(filename..'.eps', 'r'))
     if not bbline then return end
     local x_1, y_1, x_2, y_2 = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
     -- try to get HiResBoundingBox from PDF (if 'gs' works)
-    bbline = readlinematching(
+    bbline = lib.readlinematching(
         '^%%%%HiResBoundingBox',
         io.popen('gs -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..filename..'.pdf 2>&1', 'r')
     )
@@ -373,8 +325,8 @@ end
 function latex.includeinline(pdfname, height, valign, hpadding, voffset)
     local v_base
     if valign == 'bottom' then v_base = 0
-    elseif valign == 'top' then v_base = convert_unit('1em') - height
-    else v_base = (convert_unit('1em') - height) / 2
+    elseif valign == 'top' then v_base = lib.convert_unit('1em') - height
+    else v_base = (lib.convert_unit('1em') - height) / 2
     end
     tex.sprint(
         string.format(
@@ -478,6 +430,10 @@ end
 
 function Score:calc_properties()
     self:calc_staff_properties()
+    -- add includes to lilypond code
+    self.ly_code = includes_parse(self.include_before_body)
+        .. self.ly_code
+        .. includes_parse(self.include_after_body)
     -- fragment and relative
     if self.relative and not self.fragment then
         -- local option takes precedence over global option
@@ -509,7 +465,7 @@ function Score:calc_properties()
     end
     -- dimensions that can be given by LaTeX
     for _, dimension in pairs(DIM_OPTIONS) do
-        self[dimension] = convert_unit(self[dimension])
+        self[dimension] = lib.convert_unit(self[dimension])
     end
     self['max-left-protrusion'] = self['max-left-protrusion'] or self['max-protrusion']
     self['max-right-protrusion'] = self['max-right-protrusion'] or self['max-protrusion']
@@ -541,7 +497,7 @@ function Score:calc_range()
     local result = tonumber(printonly) and {tonumber(printonly)} or {}
     if not result[1] then
         for _, r in pairs(printonly:explode(',')) do
-            local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+            local range = lib.range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
             if range then
                 for _, v in pairs(range) do table.insert(result, v) end
             end
@@ -550,14 +506,14 @@ function Score:calc_range()
     local rm_result = tonumber(donotprint) and {tonumber(donotprint)} or {}
     if not rm_result[1] then
         for _, r in pairs(donotprint:explode(',')) do
-            local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+            local range = lib.range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
             if range then
                 for _, v in pairs(range) do table.insert(rm_result, v) end
             end
         end
     end
     for _, v in pairs(rm_result) do
-        local k = contains(result, v)
+        local k = lib.contains(result, v)
         if k then table.remove(result, k) end
     end
     return result
@@ -663,7 +619,7 @@ function Score:check_indent(lp)
         if lp.shorten > 0 then
             if not self.indent or self.indent == 0 then
                 self.indent = lp.overflow_left
-                lp.shorten = max(lp.shorten - lp.overflow_left, 0)
+                lp.shorten = lib.max(lp.shorten - lp.overflow_left, 0)
             else
                 self.indent = max(self.indent - lp.overflow_left, 0)
             end
@@ -713,12 +669,12 @@ end
 
 function Score:check_properties()
     local unexpected = false
-    for k, _ in orderedpairs(OPTIONS) do
+    for k, _ in lib.orderedpairs(OPTIONS) do
         if self[k] == 'default' then
             self[k] = OPTIONS[k][1] or nil
             unexpected = not self[k]
         end
-        if not contains(OPTIONS[k], self[k]) and OPTIONS[k][2] then
+        if not lib.contains(OPTIONS[k], self[k]) and OPTIONS[k][2] then
             if type(OPTIONS[k][2]) == 'function' then OPTIONS[k][2](k, self[k])
             else unexpected = true
             end
@@ -762,10 +718,10 @@ function Score:check_protrusion(bbox_func)
     -- line_props lp
     local lp = {}
     -- Determine offset due to left protrusion
-    lp.overflow_left = max(bb.protrusion - math.floor(self['max-left-protrusion']), 0)
+    lp.overflow_left = lib.max(bb.protrusion - math.floor(self['max-left-protrusion']), 0)
     self.protrusion_left = lp.overflow_left - bb.protrusion
     -- Determine further line properties
-    lp.stave_extent = lp.overflow_left + min(self['line-width'], bb.width)
+    lp.stave_extent = lp.overflow_left + lib.min(self['line-width'], bb.width)
     lp.available = self.original_lw + self['max-right-protrusion']
     lp.total_extent = lp.stave_extent + bb.r_protrusion
     -- Check if stafflines protrude into the right margin after offsetting
@@ -774,7 +730,7 @@ function Score:check_protrusion(bbox_func)
     -- present
     lp.stave_overflow_right = max(lp.stave_extent - self.original_lw, 0)
     -- Check if image as a whole protrudes over max-right-protrusion
-    lp.overflow_right = max(lp.total_extent - lp.available, 0)
+    lp.overflow_right = lib.max(lp.total_extent - lp.available, 0)
     lp.shorten = max(lp.stave_overflow_right, lp.overflow_right)
     lp.changed_indent = false
     self:check_indent(lp, bb)
@@ -801,6 +757,7 @@ end
 
 function Score:content()
     local n = ''
+    local ly_code = self.ly_code
     if self.relative then
         self.fragment = 'true'  -- in case it would serve later
         if self.relative < 0 then
@@ -808,9 +765,9 @@ function Score:content()
         elseif self.relative > 0 then
             for _ = 1, self.relative do n = n.."'" end
         end
-        return string.format([[\relative c%s {%s}]], n, self.ly_code)
-    elseif self.fragment then return [[{]]..self.ly_code..[[}]]
-    else return self.ly_code
+        return string.format([[\relative c%s {%s}]], n, ly_code)
+    elseif self.fragment then return [[{]]..ly_code..[[}]]
+    else return ly_code
     end
 end
 
@@ -849,8 +806,8 @@ function Score:flatten_content(ly_code)
     -- meddle with Lua's gsub escape character.
     ly_code = ly_code:gsub('%%', '#')
     local f
-    local includepaths = self.includepaths
-    if self.input_file then includepaths = self.includepaths..','..dirname(self.input_file) end
+    local includepaths = self.includepaths..','..self.tmpdir
+    if self.input_file then includepaths = self.includepaths..','..lib.dirname(self.input_file) end
     for iline in ly_code:gmatch('\\include%s*"[^"]*"') do
         f = io.open(locate(iline:match('\\include%s*"([^"]*)"'), includepaths, '.ly') or '')
         if f then
@@ -861,6 +818,10 @@ function Score:flatten_content(ly_code)
     return ly_code
 end
 
+function Score:footer()
+    return includes_parse(self.include_footer)
+end
+
 function Score:header()
     local header = LY_HEAD
     for element in LY_HEAD:gmatch('<<<(%w+)>>>') do
@@ -868,12 +829,12 @@ function Score:header()
     end
     local wh_dest = self['write-headers']
     if wh_dest then
-        mkdirs(wh_dest)
+        lib.mkdirs(wh_dest)
         local saved_headers = header
                                     :gsub([[%\include "lilypond%-book%-preamble.ly"]], '')
                                     :gsub([[%#%(define inside%-lyluatex %#t%)]], '')
                                     :gsub('\n+', '\n')
-        local f = io.open(wh_dest..'/'..splitext(basename(self.input_file), 'ly').."-lyluatex-headers.ily", 'w')
+        local f = io.open(wh_dest..'/'..lib.splitext(lib.basename(self.input_file), 'ly').."-lyluatex-headers.ily", 'w')
         f:write(saved_headers)
         f:close()
     end
@@ -902,7 +863,7 @@ function Score:lilypond_cmd(ly_code)
         "-dno-delete-intermediate-files "
     if self['optimize-pdf'] and self:lilypond_has_TeXGS() then cmd = cmd.."-O TeX-GS " end
     if self.input_file then
-        cmd = cmd..'-I "'..dirname(self.input_file):gsub('^%./', lfs.currentdir()..'/')..'" '
+        cmd = cmd..'-I "'..lib.dirname(self.input_file):gsub('^%./', lfs.currentdir()..'/')..'" '
     end
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
         cmd = cmd..'-I "'..dir:gsub('^%./', lfs.currentdir()..'/')..'" '
@@ -913,11 +874,11 @@ function Score:lilypond_cmd(ly_code)
 end
 
 function Score:lilypond_has_TeXGS()
-    return readlinematching('TeX%-GS', io.popen('"'..self.program..'" --help', 'r'))
+    return lib.readlinematching('TeX%-GS', io.popen('"'..self.program..'" --help', 'r'))
 end
 
 function Score:lilypond_version(number)
-    local result = readlinematching('GNU LilyPond', io.popen('"'..self.program..'" --version', 'r'))
+    local result = lib.readlinematching('GNU LilyPond', io.popen('"'..self.program..'" --version', 'r'))
     if result then
         if number then return result:match('%d+%.%d+%.?%d*')
         else
@@ -926,15 +887,8 @@ function Score:lilypond_version(number)
                 self.output, self.program
             )
             debug(result)
+            return true
         end
-    else
-        err([[
-LilyPond could not be started.
-Please check that LuaLaTeX is started with the
---shell-escape option, and that 'program'
-points to a valid LilyPond executable.
-]]
-        )
     end
 end
 
@@ -965,6 +919,10 @@ function Score:ly_fonts()
     end
 end
 
+function Score:ly_header()
+    return includes_parse(self.include_header)
+end
+
 function Score:ly_indent()
     if not (self.indent == false and self.insert == 'fullpage') then
         return [[indent = ]]..(self.indent or 0)..[[\pt]]
@@ -980,16 +938,11 @@ function Score:ly_linewidth() return self['line-width'] end
 function Score:ly_staffsize() return self.staffsize end
 
 function Score:ly_margins()
-
-    local function horizontal_margins()
-        if self.twoside then
-            return string.format([[
-inner-margin = %s\pt]], self:tex_margin_inner())
-        else
-            return string.format([[
-left-margin = %s\pt]], self:tex_margin_left())
-        end
-    end
+    local horizontal_margins =
+        self.twoside and string.format([[
+            inner-margin = %s\pt]], self:tex_margin_inner())
+        or string.format([[
+            left-margin = %s\pt]], self:tex_margin_left())
 
     local tex_top = self['extra-top-margin'] + self:tex_margin_top()
     local tex_bottom = self['extra-bottom-margin'] + self:tex_margin_bottom()
@@ -998,7 +951,7 @@ left-margin = %s\pt]], self:tex_margin_left())
     top-margin = %s\pt
     bottom-margin = %s\pt
     %s]],
-            tex_top, tex_bottom, horizontal_margins()
+            tex_top, tex_bottom, horizontal_margins
         )
     elseif self.fullpagealign == 'staffline' then
         local top_distance = 4 * tex_top / self.staffsize + 2
@@ -1023,7 +976,7 @@ left-margin = %s\pt]], self:tex_margin_left())
         (padding . 0)
         (stretchability . 0))
 ]],
-            horizontal_margins(),
+            horizontal_margins,
             top_distance,
             top_distance,
             top_distance,
@@ -1043,20 +996,33 @@ Given: %s
 end
 
 function Score:ly_paper()
+    local system_count =
+        self['system-count'] == 0 and ''
+        or 'system-count = '..self['system-count']..'\n    '
+
     local papersize = '#(set-paper-size "'..(self.papersize or 'lyluatexfmt')..'")'
     if self.insert == 'fullpage' then
         local first_page_number = self['first-page-number'] or tex.count['c@page']
         local pfpn = self['print-first-page-number'] and 't' or 'f'
         local ppn = self['print-page-number'] and 't' or 'f'
         return string.format([[
-%s
+%s%s
     print-page-number = ##%s
     print-first-page-number = ##%s
     first-page-number = %s
 %s]],
-            papersize, ppn, pfpn, first_page_number, self:ly_margins()
+          system_count, papersize, ppn, pfpn,
+          first_page_number, self:ly_margins()
 	    )
-    elseif self.papersize then return papersize
+    else
+        if self.papersize then
+            papersize = papersize..[[
+]]
+        else
+            papersize = ''
+        end
+
+        return string.format([[%s%s]], papersize, system_count)
     end
 end
 
@@ -1135,8 +1101,8 @@ end
 
 function Score:output_filename()
     local properties = ''
-    for k, _ in orderedpairs(OPTIONS) do
-        if (not contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
+    for k, _ in lib.orderedpairs(OPTIONS) do
+        if (not lib.contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'\n'..k..'\t'..self[k]
         end
     end
@@ -1152,12 +1118,32 @@ end
 function Score:process()
     self:check_properties()
     self:calc_properties()
+    if not self:lilypond_version() then
+        local warning = [[
+LilyPond could not be started.
+Please check that LuaLaTeX is started with the
+--shell-escape option, and that 'program'
+points to a valid LilyPond executable.
+]]
+        if self.showfailed then
+            warn(warning)
+            tex.sprint(string.format([[
+\begin{quote}
+\minibox[frame]{LilyPond could not be started.}
+\end{quote}
+
+]]))
+            return
+        else
+            err(warning)
+        end
+    end
     -- with bbox.read check_protrusion will only execute with
     -- a prior compilation, otherwise it will be ignored
     local do_compile = not self:check_protrusion(bbox.read)
     if self['force-compilation'] or do_compile then
         repeat
-            self:run_lilypond(self:header()..self:content())
+            self:run_lilypond(self:header()..self:content()..self:footer())
             self['force-compilation'] = false
             if self:is_compiled() then table.insert(self.output_names, self.output)
             else
@@ -1169,6 +1155,12 @@ function Score:process()
     else table.insert(self.output_names, self.output)
     end
     set_lyscore(self)
+    if self:count_systems() == 0 then
+        warn([[
+The score doesn't contain any music:
+this will probably cause bad output.]]
+        )
+    end
     if not self['raw-pdf'] then self:write_latex(do_compile) end
     self:write_to_filelist()
     if not self.debug then self:delete_intermediate_files() end
@@ -1176,8 +1168,7 @@ end
 
 function Score:run_lilypond(ly_code)
     if self:is_compiled() then return end
-    mkdirs(dirname(self.output))
-    self:lilypond_version()
+    lib.mkdirs(lib.dirname(self.output))
     local p = io.popen(self:lilypond_cmd(ly_code))
     if self.debug then
         local f = io.open(self.output..".log", 'w')
@@ -1190,15 +1181,15 @@ end
 
 function Score:tex_margin_bottom()
     self._tex_margin_bottom = self._tex_margin_bottom or
-        convert_unit(tex.dimen.paperheight..'sp')
+        lib.convert_unit(tex.dimen.paperheight..'sp')
         - self:tex_margin_top()
-        - convert_unit(tex.dimen.textheight..'sp')
+        - lib.convert_unit(tex.dimen.textheight..'sp')
     return self._tex_margin_bottom
 end
 
 function Score:tex_margin_inner()
     self._tex_margin_inner = self._tex_margin_inner or
-        convert_unit((
+        lib.convert_unit((
           tex.sp('1in') + tex.dimen.oddsidemargin + tex.dimen.hoffset
         )..'sp')
     return self._tex_margin_inner
@@ -1206,7 +1197,7 @@ end
 
 function Score:tex_margin_outer()
     self._tex_margin_outer = self._tex_margin_outer or
-        convert_unit((tex.dimen.paperwidth - tex.dimen.textwidth)..'sp')
+        lib.convert_unit((tex.dimen.paperwidth - tex.dimen.textwidth)..'sp')
         - self:tex_margin_inner()
     return self._tex_margin_outer
 end
@@ -1225,7 +1216,7 @@ end
 
 function Score:tex_margin_top()
     self._tex_margin_top = self._tex_margin_top or
-        convert_unit((
+        lib.convert_unit((
             tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin
             + tex.dimen.headheight + tex.dimen.headsep
         )..'sp')
@@ -1253,9 +1244,12 @@ Score with more than one system included inline.
 This will probably cause bad output.]]
             )
         end
-        latex.includeinline(
-            self.output, self:bbox(1).height, self.valign, self.hpadding, self.voffset
-        )
+        local bb = self:bbox(1)
+        if bb then
+            latex.includeinline(
+                self.output, bb.height, self.valign, self.hpadding, self.voffset
+            )
+        end
     end
 end
 
@@ -1327,24 +1321,14 @@ end
 
 function ly.declare_package_options(options)
     OPTIONS = options
-    local exopt = ''
-    for k, v in pairs(options) do
-        tex.sprint(string.format([[
-\DeclareOptionX{%s}{\directlua{
-  ly.set_property('%s', '\luatexluaescapestring{#1}')
-}}%%
-]],
-            k, k
-        ))
-        exopt = exopt..k..'='..(v[1] or '')..','
-    end
-    tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
+    lib.declare_package_options(options, 'ly')
 end
+
 
 function ly.make_list_file()
     local tmpdir = ly.get_option('tmpdir')
-    mkdirs(tmpdir)
-    FILELIST = tmpdir..'/'..splitext(status.log_name, 'log')..'.list'
+    lib.mkdirs(tmpdir)
+    FILELIST = tmpdir..'/'..lib.splitext(status.log_name, 'log')..'.list'
     os.remove(FILELIST)
 end
 
@@ -1403,37 +1387,25 @@ end
 
 
 function ly.get_font_family(font_id)
-    return fontinfo(font_id).shared.rawdata.metadata['familyname']
+    return lib.fontinfo(font_id).shared.rawdata.metadata['familyname']
 end
 
 
 function ly.get_option(opt) return Score[opt] end
 
 
-function ly.is_alias() end
+function ly.is_alias()
+    return lib.is_alias()
+end
 
 
 function ly.is_dim(k, v)
-    if v == '' or v == false or tonumber(v) then return true end
-    local n, sl, u = v:match('^%d*%.?%d*'), v:match('\\'), v:match('%a+')
-    -- a value of number - backslash - length is a dimension
-    -- invalid input will be prevented in by the LaTeX parser already
-    if n and sl and u then return true end
-    if n and contains(TEX_UNITS, u) then return true end
-    err([[
-Unexpected value "%s" for dimension %s:
-should be either a number (for example "12"),
-a number with unit, without space ("12pt"),
-or a (multiplied) TeX length (".8\linewidth")
-]],
-        v, k
-    )
+    lib.is_dim(k, v)
 end
 
 
 function ly.is_neg(k, _)
-    local _, i = k:find('^no')
-    return i and contains_key(OPTIONS, k:sub(i + 1))
+    return lib.is_neg(OPTIONS, k)
 end
 
 
@@ -1472,7 +1444,7 @@ function ly.set_local_options(opts)
                 while v:sub(-1) ~= '}' do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
-            k, v = process_options(k:gsub('^%s', ''), v:gsub('^%s', ''))
+            k, v = lib.process_options(OPTIONS, k:gsub('^%s', ''), v:gsub('^%s', ''))
             if k then
                 if options[k] then err('Option %s is set two times for the same score.', k)
                 else options[k] = v
@@ -1483,11 +1455,16 @@ function ly.set_local_options(opts)
     return options
 end
 
-
 function ly.set_property(k, v)
-    k, v = process_options(k, v)
+    k, v = lib.process_options(OPTIONS, k, v)
     if k then Score[k] = v end
 end
 
+function ly.write_to_file(file, content)
+    local f = io.open(Score.tmpdir..'/'..file, 'w')
+    if not f then err('Unable to write to file %s', file) end
+    f:write(content)
+    f:close()
+end
 
 return ly

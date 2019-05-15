@@ -14,6 +14,7 @@
 \RequirePackage{listings}
 \RequirePackage{minted}
 \RequirePackage{pgffor}
+\RequirePackage{fancyvrb}
 \RequirePackage[colorlinks=true]{hyperref}
 \lysetoption{includepaths}{./, ly/}
 

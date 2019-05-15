@@ -75,7 +75,14 @@ any other \LaTeX\ engine will fail.
 
 \lyIssue{Note:} In order to avoid unexpected behaviour it is strongly suggested
 that documents are generally compiled from their actual directory, i.e. without
-referring to it through a path.
+referring to it through a path. Building *out-of-tree* isn't supported, though
+it should be possible with the following workarounds:
+
+1. `includepaths={..}`: (for example, if you build from a subdirectory of main
+   directory) tell lyluatex to search the parent directory;
+2. if the book contain figures, enter only the name of the files,
+   then set two paths, e.g.: `\graphicspath{{images/}{../images/}}`,
+   so images will be found either way.
 
 \lyIssue{NOTE:} \lyluatex\ requires that \LuaLaTeX\ is started with the
 `--shell-escape` command line option to enable the execution of arbitrary
@@ -468,6 +475,12 @@ Defines indentation of first system (same as LilyPond's `indent`).
 By default, with \option{insert=fullpage}, scores are indented;
 otherwise, they aren't.
 \option{noindent} is equivalent to \option{indent=0pt}.  Please also see the section about [Dynamic Indentation](#indent).
+
+\lyOption{system-count}{}
+Forces LilyPond to produce a fixed number of systems. This may be useful when
+LilyPond breaks a score that can manually be squeezed to one system less, but
+it is also possible to spread out a score to more systems than LilyPond would
+consider necessary.
 
 \lyOption{quote}{false}
 This option, which is there for compatibility with `lilypond-book`,
@@ -1145,7 +1158,9 @@ be detected and handled (if possible) by \lyluatex.  The most basic problem is
 when LilyPond can't be started at all.  \lyluatex\ will correctly determine and
 report an error if \LuaLaTeX\ has been started without the
 \option{--shell-escape} option or if the \option{program} option doesn't point
-to a valid LilyPond executable.
+to a valid LilyPond executable. However, if the \option{showfailed} option is
+also set then only a *warning* is issued while instead of a score an information
+box is created in the document, informing about the problem.
 
 Two other situations that are correctly recognized are when LilyPond *reports* a
 compilation failure but still produces a (potentially useful) score, and when
@@ -1259,6 +1274,11 @@ Those examples and others may be found in
 \includeexample{dynamic-indent}{Dynamic Indent Handling}
 
 \includeexample{fonts}{Font Handling}
+\defaultfontfeatures{Ligatures=TeX,Numbers=OldStyle,Scale=MatchLowercase}
+\setmainfont{Linux Libertine O}
+\setsansfont[BoldFont={Linux Biolinum O Bold}]{Linux Biolinum O}
+\setmonofont{Inconsolata}
+
 
 \includeexample{wrappingcommands}{Wrapping Commands}
 
