@@ -24,7 +24,6 @@ local ly = {
 }
 local Score = {}
 
-local OPTIONS = {}
 local FILELIST
 local DIM_OPTIONS = {
     'extra-bottom-margin',
@@ -343,7 +342,7 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
             '%%%s*end verbatim.*', '')
         --[[ We unfortunately need an external file,
              as verbatim environments are quite special. --]]
-        local fname = ly.get_option('tmpdir')..'/verb.tex'
+        local fname = optlib.get_option('ly', 'tmpdir')..'/verb.tex'
         local f = io.open(fname, 'w')
         f:write(
             ly.verbenv[1]..'\n'..
@@ -1028,7 +1027,7 @@ end
 
 function Score:output_filename()
     local properties = ''
-    for k, _ in lib.orderedpairs(optlib.get_options('ly')) do
+    for k, _ in lib.orderedpairs(optlib.get_declarations('ly')) do
         if (not lib.contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'\n'..k..'\t'..self[k]
         end
@@ -1192,6 +1191,30 @@ end
 
 --[[ ========================== Public functions ========================== --]]
 
+function ly.attach_Score_table()
+--[[
+    This is a workaround to make the handling of the Score object as a storage
+    object *and* metatable work with the storage of options in lyluatex-options.
+    First we copy all the options from lyluatex-options (where they have been
+    stored through \ProcessOptionsX) to the local `Score` table, then we assign
+    a reference to Score to the options table in lyluatex-options.
+    This way lyluatex.lua can access `Score` like it did previously while the
+    new functions working on the object in lyluatex-options.lua do in effect
+    refer to the same object.
+
+    TODO: It might be useful to rewrite this module to natively interact with
+    the lyluatex-options functions.
+--]]
+    local options = optlib.get_options('ly')
+    local _k, _v
+    for k, v in pairs(options) do
+        _k, _v = optlib.sanitize_option('ly', k, v)
+        if _k then Score[_k] = _v end
+    end
+    options = Score
+end
+
+
 function ly.buffenv_begin()
 
     function ly.buffenv(line)
@@ -1247,7 +1270,7 @@ end
 
 
 function ly.make_list_file()
-    local tmpdir = ly.get_option('tmpdir')
+    local tmpdir = optlib.get_option('ly', 'tmpdir')
     lib.mkdirs(tmpdir)
     FILELIST = tmpdir..'/'..lib.splitext(status.log_name, 'log')..'.list'
     os.remove(FILELIST)
@@ -1279,17 +1302,17 @@ function ly.file_musicxml(input_file, options)
                     xmlopts = xmlopts..' '..options[opt]
                 end
             end
-        elseif ly.get_option(opt) then xmlopts = xmlopts..' --'..opt
+        elseif optlib.get_option('ly', opt) then xmlopts = xmlopts..' --'..opt
         end
     end
-    local i = io.popen(ly.get_option('xml2ly')..' --out=-'..xmlopts..' "'..file..'"', 'r')
+    local i = io.popen(optlib.get_option('ly', 'xml2ly')..' --out=-'..xmlopts..' "'..file..'"', 'r')
     if not i then
         err([[
 %s could not be started.
 Please check that LuaLaTeX is started with the
 --shell-escape option.
 ]],
-            ly.get_option('xml2ly')
+            optlib.get_option('ly', 'xml2ly')
         )
     end
     ly.score = Score:new(i:read('*a'), options, file)
@@ -1310,27 +1333,6 @@ end
 function ly.get_font_family(font_id)
     return lib.fontinfo(font_id).shared.rawdata.metadata['familyname']
 end
-
-
-function ly.get_option(opt) return Score[opt] end
-
-
-function ly.is_alias()
-    return optlib.is_alias()
-end
-
-
-function ly.is_dim(k, v)
-    optlib.is_dim(k, v)
-end
-
-
-function ly.is_neg(k, _)
-    return optlib.is_neg('ly', k)
-end
-
-
-function ly.is_num(_, v) return v == '' or tonumber(v) end
 
 
 function ly.newpage_if_fullpage()
@@ -1355,10 +1357,6 @@ end
   if ly.score.ttfamily == '' then ly.score.ttfamily = ly.get_font_family(tt) end
 end
 
-function ly.set_property(k, v)
-    k, v = optlib.sanitize_option('ly', k, v)
-    if k then Score[k] = v end
-end
 
 function ly.write_to_file(file, content)
     local f = io.open(Score.tmpdir..'/'..file, 'w')

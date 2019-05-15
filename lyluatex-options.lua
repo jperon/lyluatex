@@ -23,6 +23,20 @@ local optlib = {}  -- namespece for the returned table
 local OPTIONS = {} -- store global options of any module using this
 
 
+local function get_package_options(prefix)
+--[[
+    Returns a table with the package declaration and current option values
+    vor the given prefix.
+    Raises an error if given a prefix that hasn't been declared previously.
+--]]
+    local options = OPTIONS[prefix]
+    if not options then
+        err('No package declared with prefix '..prefix)
+    end
+    return options
+end
+
+
 function optlib.check_local_options(prefix, opts)
 --[[
     Parse the given options (options passed to a command/environment),
@@ -50,28 +64,36 @@ function optlib.check_local_options(prefix, opts)
 end
 
 
-function optlib.declare_package_options(prefix, options)
+function optlib.declare_package_options(package_prefix, opt_prefix, declarations)
 --[[
     Declare package options along with their default and
     accepted values. To *some* extent also provide type checking.
-    - prefix: the prefix/name by which the calling Lua module is referenced
-      in the parent LaTeX document (preamble or package). (Also used as the
-      key in the OPTIONS table.)
-    - options: a definition table stored in the calling module (see below)
+    - package_prefix: the prefix/name by which the calling Lua module is
+      referenced in the parent LaTeX document (preamble or package).
+      (Also used as the key in the OPTIONS table.)
+    - opt_prefix: the prefix/name by which the lyluatex-options module is
+      referenced in the parent LaTeX document (preamble or package).
+      This is required to write the code calling optlib.set_option into
+      the option declaration.
+    - declarations: a definition table stored in the calling module (see below)
 
-    Each entry in the 'options' table represents one package option, with each
+    Each entry in the 'declarations' table represents one package option, with each
     value being an array (table with integer indexes instead of keys). For
     details please refer to the manual.
 --]]
-    OPTIONS[prefix] = options
+    OPTIONS[package_prefix] = {
+        declarations = declarations,
+        options = {}
+    }
     local exopt = ''
-    for k, v in pairs(options) do
+    for k, v in pairs(declarations) do
+        OPTIONS[package_prefix]['options'][k] = v[1] or ''
         tex.sprint(string.format([[
 \DeclareOptionX{%s}{\directlua{
-  %s.set_property('%s', '\luatexluaescapestring{#1}')
+  %s.set_option('%s', '%s', '\luatexluaescapestring{#1}')
 }}%%
 ]],
-            k, prefix, k
+            k, opt_prefix, package_prefix, k
         ))
         exopt = exopt..k..'='..(v[1] or '')..','
     end
@@ -79,12 +101,31 @@ function optlib.declare_package_options(prefix, options)
 end
 
 
+function optlib.get_declarations(prefix)
+--[[
+    Return the table with the option declarations for the given package.
+    Raises an error if the package hasn't previously been declared.
+--]]
+    return get_package_options(prefix)['declarations']
+end
+
+
 function optlib.get_options(prefix)
 --[[
-    Return the table with global package options for the given prefix,
-    or nil if that hasn't been stored.
+    Return the table with the current package options for the given package.
+    Raises an error if the package hasn't previously been declared.
 --]]
-    return OPTIONS[prefix]
+    return get_package_options(prefix)['options']
+end
+
+
+function optlib.get_option(prefix, key)
+--[[
+    Return the value of a given option in the selected package.
+    Raises an error if the package hasn't previously been declared
+    but returns nil if the option isn't present in the table.
+--]]
+    return optlib.get_options(prefix)[key]
 end
 
 
@@ -96,7 +137,7 @@ function optlib.is_alias()
 end
 
 
-function optlib.is_dim(k, v)
+function optlib.is_dim(_, k, v)
 --[[
     Type checking for options that accept a LaTeX dimension.
     This can be
@@ -122,16 +163,23 @@ or a (multiplied) TeX length (".8\linewidth")
 end
 
 
-function optlib.is_neg(prefix, k)
+function optlib.is_neg(prefix, k, v)
 --[[
     Type check for a 'negative' option. This is an existing option
     name prefixed with 'no' (e.g. 'noalign')
 --]]
-
-    local options = OPTIONS[prefix]
-    if not options then err('No module registered with prefix '..prefix) end
     local _, i = k:find('^no')
-    return i and lib.contains_key(options, k:sub(i + 1))
+    if not i then return false end
+    local options = optlib.get_declarations(prefix)
+    return lib.contains_key(options, k:sub(i + 1))
+end
+
+
+function optlib.is_num(_, _, v)
+--[[
+    Type check for number options
+--]]
+    return v == '' or tonumber(v)
 end
 
 
@@ -142,8 +190,7 @@ function optlib.sanitize_option(prefix, k, v)
     Check 'negative' options
     Handle boolean options (empty strings or 'false'), set them to real booleans
 --]]
-    options = OPTIONS[prefix]
-    if not options then err('No module registered with prefix '..prefix) end
+    options = optlib.get_declarations(prefix)
     if k == '' or k == 'noarg' then return end
     if not lib.contains_key(options, k) then err('Unknown option: '..k) end
     -- aliases
@@ -154,7 +201,7 @@ function optlib.sanitize_option(prefix, k, v)
     -- boolean
     if v == 'false' then v = false end
     -- negation (for example, noindent is the negation of indent)
-    if optlib.is_neg(prefix, k) then
+    if optlib.is_neg(prefix, k, v) then
         if v ~= nil and v ~= 'default' then
             k = k:gsub('^no(.*)', '%1')
             v = not v
@@ -165,13 +212,26 @@ function optlib.sanitize_option(prefix, k, v)
 end
 
 
+function optlib.set_option(prefix, k, v)
+--[[
+    Set an option for the given prefix to be in effect from this point on.
+    Raises an error if the option is not declared or does not meet the
+    declared expectations. (TODO: The latter has to be integrated by extracting
+    optlib.validate_option from optlib.validate_options and call it in
+    sanitize_option).
+--]]
+    k, v = optlib.sanitize_option(prefix, k, v)
+    if k then optlib.get_options(prefix)[k] = v end
+end
+
+
 function optlib.validate_options(prefix, options)
 --[[
     Validate the given set of options against the option declaration
     table for the given prefix.
 --]]
     local unexpected = false
-    local package_opts = optlib.get_options(prefix)
+    local package_opts = optlib.get_declarations(prefix)
     if not package_opts then err('No module registered with prefix '..prefix) end
     for k, _ in lib.orderedpairs(package_opts) do
         if options[k] == 'default' then
@@ -181,7 +241,7 @@ function optlib.validate_options(prefix, options)
         end
         if not lib.contains(package_opts[k], options[k]) and package_opts[k][2] then
             -- option value is not in the array of accepted values
-            if type(package_opts[k][2]) == 'function' then package_opts[k][2](k, options[k])
+            if type(package_opts[k][2]) == 'function' then package_opts[k][2](prefix, k, options[k])
             else unexpected = true
             end
         end
