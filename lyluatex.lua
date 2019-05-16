@@ -1211,7 +1211,6 @@ function ly.attach_Score_table()
         _k, _v = optlib.sanitize_option('ly', k, v)
         if _k then Score[_k] = _v end
     end
-    options = Score
 end
 
 

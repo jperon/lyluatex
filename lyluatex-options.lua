@@ -244,11 +244,11 @@ function optlib.validate_option(prefix, key, options_obj)
 --]]
     local package_opts = optlib.get_declarations(prefix)
     local options = options_obj or optlib.get_options(prefix)
-
+    local unexpected
     if options[key] == 'default' then
         -- Replace 'default' with an actual value
-        options[key] = package_opts[key][1] or nil
-        unexpected = not options[key]
+        options[key] = package_opts[key][1]
+        unexpected = options[key] == nil
     end
     if not lib.contains(package_opts[key], options[key]) and package_opts[key][2] then
         -- option value is not in the array of accepted values
