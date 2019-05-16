@@ -1,4 +1,4 @@
--- luacheck: ignore ly log self luatexbase internalversion font fonts tex token kpse status
+-- luacheck: ignore ly log self luatexbase internalversion font fonts tex token kpse status ly_opts
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '1.0b',  --LYLUATEX_VERSION
@@ -10,9 +10,7 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
-local optlib = require(
-  kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua")
-
+local ly_opts = ly_opts  -- global ly_opts has been defined before in lyluatex.sty
 
 local md5 = require 'md5'
 local lfs = require 'lfs'
@@ -22,7 +20,8 @@ local ly = {
     err = err,
     varwidth_available = kpse.find_file('varwidth.sty')
 }
-local Score = {}
+local Score = ly_opts.options
+Score.__index = Score
 
 local FILELIST
 local DIM_OPTIONS = {
@@ -342,7 +341,7 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
             '%%%s*end verbatim.*', '')
         --[[ We unfortunately need an external file,
              as verbatim environments are quite special. --]]
-        local fname = optlib.get_option('ly', 'tmpdir')..'/verb.tex'
+        local fname = ly_opts.tmpdir..'/verb.tex'
         local f = io.open(fname, 'w')
         f:write(
             ly.verbenv[1]..'\n'..
@@ -362,7 +361,6 @@ end
 function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
-    self.__index = self
     o.output_names = {}
     o.input_file = input_file
     o.ly_code = ly_code
@@ -624,7 +622,7 @@ function Score:check_indent(lp)
 end
 
 function Score:check_properties()
-    optlib.validate_options('ly', self)
+    ly_opts:validate_options(self)
     for _, k in pairs(TEXINFO_OPTIONS) do
         if self[k] then info([[Option %s is specific to Texinfo: ignoring it.]], k) end
     end
@@ -1027,7 +1025,7 @@ end
 
 function Score:output_filename()
     local properties = ''
-    for k, _ in lib.orderedpairs(optlib.get_declarations('ly')) do
+    for k, _ in lib.orderedpairs(ly_opts.declarations) do
         if (not lib.contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'\n'..k..'\t'..self[k]
         end
@@ -1191,28 +1189,6 @@ end
 
 --[[ ========================== Public functions ========================== --]]
 
-function ly.attach_Score_table()
---[[
-    This is a workaround to make the handling of the Score object as a storage
-    object *and* metatable work with the storage of options in lyluatex-options.
-    First we copy all the options from lyluatex-options (where they have been
-    stored through \ProcessOptionsX) to the local `Score` table, then we assign
-    a reference to Score to the options table in lyluatex-options.
-    This way lyluatex.lua can access `Score` like it did previously while the
-    new functions working on the object in lyluatex-options.lua do in effect
-    refer to the same object.
-
-    TODO: It might be useful to rewrite this module to natively interact with
-    the lyluatex-options functions.
---]]
-    local options = optlib.get_options('ly')
-    local _k, _v
-    for k, v in pairs(options) do
-        _k, _v = optlib.sanitize_option('ly', k, v)
-        if _k then Score[_k] = _v end
-    end
-end
-
 
 function ly.buffenv_begin()
 
@@ -1269,7 +1245,7 @@ end
 
 
 function ly.make_list_file()
-    local tmpdir = optlib.get_option('ly', 'tmpdir')
+    local tmpdir = ly_opts.tmpdir
     lib.mkdirs(tmpdir)
     FILELIST = tmpdir..'/'..lib.splitext(status.log_name, 'log')..'.list'
     os.remove(FILELIST)
@@ -1279,7 +1255,7 @@ function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.ly')
-    options = optlib.check_local_options('ly', options)
+    options = ly_opts:check_local_options(options)
     if not file then err("File %s doesn't exist.", input_file) end
     local i = io.open(file, 'r')
     ly.score = Score:new(i:read('*a'), options, file)
@@ -1291,7 +1267,7 @@ function ly.file_musicxml(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.xml')
-    options = optlib.check_local_options('ly', options)
+    options = ly_opts:check_local_options(options)
     if not file then err("File %s doesn't exist.", input_file) end
     local xmlopts = ''
     for _, opt in pairs(MXML_OPTIONS) do
@@ -1301,17 +1277,17 @@ function ly.file_musicxml(input_file, options)
                     xmlopts = xmlopts..' '..options[opt]
                 end
             end
-        elseif optlib.get_option('ly', opt) then xmlopts = xmlopts..' --'..opt
+        elseif ly_opts[opt] then xmlopts = xmlopts..' --'..opt
         end
     end
-    local i = io.popen(optlib.get_option('ly', 'xml2ly')..' --out=-'..xmlopts..' "'..file..'"', 'r')
+    local i = io.popen(ly_opts.xml2ly..' --out=-'..xmlopts..' "'..file..'"', 'r')
     if not i then
         err([[
 %s could not be started.
 Please check that LuaLaTeX is started with the
 --shell-escape option.
 ]],
-            optlib.get_option('ly', 'xml2ly')
+            ly_opts.xml2ly
         )
     end
     ly.score = Score:new(i:read('*a'), options, file)
@@ -1320,7 +1296,7 @@ end
 
 
 function ly.fragment(ly_code, options)
-    options = optlib.check_local_options('ly', options)
+    options = ly_opts:check_local_options(options)
     if type(ly_code) == 'string' then
         ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     else ly_code = table.concat(ly_code, '\n')

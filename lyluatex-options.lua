@@ -1,4 +1,4 @@
--- luacheck: ignore ly log self luatexbase internalversion font fonts tex token kpse status
+-- luacheck: ignore ly warn info log self luatexbase internalversion font fonts tex token kpse status
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex-options",
     version            = '1.0b',  --LYLUATEX_VERSION
@@ -19,25 +19,49 @@ local err, warn, info, log = luatexbase.provides_module({
 -- ]]
 
 local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
-local optlib = {}  -- namespece for the returned table
-local OPTIONS = {} -- store global options of any module using this
+local optlib = {}  -- namespace for the returned table
+local Opts = {options = {}}  -- Options class
+Opts.__index = function (self, k) return self.options[k] or rawget(Opts, k) end
+setmetatable(Opts, Opts)
 
 
-local function get_package_options(prefix)
+function Opts:new(opt_prefix, declarations)
 --[[
-    Returns a table with the package declaration and current option values
-    vor the given prefix.
-    Raises an error if given a prefix that hasn't been declared previously.
+    Declare package options along with their default and
+    accepted values. To *some* extent also provide type checking.
+    - opt_prefix: the prefix/name by which the lyluatex-options module is
+        referenced in the parent LaTeX document (preamble or package).
+        This is required to write the code calling optlib.set_option into
+        the option declaration.
+    - declarations: a definition table stored in the calling module (see below)
+    Each entry in the 'declarations' table represents one package option, with each
+    value being an array (table with integer indexes instead of keys). For
+    details please refer to the manual.
 --]]
-    local options = OPTIONS[prefix]
-    if not options then
-        err('No package declared with prefix '..prefix)
+    local o = setmetatable(
+        {
+            declarations = declarations,
+            options = {}
+        },
+        self
+    )
+    local exopt = ''
+    for k, v in pairs(declarations) do
+        o.options[k] = v[1] or ''
+        tex.sprint(string.format([[
+\DeclareOptionX{%s}{\directlua{
+    %s:set_option('%s', '\luatexluaescapestring{#1}')
+}}%%
+]],
+            k, opt_prefix, k
+        ))
+        exopt = exopt..k..'='..(v[1] or '')..','
     end
-    return options
+    tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
+    return o
 end
 
-
-function optlib.check_local_options(prefix, opts)
+function Opts:check_local_options(opts)
 --[[
     Parse the given options (options passed to a command/environment),
     sanitize them against the global package options and return a table
@@ -52,7 +76,7 @@ function optlib.check_local_options(prefix, opts)
                 while v:sub(-1) ~= '}' do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
-            k, v = optlib.sanitize_option(prefix, k:gsub('^%s', ''), v:gsub('^%s', ''))
+            k, v = self:sanitize_option(k:gsub('^%s', ''), v:gsub('^%s', ''))
             if k then
                 if options[k] then err('Option %s is set two times for the same score.', k)
                 else options[k] = v
@@ -63,81 +87,112 @@ function optlib.check_local_options(prefix, opts)
     return options
 end
 
-
-function optlib.declare_package_options(package_prefix, opt_prefix, declarations)
+function Opts:is_neg(k)
 --[[
-    Declare package options along with their default and
-    accepted values. To *some* extent also provide type checking.
-    - package_prefix: the prefix/name by which the calling Lua module is
-      referenced in the parent LaTeX document (preamble or package).
-      (Also used as the key in the OPTIONS table.)
-    - opt_prefix: the prefix/name by which the lyluatex-options module is
-      referenced in the parent LaTeX document (preamble or package).
-      This is required to write the code calling optlib.set_option into
-      the option declaration.
-    - declarations: a definition table stored in the calling module (see below)
-
-    Each entry in the 'declarations' table represents one package option, with each
-    value being an array (table with integer indexes instead of keys). For
-    details please refer to the manual.
+    Type check for a 'negative' option. This is an existing option
+    name prefixed with 'no' (e.g. 'noalign')
 --]]
-    OPTIONS[package_prefix] = {
-        declarations = declarations,
-        options = {}
-    }
-    local exopt = ''
-    for k, v in pairs(declarations) do
-        OPTIONS[package_prefix]['options'][k] = v[1] or ''
-        tex.sprint(string.format([[
-\DeclareOptionX{%s}{\directlua{
-  %s.set_option('%s', '%s', '\luatexluaescapestring{#1}')
-}}%%
-]],
-            k, opt_prefix, package_prefix, k
-        ))
-        exopt = exopt..k..'='..(v[1] or '')..','
+    local _, i = k:find('^no')
+    return i and lib.contains_key(self.declarations, k:sub(i + 1))
+end
+
+function Opts:sanitize_option(k, v)
+--[[
+    Check and (if necessary) adjust the value of a given option.
+    Reject undefined options
+    Check 'negative' options
+    Handle boolean options (empty strings or 'false'), set them to real booleans
+--]]
+    local declarations = self.declarations
+    if k == '' or k == 'noarg' then return end
+    if not lib.contains_key(declarations, k) then err('Unknown option: '..k) end
+    -- aliases
+    if declarations[k] and declarations[k][2] == optlib.is_alias then
+        if declarations[k][1] == v then return
+        else k = declarations[k] end
     end
-    tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
+    -- boolean
+    if v == 'false' then v = false end
+    -- negation (for example, noindent is the negation of indent)
+    if self:is_neg(k) then
+        if v ~= nil and v ~= 'default' then
+            k = k:gsub('^no(.*)', '%1')
+            v = not v
+        else return
+        end
+    end
+    return k, v
 end
 
-
-function optlib.get_declarations(prefix)
+function Opts:set_option(k, v)
 --[[
-    Return the table with the option declarations for the given package.
-    Raises an error if the package hasn't previously been declared.
+    Set an option for the given prefix to be in effect from this point on.
+    Raises an error if the option is not declared or does not meet the
+    declared expectations. (TODO: The latter has to be integrated by extracting
+    optlib.validate_option from optlib.validate_options and call it in
+    sanitize_option).
 --]]
-    return get_package_options(prefix)['declarations']
+    k, v = self:sanitize_option(k, v)
+    if k then
+        self.options[k] = v
+        self:validate_option(k)
+    end
 end
 
-
-function optlib.get_options(prefix)
+function Opts:validate_option(key, options_obj)
 --[[
-    Return the table with the current package options for the given package.
-    Raises an error if the package hasn't previously been declared.
+    Validate an (already sanitized) option against its expected values.
+    With options_obj a local options table can be provided,
+    otherwise the global options stored in OPTIONS are checked.
 --]]
-    return get_package_options(prefix)['options']
+    local package_opts = self.declarations
+    local options = options_obj or self.options
+    local unexpected
+    if options[key] == 'default' then
+        -- Replace 'default' with an actual value
+        options[key] = package_opts[key][1]
+        unexpected = options[key] == nil
+    end
+    if not lib.contains(package_opts[key], options[key]) and package_opts[key][2] then
+        -- option value is not in the array of accepted values
+        if type(package_opts[key][2]) == 'function' then package_opts[key][2](key, options[key])
+        else unexpected = true
+        end
+    end
+    if unexpected then
+        err([[
+    Unexpected value "%s" for option %s:
+    authorized values are "%s"
+    ]],
+            options[key], key, table.concat(package_opts[key], ', ')
+        )
+    end
 end
 
-
-function optlib.get_option(prefix, key)
+function Opts:validate_options(options_obj)
 --[[
-    Return the value of a given option in the selected package.
-    Raises an error if the package hasn't previously been declared
-    but returns nil if the option isn't present in the table.
+    Validate the given set of options against the option declaration
+    table for the given prefix.
+    With options_obj a local options table can be provided,
+    otherwise the global options stored in OPTIONS are checked.
 --]]
-    return optlib.get_options(prefix)[key]
+    for k, _ in lib.orderedpairs(self.declarations) do
+        self:validate_option(k, options_obj)
+    end
 end
 
 
 function optlib.is_alias()
 --[[
-    Handling noop 'alias' options, for example to provide compatibility
-    options. TODO: I don't really know how that works internally.
+    This function doesn't do anything, but if an option is defined
+    as an alias, its second parameter will be this function, so the
+    test declarations[k][2] == optlib.is_alias in Opts:sanitize_options
+    will return true.
 --]]
 end
 
 
-function optlib.is_dim(_, k, v)
+function optlib.is_dim(k, v)
 --[[
     Type checking for options that accept a LaTeX dimension.
     This can be
@@ -163,19 +218,16 @@ or a (multiplied) TeX length (".8\linewidth")
 end
 
 
-function optlib.is_neg(prefix, k, v)
+function optlib.is_neg(k, _)
 --[[
-    Type check for a 'negative' option. This is an existing option
-    name prefixed with 'no' (e.g. 'noalign')
+    Type check for a 'negative' option. At this stage,
+    we only check that it begins with 'no'.
 --]]
-    local _, i = k:find('^no')
-    if not i then return false end
-    local options = optlib.get_declarations(prefix)
-    return lib.contains_key(options, k:sub(i + 1))
+    return k:find('^no')
 end
 
 
-function optlib.is_num(_, _, v)
+function optlib.is_num(_, v)
 --[[
     Type check for number options
 --]]
@@ -183,7 +235,7 @@ function optlib.is_num(_, _, v)
 end
 
 
-function optlib.is_str(_, _, v)
+function optlib.is_str(_, v)
 --[[
     Type check for string options
 --]]
@@ -191,94 +243,5 @@ function optlib.is_str(_, _, v)
 end
 
 
-function optlib.sanitize_option(prefix, k, v)
---[[
-    Check and (if necessary) adjust the value of a given option.
-    Reject undefined options
-    Check 'negative' options
-    Handle boolean options (empty strings or 'false'), set them to real booleans
---]]
-    options = optlib.get_declarations(prefix)
-    if k == '' or k == 'noarg' then return end
-    if not lib.contains_key(options, k) then err('Unknown option: '..k) end
-    -- aliases
-    if options[k] and options[k][2] == optlib.is_alias then
-        if options[k][1] == v then return
-        else k = options[k] end
-    end
-    -- boolean
-    if v == 'false' then v = false end
-    -- negation (for example, noindent is the negation of indent)
-    if optlib.is_neg(prefix, k, v) then
-        if v ~= nil and v ~= 'default' then
-            k = k:gsub('^no(.*)', '%1')
-            v = not v
-        else return
-        end
-    end
-    return k, v
-end
-
-
-function optlib.set_option(prefix, k, v)
---[[
-    Set an option for the given prefix to be in effect from this point on.
-    Raises an error if the option is not declared or does not meet the
-    declared expectations. (TODO: The latter has to be integrated by extracting
-    optlib.validate_option from optlib.validate_options and call it in
-    sanitize_option).
---]]
-    k, v = optlib.sanitize_option(prefix, k, v)
-    if k then
-        optlib.get_options(prefix)[k] = v
-        optlib.validate_option(prefix, k)
-    end
-end
-
-
-function optlib.validate_option(prefix, key, options_obj)
---[[
-    Validate an (already sanitized) option against its expected values.
-    With options_obj a local options table can be provided,
-    otherwise the global options stored in OPTIONS are checked.
---]]
-    local package_opts = optlib.get_declarations(prefix)
-    local options = options_obj or optlib.get_options(prefix)
-    local unexpected
-    if options[key] == 'default' then
-        -- Replace 'default' with an actual value
-        options[key] = package_opts[key][1]
-        unexpected = options[key] == nil
-    end
-    if not lib.contains(package_opts[key], options[key]) and package_opts[key][2] then
-        -- option value is not in the array of accepted values
-        if type(package_opts[key][2]) == 'function' then package_opts[key][2](prefix, key, options[key])
-        else unexpected = true
-        end
-    end
-    if unexpected then
-        err([[
-  Unexpected value "%s" for option %s:
-  authorized values are "%s"
-  ]],
-            options[key], key, table.concat(package_opts[key], ', ')
-        )
-    end
-end
-
-
-function optlib.validate_options(prefix, options_obj)
---[[
-    Validate the given set of options against the option declaration
-    table for the given prefix.
-    With options_obj a local options table can be provided,
-    otherwise the global options stored in OPTIONS are checked.
---]]
-    local package_opts = optlib.get_declarations(prefix)
-    for k, _ in lib.orderedpairs(package_opts) do
-        optlib.validate_option(prefix, k, options_obj)
-    end
-end
-
-
+optlib.Opts = Opts
 return optlib

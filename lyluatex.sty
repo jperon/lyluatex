@@ -43,10 +43,10 @@
 % Options
 \catcode`-=11
 \directlua{
-  ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")
   opt = require(
-      kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua")
-  opt.declare_package_options('ly', 'opt', {
+    kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua"
+  )
+  ly_opts = opt.Opts:new('ly_opts', {
     ['addversion'] = {'false', 'true', ''},
     ['autoindent'] = {'true', 'false', ''},
     ['cleantmp'] = {'false', 'true', ''},
@@ -129,10 +129,10 @@
     ['xml2ly'] = {'musicxml2ly'},
   })
 }
-\directlua{ly.attach_Score_table()}
-\directlua{ly.make_list_file()}
 \directlua{
-  if opt.get_option('ly', 'cleantmp') then
+  ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")
+  ly.make_list_file()
+  if ly_opts.cleantmp then
     luatexbase.add_to_callback('stop_run', ly.clean_tmp_dir, 'lyluatex cleantmp')
     luatexbase.add_to_callback('stop_run', ly.conclusion_text, 'lyluatex conclusion')
   end
@@ -157,7 +157,7 @@
 }
 
 % Command to change options during the document
-\newcommand{\lysetoption}[2]{\directlua{opt.set_option('ly', [[#1]], [[#2]])}}
+\newcommand{\lysetoption}[2]{\directlua{ly_opts:set_option([[#1]], [[#2]])}}
 
 % How the filename of a score will look like (if printed)
 \newcommand{\lyFilename}[1]{\noindent #1\par\bigskip}
@@ -173,7 +173,7 @@
 % *current* font for optional use.
 \newcommand{\ly@currentfonts}{%
   \begingroup%
-    \directlua{opt.set_option('ly', 'current-font', ly.get_font_family(font.current()))}%
+    \directlua{ly_opts:set_option('current-font', ly.get_font_family(font.current()))}%
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
@@ -188,8 +188,8 @@
 \newcommand*{\ly@compilescore}[1]{%
   \ly@setunits%
   \directlua{
-    opt.set_option('ly', 'currfiledir', [[\currfiledir]])
-    opt.set_option('ly', 'twoside', '\ly@istwosided')
+    ly_opts:set_option('currfiledir', [[\currfiledir]])
+    ly_opts:set_option('twoside', '\ly@istwosided')
     #1
     ly.newpage_if_fullpage()
   }%
