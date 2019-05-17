@@ -61,11 +61,14 @@ function Opts:new(opt_prefix, declarations)
     return o
 end
 
-function Opts:check_local_options(opts)
+function Opts:check_local_options(opts, ignore_declarations)
 --[[
     Parse the given options (options passed to a command/environment),
     sanitize them against the global package options and return a table
     with the local options that should then supersede the global options.
+    If ignore_declaration is given any non-false value the sanitization
+    step is skipped (i.e. local options are only parsed and duplicates
+    rejected).
 --]]
     local options = {}
     local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
@@ -76,7 +79,9 @@ function Opts:check_local_options(opts)
                 while v:sub(-1) ~= '}' do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
-            k, v = self:sanitize_option(k:gsub('^%s', ''), v:gsub('^%s', ''))
+            if not ignore_declarations then
+                k, v = self:sanitize_option(k:gsub('^%s', ''), v:gsub('^%s', ''))
+            end
             if k then
                 if options[k] then err('Option %s is set two times for the same score.', k)
                 else options[k] = v
