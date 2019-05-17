@@ -131,11 +131,8 @@ function lib.splitext(str, ext)
     If 'ext' is supplied return str stripped of the given extension,
     otherwise return the base and extension (if any)
 --]]
-    if ext then
-        return str:match('(.*)%.'..ext..'$') or str
-    else
-        return str:match('(.*)%.(%w*)$') or str
-    end
+    return ext and (str:match('(.*)%.'..ext..'$') or str)
+        or (str:match('(.*)%.(%w*)$') or str)
 end
 
 return lib
