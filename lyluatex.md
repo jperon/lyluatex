@@ -185,6 +185,13 @@ value including the full content and all options will be used to determine if
 the score has already been compiled earlier, so unnecessary recompilations are
 avoided.
 
+\lyIssue{Note:}
+Despite its familiar appearance, this environment is very special, using a
+mechanism specific to LuaLaTeX. One consequence is that you necessarily need a
+newline after `\begin{lilypond}`, and before `\end{lilypond}`; another is that you
+have to be careful when you want to wrap this environment in a custom one:
+see the examples at the end of the manual.
+
 
 \lyCmd{lilypond}
 
