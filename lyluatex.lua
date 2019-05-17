@@ -1,4 +1,4 @@
--- luacheck: ignore ly log self luatexbase internalversion font fonts tex token kpse status
+-- luacheck: ignore ly log self luatexbase internalversion font fonts tex token kpse status ly_opts
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
     version            = '1.0b',  --LYLUATEX_VERSION
@@ -10,6 +10,7 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
+local ly_opts = ly_opts  -- global ly_opts has been defined before in lyluatex.sty
 
 local md5 = require 'md5'
 local lfs = require 'lfs'
@@ -19,9 +20,9 @@ local ly = {
     err = err,
     varwidth_available = kpse.find_file('varwidth.sty')
 }
-local Score = {}
+local Score = ly_opts.options
+Score.__index = Score
 
-local OPTIONS = {}
 local FILELIST
 local DIM_OPTIONS = {
     'extra-bottom-margin',
@@ -150,42 +151,6 @@ local function locate(file, includepaths, ext)
 end
 
 
-local function max(a, b)
-    a, b = tonumber(a), tonumber(b)
-    if a > b then return a else return b end
-end
-
-
-local function min(a, b)
-    a, b = tonumber(a), tonumber(b)
-    if a < b then return a else return b end
-end
-
-
-local function mkdirs(str)
-    local path = '.'
-    for dir in str:gmatch('([^%/]+)') do
-        path = path .. '/' .. dir
-        lfs.mkdir(path)
-    end
-end
-
-
-local function orderedpairs(t)
-    local key
-    local i = 0
-    local orderedIndex = {}
-    for k in pairs(t) do table.insert(orderedIndex, k) end
-    table.sort(orderedIndex)
-    return function ()
-            i = i + 1
-            key = orderedIndex[i]
-            if key then return key, t[key] end
-        end
-end
-
-
-
 local function range_parse(range, nsystems)
     local num = tonumber(range)
     if num then return {num} end
@@ -211,16 +176,6 @@ This item will be skipped!
         for i = from, to, dir do table.insert(result, i) end
         return result
     else return {range}  -- N- with insert=fullpage
-    end
-end
-
-
-local function readlinematching(s, f)
-    if f then
-        local result = ''
-        while result and not result:find(s) do result = f:read() end
-        f:close()
-        return result
     end
 end
 
@@ -386,7 +341,7 @@ function latex.verbatim(verbatim, ly_code, intertext, version)
             '%%%s*end verbatim.*', '')
         --[[ We unfortunately need an external file,
              as verbatim environments are quite special. --]]
-        local fname = ly.get_option('tmpdir')..'/verb.tex'
+        local fname = ly_opts.tmpdir..'/verb.tex'
         local f = io.open(fname, 'w')
         f:write(
             ly.verbenv[1]..'\n'..
@@ -406,7 +361,6 @@ end
 function Score:new(ly_code, options, input_file)
     local o = options or {}
     setmetatable(o, self)
-    self.__index = self
     o.output_names = {}
     o.input_file = input_file
     o.ly_code = ly_code
@@ -497,7 +451,7 @@ function Score:calc_range()
     local result = tonumber(printonly) and {tonumber(printonly)} or {}
     if not result[1] then
         for _, r in pairs(printonly:explode(',')) do
-            local range = lib.range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+            local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
             if range then
                 for _, v in pairs(range) do table.insert(result, v) end
             end
@@ -506,7 +460,7 @@ function Score:calc_range()
     local rm_result = tonumber(donotprint) and {tonumber(donotprint)} or {}
     if not rm_result[1] then
         for _, r in pairs(donotprint:explode(',')) do
-            local range = lib.range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
+            local range = range_parse(r:gsub('^%s', ''):gsub('%s$', ''), nsystems)
             if range then
                 for _, v in pairs(range) do table.insert(rm_result, v) end
             end
@@ -621,7 +575,7 @@ function Score:check_indent(lp)
                 self.indent = lp.overflow_left
                 lp.shorten = lib.max(lp.shorten - lp.overflow_left, 0)
             else
-                self.indent = max(self.indent - lp.overflow_left, 0)
+                self.indent = lib.max(self.indent - lp.overflow_left, 0)
             end
             lp.changed_indent = true
         end
@@ -668,26 +622,7 @@ function Score:check_indent(lp)
 end
 
 function Score:check_properties()
-    local unexpected = false
-    for k, _ in lib.orderedpairs(OPTIONS) do
-        if self[k] == 'default' then
-            self[k] = OPTIONS[k][1] or nil
-            unexpected = not self[k]
-        end
-        if not lib.contains(OPTIONS[k], self[k]) and OPTIONS[k][2] then
-            if type(OPTIONS[k][2]) == 'function' then OPTIONS[k][2](k, self[k])
-            else unexpected = true
-            end
-        end
-        if unexpected then
-            err([[
-Unexpected value "%s" for option %s:
-authorized values are "%s"
-]],
-                self[k], k, table.concat(OPTIONS[k], ', ')
-            )
-        end
-    end
+    ly_opts:validate_options(self)
     for _, k in pairs(TEXINFO_OPTIONS) do
         if self[k] then info([[Option %s is specific to Texinfo: ignoring it.]], k) end
     end
@@ -728,10 +663,10 @@ function Score:check_protrusion(bbox_func)
     -- Note: we can't *reliably* determine this with ragged one-system scores,
     -- possibly resulting in unnecessarily short lines when right protrusion is
     -- present
-    lp.stave_overflow_right = max(lp.stave_extent - self.original_lw, 0)
+    lp.stave_overflow_right = lib.max(lp.stave_extent - self.original_lw, 0)
     -- Check if image as a whole protrudes over max-right-protrusion
     lp.overflow_right = lib.max(lp.total_extent - lp.available, 0)
-    lp.shorten = max(lp.stave_overflow_right, lp.overflow_right)
+    lp.shorten = lib.max(lp.stave_overflow_right, lp.overflow_right)
     lp.changed_indent = false
     self:check_indent(lp, bb)
     if lp.shorten > 0 or lp.changed_indent then
@@ -1090,7 +1025,7 @@ end
 
 function Score:output_filename()
     local properties = ''
-    for k, _ in lib.orderedpairs(OPTIONS) do
+    for k, _ in lib.orderedpairs(ly_opts.declarations) do
         if (not lib.contains(HASHIGNORE, k)) and self[k] and type(self[k]) ~= 'function' then
             properties = properties..'\n'..k..'\t'..self[k]
         end
@@ -1254,6 +1189,7 @@ end
 
 --[[ ========================== Public functions ========================== --]]
 
+
 function ly.buffenv_begin()
 
     function ly.buffenv(line)
@@ -1308,14 +1244,8 @@ Transcript written on %s.log.
 end
 
 
-function ly.declare_package_options(options)
-    OPTIONS = options
-    lib.declare_package_options(options, 'ly')
-end
-
-
 function ly.make_list_file()
-    local tmpdir = ly.get_option('tmpdir')
+    local tmpdir = ly_opts.tmpdir
     lib.mkdirs(tmpdir)
     FILELIST = tmpdir..'/'..lib.splitext(status.log_name, 'log')..'.list'
     os.remove(FILELIST)
@@ -1325,7 +1255,7 @@ function ly.file(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.ly')
-    options = ly.set_local_options(options)
+    options = ly_opts:check_local_options(options)
     if not file then err("File %s doesn't exist.", input_file) end
     local i = io.open(file, 'r')
     ly.score = Score:new(i:read('*a'), options, file)
@@ -1337,7 +1267,7 @@ function ly.file_musicxml(input_file, options)
     --[[ Here, we only take in account global option includepaths,
     as it really doesn't mean anything as a local option. --]]
     local file = locate(input_file, Score.includepaths, '.xml')
-    options = ly.set_local_options(options)
+    options = ly_opts:check_local_options(options)
     if not file then err("File %s doesn't exist.", input_file) end
     local xmlopts = ''
     for _, opt in pairs(MXML_OPTIONS) do
@@ -1347,17 +1277,17 @@ function ly.file_musicxml(input_file, options)
                     xmlopts = xmlopts..' '..options[opt]
                 end
             end
-        elseif ly.get_option(opt) then xmlopts = xmlopts..' --'..opt
+        elseif ly_opts[opt] then xmlopts = xmlopts..' --'..opt
         end
     end
-    local i = io.popen(ly.get_option('xml2ly')..' --out=-'..xmlopts..' "'..file..'"', 'r')
+    local i = io.popen(ly_opts.xml2ly..' --out=-'..xmlopts..' "'..file..'"', 'r')
     if not i then
         err([[
 %s could not be started.
 Please check that LuaLaTeX is started with the
 --shell-escape option.
 ]],
-            ly.get_option('xml2ly')
+            ly_opts.xml2ly
         )
     end
     ly.score = Score:new(i:read('*a'), options, file)
@@ -1366,7 +1296,7 @@ end
 
 
 function ly.fragment(ly_code, options)
-    options = ly.set_local_options(options)
+    options = ly_opts:check_local_options(options)
     if type(ly_code) == 'string' then
         ly_code = ly_code:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
     else ly_code = table.concat(ly_code, '\n')
@@ -1378,27 +1308,6 @@ end
 function ly.get_font_family(font_id)
     return lib.fontinfo(font_id).shared.rawdata.metadata['familyname']
 end
-
-
-function ly.get_option(opt) return Score[opt] end
-
-
-function ly.is_alias()
-    return lib.is_alias()
-end
-
-
-function ly.is_dim(k, v)
-    lib.is_dim(k, v)
-end
-
-
-function ly.is_neg(k, _)
-    return lib.is_neg(OPTIONS, k)
-end
-
-
-function ly.is_num(_, v) return v == '' or tonumber(v) end
 
 
 function ly.newpage_if_fullpage()
@@ -1423,31 +1332,6 @@ end
   if ly.score.ttfamily == '' then ly.score.ttfamily = ly.get_font_family(tt) end
 end
 
-function ly.set_local_options(opts)
-    local options = {}
-    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
-    for opt in next_opt do
-        local k, v = opt:match('([^=]+)=?(.*)')
-        if k then
-            if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
-                while v:sub(-1) ~= '}' do v = v..','..next_opt() end
-                v = v:sub(2, -2)  -- remove { }
-            end
-            k, v = lib.process_options(OPTIONS, k:gsub('^%s', ''), v:gsub('^%s', ''))
-            if k then
-                if options[k] then err('Option %s is set two times for the same score.', k)
-                else options[k] = v
-                end
-            end
-        end
-    end
-    return options
-end
-
-function ly.set_property(k, v)
-    k, v = lib.process_options(OPTIONS, k, v)
-    if k then Score[k] = v end
-end
 
 function ly.write_to_file(file, content)
     local f = io.open(Score.tmpdir..'/'..file, 'w')

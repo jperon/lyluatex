@@ -43,41 +43,43 @@
 % Options
 \catcode`-=11
 \directlua{
-  ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")
-  ly.declare_package_options({
+  opt = require(
+    kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua"
+  )
+  ly_opts = opt.Opts:new('ly_opts', {
     ['addversion'] = {'false', 'true', ''},
     ['autoindent'] = {'true', 'false', ''},
     ['cleantmp'] = {'false', 'true', ''},
     ['currfiledir'] = {},
     ['debug'] = {'false', 'true', ''},
-    ['extra-bottom-margin'] = {'0', ly.is_dim},
-    ['extra-top-margin'] = {'0', ly.is_dim},
+    ['extra-bottom-margin'] = {'0', opt.is_dim},
+    ['extra-top-margin'] = {'0', opt.is_dim},
     ['fix_badly_cropped_staffgroup_brackets'] = {'false', 'true', ''},
-      ['nofix_badly_cropped_staffgroup_brackets'] = {'default', ly.is_neg},
+      ['nofix_badly_cropped_staffgroup_brackets'] = {'default', opt.is_neg},
     ['force-compilation'] = {'false', 'true', ''},
     ['fragment'] = {'', 'false', 'true'},
-        ['nofragment'] = {'default', ly.is_neg},
+        ['nofragment'] = {'default', opt.is_neg},
     ['fullpagealign'] = {'crop', 'staffline'},
     ['fullpagestyle'] = {''},
-    ['gutter'] = {'.4in', ly.is_dim},
-        ['exampleindent'] = {'gutter', ly.is_alias},
-        ['leftgutter'] = {'', ly.is_dim}, ['rightgutter'] = {'', ly.is_dim},
-    ['hpadding'] = {'0.75ex', ly.is_dim},
+    ['gutter'] = {'.4in', opt.is_dim},
+        ['exampleindent'] = {'gutter', opt.is_alias},
+        ['leftgutter'] = {'', opt.is_dim}, ['rightgutter'] = {'', opt.is_dim},
+    ['hpadding'] = {'0.75ex', opt.is_dim},
     ['include_after_body'] = {'false'},
     ['include_before_body'] = {'false'},
     ['include_footer'] = {'false'},
     ['include_header'] = {'false'},
     ['includepaths'] = {'./'},
-    ['indent'] = {'', ly.is_dim},
-        ['noindent'] = {'default', ly.is_neg},
+    ['indent'] = {'', opt.is_dim},
+        ['noindent'] = {'default', opt.is_neg},
     ['insert'] = {'', 'systems', 'fullpage', 'inline', 'bare-inline'},
     ['intertext'] = {''},
     ['label'] = {'false'}, ['labelprefix'] = {'ly_'},
-    ['line-width'] = {[[\linewidth]], ly.is_dim},
+    ['line-width'] = {[[\linewidth]], opt.is_dim},
     ['ly-version'] = {'2.18.2'},
-    ['max-protrusion'] = {[[\maxdimen]], ly.is_dim},
-        ['max-left-protrusion'] = {'', ly.is_dim},
-        ['max-right-protrusion'] = {'', ly.is_dim},
+    ['max-protrusion'] = {[[\maxdimen]], opt.is_dim},
+        ['max-left-protrusion'] = {'', opt.is_dim},
+        ['max-right-protrusion'] = {'', opt.is_dim},
     ['noclef'] = {'false', 'true', ''},
     ['nostaff'] = {'false', 'true', ''},
     ['nostaffsymbol'] = {'false', 'true', ''},
@@ -85,8 +87,8 @@
     ['notiming'] = {'false', 'true', ''},
     ['notimesig'] = {'false', 'true', ''},
     ['optimize-pdf'] = {'false', 'true', ''},
-    ['paperwidth'] = {[[\paperwidth]], ly.is_dim},
-    ['paperheight'] = {[[\paperheight]], ly.is_dim},
+    ['paperwidth'] = {[[\paperwidth]], opt.is_dim},
+    ['paperheight'] = {[[\paperheight]], opt.is_dim},
     ['papersize'] = {'false'},
     ['pass-fonts'] = {'false', 'true', ''},
         ['current-font'] = {}, ['current-font-as-main'] = {'false', 'true', ''},
@@ -98,22 +100,22 @@
         ['do-not-print'] = {''},
     ['printfilename'] = {'false', 'true', ''},
     ['program'] = {'lilypond'},
-    ['protrusion'] = {'', ly.is_dim},
-        ['noprotrusion'] = {'default', ly.is_neg},
+    ['protrusion'] = {'', opt.is_dim},
+        ['noprotrusion'] = {'default', opt.is_neg},
     ['raw-pdf'] = {'false', 'true', ''},
     ['quote'] = {'false', 'true', ''},
     ['ragged-right'] = {'default', 'true', 'false', ''},
-        ['noragged-right'] = {'default', ly.is_neg},
-    ['relative'] = {'false', ly.is_num},
-        ['norelative'] = {'default', ly.is_neg},
+        ['noragged-right'] = {'default', opt.is_neg},
+    ['relative'] = {'false', opt.is_num},
+        ['norelative'] = {'default', opt.is_neg},
     ['showfailed'] = {'false', 'true' ,''},
-    ['staffsize'] = {'0', ly.is_dim},
-        ['inline-staffsize'] = {'0', ly.is_dim},
-    ['system-count'] = {'0', ly.is_dim},
+    ['staffsize'] = {'0', opt.is_dim},
+        ['inline-staffsize'] = {'0', opt.is_dim},
+    ['system-count'] = {'0', opt.is_dim},
     ['tmpdir'] = {'tmp-ly'},
     ['twoside'] = {'\ly@istwosided', 'false', 'true', ''},
     ['verbatim'] = {'false', 'true', ''},
-    ['voffset'] = {'0pt', ly.is_dim},
+    ['voffset'] = {'0pt', opt.is_dim},
     ['valign'] = {'center', 'top', 'bottom'},
     % MusicXML options
     ['absolute'] = {'false', 'true', ''},
@@ -127,9 +129,10 @@
     ['xml2ly'] = {'musicxml2ly'},
   })
 }
-\directlua{ly.make_list_file()}
 \directlua{
-  if ly.get_option('cleantmp') then
+  ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")
+  ly.make_list_file()
+  if ly_opts.cleantmp then
     luatexbase.add_to_callback('stop_run', ly.clean_tmp_dir, 'lyluatex cleantmp')
     luatexbase.add_to_callback('stop_run', ly.conclusion_text, 'lyluatex conclusion')
   end
@@ -154,7 +157,7 @@
 }
 
 % Command to change options during the document
-\newcommand{\lysetoption}[2]{\directlua{ly.set_property([[#1]], [[#2]])}}
+\newcommand{\lysetoption}[2]{\directlua{ly_opts:set_option([[#1]], [[#2]])}}
 
 % How the filename of a score will look like (if printed)
 \newcommand{\lyFilename}[1]{\noindent #1\par\bigskip}
@@ -170,7 +173,7 @@
 % *current* font for optional use.
 \newcommand{\ly@currentfonts}{%
   \begingroup%
-    \directlua{ly.set_property('current-font', ly.get_font_family(font.current()))}%
+    \directlua{ly_opts:set_option('current-font', ly.get_font_family(font.current()))}%
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
@@ -185,8 +188,8 @@
 \newcommand*{\ly@compilescore}[1]{%
   \ly@setunits%
   \directlua{
-    ly.set_property('currfiledir', [[\currfiledir]])
-    ly.set_property('twoside', '\ly@istwosided')
+    ly_opts:set_option('currfiledir', [[\currfiledir]])
+    ly_opts:set_option('twoside', '\ly@istwosided')
     #1
     ly.newpage_if_fullpage()
   }%
