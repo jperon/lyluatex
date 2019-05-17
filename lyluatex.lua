@@ -765,12 +765,21 @@ function Score:header()
     local wh_dest = self['write-headers']
     if wh_dest then
         if self.input_file then
-            lib.mkdirs(wh_dest)
+            local base, ext = lib.splitext(wh_dest)
+            local header_file
+            if ext then
+                header_file = wh_dest
+            else
+                lib.mkdirs(wh_dest)
+                header_file = wh_dest..'/'..lib.splitext(
+                  lib.basename(self.input_file), 'ly')
+                  .."-lyluatex-headers.ily"
+            end
             local saved_headers = header
                                         :gsub([[%\include "lilypond%-book%-preamble.ly"]], '')
                                         :gsub([[%#%(define inside%-lyluatex %#t%)]], '')
                                         :gsub('\n+', '\n')
-            local f = io.open(wh_dest..'/'..lib.splitext(lib.basename(self.input_file), 'ly').."-lyluatex-headers.ily", 'w')
+            local f = io.open(header_file, 'w')
             f:write(saved_headers)
             f:close()
         else

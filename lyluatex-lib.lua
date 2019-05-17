@@ -127,7 +127,15 @@ end
 
 
 function lib.splitext(str, ext)
-  return str:match('(.*)%.'..ext..'$') or str
+--[[
+    If 'ext' is supplied return str stripped of the given extension,
+    otherwise return the base and extension (if any)
+--]]
+    if ext then
+        return str:match('(.*)%.'..ext..'$') or str
+    else
+        return str:match('(.*)%.(%w*)$') or str
+    end
 end
 
 return lib
