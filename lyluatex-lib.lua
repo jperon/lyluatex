@@ -16,6 +16,15 @@ lib.TEX_UNITS = {'bp', 'cc', 'cm', 'dd', 'in', 'mm', 'pc', 'pt', 'sp', 'em',
 -------------------------
 -- General tool functions
 
+function lib.basename(str)
+--[[
+  Given the full path to a file, return only the file name (without path).
+  If there is no slash, return the full name.
+--]]
+    return str:gsub(".*/(.*)", "%1") or str
+end
+
+
 function lib.contains(table_var, value)
 --[[
   Returns the key if the given table contains the given value, or nil.
@@ -55,10 +64,10 @@ end
 
 function lib.dirname(str)
 --[[
-  Return the left part of a string up to and including the last slash.
-  If no slash is present (no path components) return an empty string
+  Given the full path to a file, return only the path (without file name),
+  including the last slash. If there is no slash, return an empty string.
 --]]
-    return str:gsub("(.*/)(.*)", "%1") or ''
+    return str:gsub("(.*/).*", "%1") or ''
 end
 
 
@@ -118,7 +127,12 @@ end
 
 
 function lib.splitext(str, ext)
-  return str:match('(.*)%.'..ext..'$') or str
+--[[
+    If 'ext' is supplied return str stripped of the given extension,
+    otherwise return the base and extension (if any)
+--]]
+    return ext and (str:match('(.*)%.'..ext..'$') or str)
+        or (str:match('(.*)%.(%w*)$') or str)
 end
 
 return lib

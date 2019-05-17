@@ -1160,6 +1160,33 @@ remove scores needed by *other* documents. Therefore \lyluatex\ will read *all*
 `<documentname>.list` files and only remove scores that are not referenced by
 *any* list file.
 
+### Writing headers to include file
+
+\lyOption{write-headers}{false}
+
+When using `\lilypondfile` it is possible to write a copy of the LilyPond
+headers defining the layout and appearance of the score to an include file. When
+working on the score in an external editor this makes it possible to include
+this file to see the score in the layout it will have in the final \LaTeX\
+document. Using this option together with non-filebased scores makes no sense,
+therefore it is ignored while a warning is issued.
+
+*NOTE*: Of course this will produce conflicts if a LilyPond file is used in
+multiple \LaTeX\ documents.
+
+If set to a *path* the LilyPond headers defining the layout and appearance of
+the score will be exported to a file
+`<path>/<input-file-basename>-lyluatex-headers.ily`. The target directory will
+be created if necessary.
+
+If set to a *filename* (i.e. a path with a file extension) the headers will be
+written to this specific file. This is useful because in most cases the headers
+will be consistent throughout a \LaTeX\ document, so it should be unncecessary
+to copy them for all input files. A typical use case might be to specify one
+header file as a package option while overriding the option for specific scores
+that require different headers (e.g. in combination with a different
+`staffsize`)
+
 ### PDF optimization
 
 \lyOption{optimize-pdf}{false}

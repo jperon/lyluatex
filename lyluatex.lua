@@ -762,6 +762,24 @@ function Score:header()
     for element in LY_HEAD:gmatch('<<<(%w+)>>>') do
         header = header:gsub('<<<'..element..'>>>', self['ly_'..element](self) or '')
     end
+    local wh_dest = self['write-headers']
+    if wh_dest then
+        if self.input_file then
+            local _, ext = lib.splitext(wh_dest)
+            local header_file = ext and wh_dest
+                or wh_dest..'/'..lib.splitext(lib.basename(self.input_file), 'ly').."-lyluatex-headers.ily"
+            lib.mkdirs(lib.dirname(header_file))
+            local f = io.open(header_file, 'w')
+            f:write(header
+                :gsub([[%\include "lilypond%-book%-preamble.ly"]], '')
+                :gsub([[%#%(define inside%-lyluatex %#t%)]], '')
+                :gsub('\n+', '\n')
+            )
+            f:close()
+        else
+            warn([[Ignoring 'write-headers' for non-file score.]])
+        end
+    end
     return header
 end
 
