@@ -1168,13 +1168,11 @@ When using `\lilypondfile` it is possible to write a copy of the LilyPond
 headers defining the layout and appearance of the score to an include file. When
 working on the score in an external editor this makes it possible to include
 this file to see the score in the layout it will have in the final \LaTeX\
-document.
-
-Using this option together with non-filebased scores makes no sense, therefore
-it is ignored with a warning issued.
+document. Using this option together with non-filebased scores makes no sense,
+therefore it is ignored while a warning is issued.
 
 *NOTE*: Of course this will produce conflicts if a LilyPond file is used in
-different \LaTeX\ documents.
+multiple \LaTeX\ documents.
 
 If set to a *path* the LilyPond headers defining the layout and appearance of
 the score will be exported to a file
