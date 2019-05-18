@@ -255,7 +255,7 @@ function optlib.merge_options(base_opt, super_opt)
     super_opt. Entries in super_opt supersede (i.e. overwrite)
     colliding entries in base_opt.
 --]]
-    result = {}
+    local result = {}
     for k, v in pairs(base_opt) do result[k] = v end
     for k, v in pairs(super_opt) do result[k] = v end
     return result
