@@ -248,5 +248,19 @@ function optlib.is_str(_, v)
 end
 
 
+function optlib.merge_options(base_opt, super_opt)
+--[[
+    Merge two tables.
+    Create a new table as a copy of base_opt, then merge with
+    super_opt. Entries in super_opt supersede (i.e. overwrite)
+    colliding entries in base_opt.
+--]]
+    local result = {}
+    for k, v in pairs(base_opt) do result[k] = v end
+    for k, v in pairs(super_opt) do result[k] = v end
+    return result
+end
+
+
 optlib.Opts = Opts
 return optlib
