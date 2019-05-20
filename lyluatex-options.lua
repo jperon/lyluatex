@@ -76,7 +76,7 @@ function Opts:check_local_options(opts, ignore_declarations)
         local k, v = opt:match('([^=]+)=?(.*)')
         if k then
             if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
-                while v:sub(-1) ~= '}' do v = v..','..next_opt() end
+                while select(2, v:gsub('{', '')) ~= select(2, v:gsub('}', '')) do v = v..','..next_opt() end
                 v = v:sub(2, -2)  -- remove { }
             end
             if not ignore_declarations then
