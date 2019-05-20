@@ -70,13 +70,34 @@ function Opts:check_local_options(opts, ignore_declarations)
     step is skipped (i.e. local options are only parsed and duplicates
     rejected).
 --]]
+    local _nesting = 0
+    local _deltas = {} _deltas['{'] = 1 _deltas['}'] = -1
+    local function nesting(v, init)
+        if init then _nesting = init end
+        if v then
+            for brace in v:gmatch('[{}]') do
+                _nesting = _nesting + _deltas[brace]
+            end
+        end
+        return _nesting
+    end
+
+    local next = opts:gmatch('([^,]+)')  -- iterator over options
+    local function next_opt()
+        local v = next()
+        nesting(v)
+        return v
+    end
+
     local options = {}
-    local next_opt = opts:gmatch('([^,]+)')  -- iterator over options
     for opt in next_opt do
         local k, v = opt:match('([^=]+)=?(.*)')
         if k then
-            if v and v:sub(1, 1) == '{' then  -- handle keys with {multiple, values}
-                while v:sub(-1) ~= '}' do v = v..','..next_opt() end
+            if v and v:sub(1, 1) == '{' then -- handle keys with {multiple, values}
+                nesting(v, 0)
+                while _nesting > 0 or v:sub(-1) ~= '}' do
+                    v = v..','..next_opt()
+                end
                 v = v:sub(2, -2)  -- remove { }
             end
             if not ignore_declarations then
