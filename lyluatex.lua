@@ -790,11 +790,11 @@ end
 
 function Score:is_odd_page() return tex.count['c@page'] % 2 == 1 end
 
-function Score:lilypond_cmd(ly_code)
+function Score:lilypond_cmd()
     local input, mode = '-s -', 'w'
     if self.debug then
         local f = io.open(self.output..'.ly', 'w')
-        f:write(ly_code)
+        f:write(self.complete_ly_code)
         f:close()
         input = self.output..".ly 2>&1"
         mode = 'r'
@@ -1085,7 +1085,8 @@ points to a valid LilyPond executable.
     local do_compile = not self:check_protrusion(bbox.read)
     if self['force-compilation'] or do_compile then
         repeat
-            self:run_lilypond(self:header()..self:content()..self:footer())
+            self.complete_ly_code = self:header()..self:content()..self:footer()
+            self:run_lilypond()
             self['force-compilation'] = false
             if self:is_compiled() then table.insert(self.output_names, self.output)
             else
@@ -1108,17 +1109,27 @@ this will probably cause bad output.]]
     if not self.debug then self:delete_intermediate_files() end
 end
 
-function Score:run_lilypond(ly_code)
+function Score:run_lily_proc(p)
+        if self.debug then
+          local f = io.open(self.output..".log", 'w')
+          f:write(p:read('*a'))
+          f:close()
+        else p:write(self.complete_ly_code)
+        end
+        return p:close()
+    end
+
+function Score:run_lilypond()
     if self:is_compiled() then return end
     lib.mkdirs(lib.dirname(self.output))
-    local p = io.popen(self:lilypond_cmd(ly_code))
-    if self.debug then
-        local f = io.open(self.output..".log", 'w')
-        f:write(p:read('*a'))
-        f:close()
-    else p:write(ly_code)
+    if not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code))) then  -- TeXLive - normal case
+        self.debug = true
+        local lilypond_cmd = self:lilypond_cmd(self.complete_ly_code)
+        local quoted_lilypond_cmd = '"'..lilypond_cmd..'"'
+        self.lilypond_error =
+            not self:run_lily_proc(io.popen(quoted_lilypond_cmd))  -- MiKTeX - normal case
+            and not self:run_lily_proc(io.popen(lilypond_cmd))  -- In case of errors
     end
-    self.lilypond_error = not p:close()
 end
 
 function Score:tex_margin_bottom()
