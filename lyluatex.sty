@@ -43,6 +43,7 @@
 % Options
 \catcode`-=11
 \directlua{
+  local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
   local _opt = require(
     kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua"
   )
@@ -129,6 +130,7 @@
     ['verbose'] = {'false', 'true', ''},
     ['xml2ly'] = {'musicxml2ly'},
   })
+  if lib.tex_engine.dist == 'MiKTeX' then ly_opts:set_option('debug', true) end
 }
 \directlua{
   ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")

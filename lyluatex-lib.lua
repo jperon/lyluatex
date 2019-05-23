@@ -135,4 +135,29 @@ function lib.splitext(str, ext)
         or (str:match('(.*)%.(%w*)$') or str)
 end
 
+
+------------------------------------
+-- Engine, version, TeX distribution
+
+local tex_engine = {}
+setmetatable(tex_engine, tex_engine)
+
+function tex_engine:__call()
+--[[
+    Defines the properties extracted from the first line of jobname.log.
+--]]
+    local f = io.open(tex.jobname..'.log')
+    if not f then return end
+    self.engine, self.engine_version, self.dist, self.dist_version, self.format, self.format_version =
+        f:read():match(
+            'This is ([^,]*), Version ([^%(]*) %(([^%)]*) ([^%)]*)%)%s+%(format=([^%)]*) ([^)]*)%)'
+        )
+    f:close()
+    return self
+end
+
+function tex_engine:__index(k) return rawget(self(), k) end
+
+
+lib.tex_engine = tex_engine
 return lib

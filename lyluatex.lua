@@ -811,6 +811,7 @@ function Score:lilypond_cmd()
         cmd = cmd..'-I "'..dir:gsub('^%./', lfs.currentdir()..'/')..'" '
     end
     cmd = cmd..'-o "'..self.output..'" '..input
+    if lib.tex_engine.dist == 'MiKTeX' then cmd = '"'..cmd..'"' end
     debug("Command:\n"..cmd)
     return cmd, mode
 end
@@ -1122,13 +1123,9 @@ function Score:run_lily_proc(p)
 function Score:run_lilypond()
     if self:is_compiled() then return end
     lib.mkdirs(lib.dirname(self.output))
-    if not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code))) then  -- TeXLive - normal case
+    if not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code))) and not debug then
         self.debug = true
-        local lilypond_cmd = self:lilypond_cmd(self.complete_ly_code)
-        local quoted_lilypond_cmd = '"'..lilypond_cmd..'"'
-        self.lilypond_error =
-            not self:run_lily_proc(io.popen(quoted_lilypond_cmd))  -- MiKTeX - normal case
-            and not self:run_lily_proc(io.popen(lilypond_cmd))  -- In case of errors
+        self.lilypond_error = not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code)))
     end
 end
 
