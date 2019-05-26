@@ -2,7 +2,7 @@
 documentclass: lyluatexmanual
 title: "\\lyluatex"
 subtitle: "1.0b"
-date: \today
+date: \lyluatexmanualdate
 author:
 - Fr. Jacques Peron
 - Urs Liska

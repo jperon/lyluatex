@@ -28,3 +28,14 @@
     \addcontentsline{toc}{subsection}{#2}
     \hypertarget{#1}{}
 }
+
+
+\newcommand{\lyluatexmanualdate}{
+	\directlua{
+		local PC = string.char(37)
+		local date_fmt = PC..'Y-'..PC..'m-'..PC..'d'
+		local p = io.popen('git log -n1 --date=short --format='..PC..'"ad"', 'r')
+		tex.sprint(p and p:read('*a') or os.date(date_fmt))
+		if p then p:close() end
+	}
+}
