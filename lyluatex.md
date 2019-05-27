@@ -444,6 +444,14 @@ score.  By default this is set to `false`, so the default setting of these two
 options means that LilyPond does *not* print page numbers while
 \LaTeX\ continues to print headers and footers.
 
+The same may be achieved only for first page with \option{print-first-page-number}.
+
+\lyOption{first-page-number}{false}
+
+Normally, \lyluatex\ should automatically determine the first page number of
+the score to match its place in the document. Should you like to force it to
+another value, you may do it thanks to this option.
+
 ### Inline
 
 \lyMargin{\texttt{insert=inline|bare-inline}}
@@ -1296,6 +1304,15 @@ fail, especially when not all relevant code is included through LilyPond's
 unchanged. In such cases the \option{force-compilation} option skips the checks
 and unconditionally recompiles the score, which may be a better solution than
 to (selectively) delete the scores from the \option{tmpdir} directory.
+
+### Bug workaround
+
+\lyOption{fix\_badly\_cropped\_staffgroup\_brackets}{false}
+
+This option is a dirty workaround for a
+[known bug](https://lists.gnu.org/archive/html/lilypond-user/2018-11/msg00039.html)
+of LilyPond. It's disabled by default; should you enable it globally, you may
+cancel it locally with \option{nofix\_badly\_cropped\_staffgroup\_brackets}.
 
 ## MusicXML options
 
