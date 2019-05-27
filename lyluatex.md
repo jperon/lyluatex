@@ -2,6 +2,7 @@
 documentclass: lyluatexmanual
 title: "\\lyluatex"
 subtitle: "1.0b"
+date: \lyluatexmanualdate
 author:
 - Fr. Jacques Peron
 - Urs Liska
@@ -11,20 +12,21 @@ toc: yes
 
 # Introduction
 
-\lyluatex\ is a \LaTeX\ package that manages the inclusion of musical scores in
-\LaTeX\ documents.  It uses the GNU LilyPond^[\url{http://lilypond.org}] score
-writer to produce beautiful music elements in beautifully typeset text documents.
-\lyluatex\ supports a wide range of use cases and lends itself equally well to
-authoring musicological texts with music examples and preparing musical editions
-with interspersed text parts, to creating song booklets used in service and to
-provide work sheets for teaching and exams.
+\lyluatex\ is a comprehensive \LuaLaTeX\ package to manage the inclusion of
+musical scores in text documents.  It uses the GNU
+LilyPond^[\url{http://lilypond.org}] score writer to produce beautiful music
+elements in beautifully typeset text documents. \lyluatex\ supports a wide range
+of use cases and lends itself equally well to authoring musicological texts with
+music examples and preparing musical editions with interspersed text parts, to
+creating song booklets used in service and to provide work sheets for teaching
+and exams.
 
 \lyluatex\ is inspired by and provides a fully compatible drop-in replacement to
 [lilypond-book](http://lilypond.org/doc/v2.18/Documentation/usage/invoking-lilypond_002dbook.html),
-a \LaTeX\ document preprocessor shipping with LilyPond.  However, thanks to the
-use of \LuaLaTeX\ it can overcome substantial limitations of the scripted solution,
-and it actually is a *superset* of `lilypond-book`, providing numerous additional
-features.
+a \LaTeX\ document preprocessor shipping with LilyPond,  which it actually is a
+*superset* of.  However, thanks to the use of \LuaLaTeX\ it can overcome
+substantial usability limitations of the scripted solution and provide numerous
+additional features.
 
 \lyluatex's main features include:
 
@@ -33,38 +35,111 @@ features.
 * Matching of layout and appearance to perfectly fit the scores into the text document
 * Comprehensive configuration through global and per-score options
 
-## Installation
+What \lyluatex\ does *not* try to do is managing the handling of floating
+environments, counters and lists of music examples. The
+\emph{ly}\LuaTeX\textsc{mp} package^[\url{https://github.com/uliska/lyluatexmp}]
+is currently under construction and practical testing and will eventually be
+released to become a suitable wrapper for using \lyluatex\ to create numbered
+music examples.
+
+## Installation and Requirements
+
+### Prerequisites
+
+As the name \lyluatex\ implies this package can only be used with the
+\LuaLaTeX\ engine. For more information on this please refer to
+[Usage](#usage) below.
+
+Musical scores are created in real-time (instead of incorporating pre-built
+*image* files) using the GNU LilyPond^[\url{http://lilypond.org}] score writer,
+so of course this has to be installed too. \lyluatex\ should work with any
+versions of LilyPond but it has been developed against the stable and
+development versions that were current at the time of this writing: 2.18.2 and
+2.19.83.
+
+### TeXLive and MiKTeX
+
+\lyluatex\ is included in both the TeXLive and MiKTeX \LaTeX\ distributions and
+can be installed through their package management systems. In TeXLive it is
+included in the `texlive-music` collection and -- of course -- in
+`texlive-full`. If neither of these collections is installed \lyluatex\ can be
+added to a TeXLive installation by running
+
+```
+tlmgr install lyluatex
+```
+
+from the command line.
+
+**TODO:** Document handling with MiKTeX.
+
+### Latest version
+
+The \lyluatex\ versions shipped with the \LaTeX\ distributions may be
+significantly outdated so you may want to install and use the latest version
+from the Github repository^[\url{https://github.com/jperon/lyluatex}] instead.
+
+Copy `lyluatex.sty` and `lyluatex.lua` from this repository into your
+`$TEXMFHOME` tree, or clone this repostory into your `$TEXMFHOME` tree using
+Git. In many cases this will be `$HOME/texmf`, and \lyluatex\ should be located
+below `$TEXMFHOME/tex/luatex`. It is important that this is the `tex/luatex`
+subtree rather than `tex/latex`: if \lyluatex\ should *also* be present in the
+\LaTeX\ distribution \LuaLaTeX\ would otherwise find that version first and use
+that instead of your local clone.
+
+\lyMargin{Note:}
+It may be useful to clone the Git repository not into the `$TEXMFHOME` tree
+directly but to some arbitrary location and link to that. Please note that
+\LuaLaTeX\ will only follow such symbolic links if there is at least one *real*
+subdirectory in each directory. So if there is a directory
+`$TEXMFHOME/tex/luatex` containing *only* symbolic links it is necessary to
+create a dummy subdirectory in it.
 
 ### For a single document
 
 Copy `lyluatex.sty` and `lyluatex.lua` into the folder containing the document
 you wish to typeset.
 
-### For all documents compiled with your LaTeX distribution
-
-#### TeXLive version
-
-Just run this command :
-
-```
-tlmgr install lyluatex
-```
-
-#### Latest version
-
-Copy `lyluatex.sty` and `lyluatex.lua` from this repository into your
-`TEXMFHOME` tree, or clone this repostory into your `TEXMFHOME` tree using Git.
-In many cases this will be `$HOME/texmf`, and \lyluatex\ should be located below
-`$TEXMFHOME/tex/luatex`. It is important that this is the `luatex` tree:
-otherwise \LuaLaTeX\ will still find the version from TeXLive first and use that
-instead of your local clone.
-
 # Usage
 
-\lyluatex\ is loaded with the command `\usepackage{lyluatex}` which also accepts
-a number of `key=value` options.  Their general use is described in the [Option
-Handling](#option-handling) section below.
+## The Big Picture and caveats
 
+Once \lyluatex\ is loaded it provides commands and environments to include
+musical scores and score fragments which are produced using the GNU LilyPond
+score writer.  They are encoded in LilyPond input language, either directly in
+the `.tex` document or in referenced standalone files.  \lyluatex\ will
+automatically take care of compiling the scores if necessary -- making use of an
+intelligent caching mechanism --, and it will match the score's layout to that
+of the text document.  \lyluatex\ will produce PDF image files which are
+automatically included within the current paragraph, in their own paragraphs or
+as full pages. The behaviour of \lyluatex\ and the appearance of the resulting
+scores are highly configurable through package, global, and per-score options
+which are globally described in the [Option Handling](#option-handling) section
+below and in detail throughout the rest of this manual.
+
+\lyluatex\ aims at being an upwards-compatible drop-in replacement for the
+\highlight{lilypond-book} preprocessor shipping with
+LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
+which means that any documents prepared for use with `lilypond-book` should
+be directly usable with \lyluatex, with some caveats:
+
+- \option{fragment} is the default: see [Automatic wrapping](#autowrap) for
+  more details about this;
+- \lyluatex\ has an option \option{insert}, which defaults to \option{systems}
+  for \cmd{begin\{lilypond\}} \cmd{end\{lilypond\}}, but to \option{inline}
+  for \cmd{lilypond}; the last one by default reduces staff size and includes
+  only the first system if there are several ones;
+- \cmd{musicxmlfile} has \option{no-articulation-directions},
+  \option{no-beaming}, \option{no-page-layout} and \option{no-rest-positions}
+  set to `true` by default, to increase chances of getting something
+  acceptable. Nevertheless, please read the note about this command below.
+
+So, if you want \lyluatex\ to mimic as much as possible
+\highlight{lilypond-book}, you should load it with options as follows:
+\cmd{usepackage[nofragment, insert=systems]\{lyluatex\}}.
+
+
+\lyIssue{Note:}
 By default \lyluatex\ invokes LilyPond simply as `lilypond`.  If LilyPond is
 installed in another location or a specific version of LilyPond should be used
 the invocation is controlled with the \option{program} option, see [The LilyPond
@@ -75,8 +150,10 @@ any other \LaTeX\ engine will fail.
 
 \lyIssue{Note:} In order to avoid unexpected behaviour it is strongly suggested
 that documents are generally compiled from their actual directory, i.e. without
-referring to it through a path. Building *out-of-tree* isn't supported, though
-it should be possible with the following workarounds:
+referring to it through a path. This is because in many places during the
+compilation process relative paths are calculated from this starting point.
+Building *out-of-tree* isn't supported, though it should be possible with the
+following workarounds:
 
 1. `includepaths={..}`: (for example, if you build from a subdirectory of main
    directory) tell lyluatex to search the parent directory;
@@ -103,37 +180,11 @@ For example, on Debian Linux with TeXLive:
 
 ## Basic Operation
 
-Once \lyluatex\ is loaded it provides commands and environments to include
-musical scores and score fragments which are produced using the GNU LilyPond
-score writer.  They are encoded in LilyPond input language, either directly in
-the `.tex` document or in referenced standalone files.  \lyluatex\ will
-automatically take care of compiling the scores if necessary -- making use of an
-intelligent caching mechanism --, and it will match the score's layout to that
-of the text document.  \lyluatex\ will produce PDF image files which are
-automatically included within the current paragraph, in their own paragraphs or
-as full pages.
-
-\lyluatex\ aims at being an upwards-compatible drop-in replacement for the
-\highlight{lilypond-book} preprocessor shipping with
-LilyPond.^[[http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook](http://lilypond.org/doc/v2.18/Documentation/usage/lilypond_002dbook)]
-which means that any documents prepared for use with `lilypond-book` should
-be directly usable with \lyluatex, with some caveats:
-
-- \option{fragment} is the default: see [Automatic wrapping](#autowrap) for
-  more details about this;
-- \lyluatex\ has an option \option{insert}, which defaults to \option{systems}
-  for \cmd{begin\{lilypond\}} \cmd{end\{lilypond\}}, but to \option{inline}
-  for \cmd{lilypond}; the last one by default reduces staff size and includes
-  only the first system if there are several ones;
-- \cmd{musicxmlfile} has \option{no-articulation-directions},
-  \option{no-beaming}, \option{no-page-layout} and \option{no-rest-positions}
-  set to `true` by default, to increase chances of getting something
-  acceptable. Nevertheless, please read the note about this command below.
-
-So, if you want \lyluatex\ to mimic as much as possible
-\highlight{lilypond-book}, you should load it with options as follows:
-\cmd{usepackage[nofragment, insert=systems]\{lyluatex\}}.
-
+\lyluatex\ is loaded with the command `\usepackage{lyluatex}` which also accepts
+a number of `key=value` options.  Their general use is described in the [Option
+Handling](#option-handling) section below. If LilyPond can be invoked through
+`lilypond` on the given system using the package without any options already
+provides a usable system.
 
 \lyMargin{lilypond\index{lilypond}}
 The basic mode of inserting scores into text documents is the `lilypond` environment:
@@ -185,12 +236,13 @@ value including the full content and all options will be used to determine if
 the score has already been compiled earlier, so unnecessary recompilations are
 avoided.
 
-\lyIssue{Note:}
-Despite its familiar appearance, this environment is very special, using a
-mechanism specific to LuaLaTeX. One consequence is that you necessarily need a
-newline after `\begin{lilypond}`, and before `\end{lilypond}`; another is that you
-have to be careful when you want to wrap this environment in a custom one:
-see the examples at the end of the manual.
+\lyIssue{Note:} Despite its familiar appearance, this environment is very
+special, using a mechanism specific to \LuaLaTeX. One consequence is that you
+necessarily need a newline after `\begin{lilypond}`, and before
+`\end{lilypond}`; another is that you have to be careful when you want to wrap
+this environment in a custom one: see
+[Wrapping \lyluatex\ commands](#wrapping-commands) and the examples at the end
+of the manual.
 
 
 \lyCmd{lilypond}
@@ -339,11 +391,11 @@ the typical issues of how many systems will fit on a page.
 
 Also notice that by default pages will be ragged-bottom,
 and LilyPond will not make any efforts to optimize page breaks.
-\cmd{betweenLilyPondSystem} (see below) can also be used when the space
+\cmd{betweenLilyPondSystem} can be used when the space
 between systems seems too tight, for example using something like `\vfill`.
 
 \lyCmd{betweenLilyPondSystem}
-However, if a macro \cmd{betweenLilyPondSystem} is defined it will be expanded
+If a macro \cmd{betweenLilyPondSystem} is defined it will be expanded
 between each system. This macro is documented in
 [LilyPond documentation](http://lilypond.org/doc/v2.18/Documentation/usage/latex).
 It must accept one argument, which will be the
@@ -391,6 +443,14 @@ continue to print headers and footers, including page numbers.
 score.  By default this is set to `false`, so the default setting of these two
 options means that LilyPond does *not* print page numbers while
 \LaTeX\ continues to print headers and footers.
+
+The same may be achieved only for first page with \option{print-first-page-number}.
+
+\lyOption{first-page-number}{false}
+
+Normally, \lyluatex\ should automatically determine the first page number of
+the score to match its place in the document. Should you like to force it to
+another value, you may do it thanks to this option.
 
 ### Inline
 
@@ -1245,6 +1305,15 @@ unchanged. In such cases the \option{force-compilation} option skips the checks
 and unconditionally recompiles the score, which may be a better solution than
 to (selectively) delete the scores from the \option{tmpdir} directory.
 
+### Bug workaround
+
+\lyOption{fix\_badly\_cropped\_staffgroup\_brackets}{false}
+
+This option is a dirty workaround for a
+[known bug](https://lists.gnu.org/archive/html/lilypond-user/2018-11/msg00039.html)
+of LilyPond. It's disabled by default; should you enable it globally, you may
+cancel it locally with \option{nofix\_badly\_cropped\_staffgroup\_brackets}.
+
 ## MusicXML options
 
 \lyOption{xml2ly}{musicxml2ly}
@@ -1263,7 +1332,7 @@ for more information.
 
 # Using \lyluatex\ in Classes or Style Files
 
-## Wrapping \lyluatex\ commands
+## Wrapping \lyluatex\ commands {#wrapping-commands}
 
 \cmd{lilypond} and \highlight{lilypond} are aliases for a command and an
 environment that \lyluatex\ defines internally,
