@@ -13,7 +13,7 @@ clean:
 
 ctan: manual
 	mkdir -p ./ctan/lyluatex/ly
-	cp -R lyluatex.sty lyluatex.lua \
+	cp -R lyluatex.sty lyluatex*.lua \
 		latexmkrc lyluatexbase.cls lyluatexmanual.cls \
 		lyluatex.tex lyluatex.pdf LICENSE Contributors.md \
 		./ctan/lyluatex/

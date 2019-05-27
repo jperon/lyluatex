@@ -114,3 +114,14 @@ devraient s'utiliser sans grande difficulté avec `lyluatex`.
 # Remerciements
 
 Cf. [Contributors.md](Contributors.md)
+
+# Contribuer
+
+Si vous souhaitez des améliorations ou rencontrez une erreur, n'hésitez pas
+à [signaler le problème](https://github.com/jperon/lyluatex/issues).
+Vous pouvez aussi, si vous maîtrisez la programmation, proposer vos changements
+via une [*pull request*](https://github.com/jperon/lyluatex/pulls).
+
+Cette extension est et demeurera libre et gratuite ; si elle vous est utile et
+que vous souhaitez en encourager le développement par un
+[don](https://www.paypal.me/abjperon), vous en êtes vivement remercié !

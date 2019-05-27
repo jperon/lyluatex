@@ -106,3 +106,14 @@ That way, documents typeset with `lilypond-book` can be adapted to use
 # Credits
 
 Cf. [Contributors.md](Contributors.md)
+
+# Contributing
+
+If you want improvements or encounter an error, do not hesitate to
+to report the [issue](https://github.com/jperon/lyluatex/issues).
+If you have programming skills, you may also propose your changes
+via a [pull request](https://github.com/jperon/lyluatex/pulls).
+
+This extension is and will remain free; if you find it useful and
+wish to encourage its development by a
+[donation](https://www.paypal.me/abjperon), many thanks!
