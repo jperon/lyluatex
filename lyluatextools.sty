@@ -1,0 +1,30 @@
+%lyluatextools support package.
+%
+% Copyright (C) 2015-2019 jperon and others (see CONTRIBUTORS.md)
+% License: MIT
+% This file is part of lyluatex.
+
+\NeedsTeXFormat{LaTeX2e}%
+\ProvidesPackage{lyluatextools}[2019/05/27 v1.0f]  %%LYLUATEX_DATE LYLUATEX_VERSION
+
+% Dependencies
+\RequirePackage{luatexbase}
+\RequirePackage{luaotfload}
+
+% Helper macro
+\def\ly@load@module#1#2{
+  \directlua{#1 = require(kpse.find_file("#2.lua") or "#2.lua")}
+}
+
+% Options
+\DeclareOption{lib}{\ly@load@module{lyluatex_lib}{lyluatex-lib}}
+\DeclareOption{options}{\ly@load@module{lyluatex_options}{lyluatex-options}}
+\ProcessOptions
+
+% If no option defined
+\directlua{
+  if not lyluatex_lib and not lyluatex_options then
+    lyluatex_lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
+    lyluatex_options = require(kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua")
+  end
+}
