@@ -17,6 +17,7 @@
 \RequirePackage{currfile}
 \RequirePackage{pdfpages}
 \IfFileExists{varwidth.sty}{\RequirePackage{varwidth}}{}
+\RequirePackage[options]{lyluatextools}
 
 \RequirePackage{metalogo}
 \newcommand{\lyluatex}{\textit{ly}\LuaTeX}
@@ -43,9 +44,7 @@
 % Options
 \catcode`-=11
 \directlua{
-  local _opt = require(
-    kpse.find_file("lyluatex-options.lua") or "lyluatex-options.lua"
-  )
+  local _opt = lyluatex_options
   ly_opts = _opt.Opts:new('ly_opts', {
     ['addversion'] = {'false', 'true', ''},
     ['autoindent'] = {'true', 'false', ''},
