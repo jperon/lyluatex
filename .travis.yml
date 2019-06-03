@@ -7,6 +7,8 @@ before_install:
 - sudo apt-get update -qq
 - sudo apt-get -y --force-yes install --no-install-recommends texlive texlive-latex-recommended texlive-latex-extra texlive-xetex texlive-luatex texlive-lang-european texlive-lang-french texlive-humanities texlive-extra-utils texlive-fonts-extra fonts-linuxlibertine lmodern texlive-metapost texlive-music latexmk lilypond pandoc lua5.1 python-pip
 - sudo pip install pygments
+- sudo mkdir -p /usr/share/fonts/truetype/inconsolata/
+- sudo wget -O /usr/share/fonts/truetype/inconsolata/Inconsolata.otf https://github.com/processing/p5.js-editor/raw/master/public/fonts/Inconsolata.otf
 
 script:
 - make manual
