@@ -1,7 +1,7 @@
 language: minimal
 
 before_install:
-- sudo apt-get -y --force-yes install --no-install-recommends texlive texlive-latex-recommended texlive-latex-extra texlive-xetex texlive-luatex texlive-lang-european texlive-lang-french texlive-humanities texlive-extra-utils texlive-fonts-extra fonts-linuxlibertine lmodern texlive-metapost texlive-music latexmk lilypond pandoc lua
+- sudo apt-get -y --force-yes install --no-install-recommends texlive texlive-latex-recommended texlive-latex-extra texlive-xetex texlive-luatex texlive-lang-european texlive-lang-french texlive-humanities texlive-extra-utils texlive-fonts-extra fonts-linuxlibertine lmodern texlive-metapost texlive-music latexmk lilypond pandoc lua5.1
 
 script:
 - make manual
