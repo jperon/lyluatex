@@ -1,85 +1,77 @@
 # lyluatex
 
-Alternative à lilypond-book pour lualatex
-
-[![Build Status](https://travis-ci.com/jperon/lyluatex.svg?branch=master)](https://travis-ci.com/jperon/lyluatex)
+Alternative to lilypond-book for lualatex
 
 ## Installation
 
-### Pour un document isolé
+### For a single document
 
-Copiez `lyluatex.sty` et `lyluatex.lua` dans le dossier contenant le document concerné.
+Copy `lyluatex.sty` and `lyluatex.lua` into the folder containing the document
+you wish to typeset.
 
-### Pour l'ensemble de votre distribution de LaTeX
+### For all documents compiled with your LaTeX distribution
 
-#### Version disponible sur TeXLive
+#### TeXLive version
 
-La commande suivante devrait faire l'affaire :
+Just run this command :
 
 ```bash
 tlmgr install lyluatex
 ```
 
-#### Version la plus récente
+#### Last version
 
-Copiez depuis ce dépôt `lyluatex.sty` et `lyluatex.lua` quelque part dans votre
-texmf, puis lancez `mktexlsr`.
+Copy `lyluatex.sty` and `lyluatex.lua` from this repository into your texmf
+tree, then run `mktexlsr`.
 
-## Utilisation
+## Usage
 
-Dans le préambule de votre document, incluez le package `lyluatex` :
+In the preable of your document, include the package `lyluatex`:
 
 ```TeX
 \usepackage{lyluatex}
 ```
 
-L'option facultative `program` permet de définir un chemin alternatif vers
-`lilypond`, par exemple :
+The `program` option permits the definition of an alternative path to
+`lilypond`, for example:
 
 ```TeX
 \usepackage[program=/opt/lilypond-dev/lilypond]{lyluatex}
 ```
 
-Dès lors, vous pouvez inclure une partition lilypond grâce à la commande :
+Thereafter, you can include a lilypond file with the command:
 
 ```TeX
-\lilypondfile[staffsize=17]{CHEMIN/VERS/LA/PARTITION}
+\lilypondfile[staffsize=17]{PATH/TO/THE/FILE}
 ```
 
-L'argument `staffsize`, optionnel, influe sur la taille de la partition. Vous
-pouvez changer la taille pour l'ensemble des partitions en saisissant, avant
-l'inclusion des partitions concernées :
+The argument `staffsize`, which is optional, changes the size of the score.  You
+can change the size for all the subsequent scores in a document by placing the
+following command before your first include statement to be so affected:
 
 ```TeX
 \lysetoption{staffsize}{24}
 ```
 
-Si `staffsize` est défini à 0 (sa valeur par défaut), la taille de partition
-sera calculée automatiquement de façon à ce que le texte de la partition ait la
-même taille que la police de caractères à l'endroit concerné.
-
-Dès lors, il ne vous reste plus qu'à compiler le document comme d'habitude, avec
+Next, you simply need to compile the document normally with the command
 `lualatex -shell-escape` :
 
-```TeX
+```bash
 lualatex -shell-escape DOCUMENT.TEX
 ```
 
-Une autre possibilité, plus "sécurisée", est d'ajouter `lilypond` et `gs` aux commandes
-autorisées par défaut :
+Another "more secure" option is to add `lilypond` and `gs` to default allowed commands :
 
 ```bash
 shell_escape_commands=$(kpsewhich -expand-var '$shell_escape_commands'),lilypond,gs lualatex DOCUMENT.TEX
 ```
 
-Sur de gros documents, si votre ordinateur a peu de RAM, il est possible que
-surgissent des erreurs *buffer overflow* dans les appels à `lilypond`. Pour
-éviter cela, ajoutez d'abord l'option `-draftmode` à la commande précédente,
-puis relancez la compilation sans cette option.
+On systems with low RAM, when working on big documents, you could encounter
+*buffer overflows* in `lilypond` calls. In that case, first compile with option
+`-draftmode`, then compile again without this option.
 
-Vous pouvez aussi (mais ce n'est pas recommandé, sauf pour des fragments
-relativement courts) saisir directement la musique au sein de votre document, grâce
-à l'environnement `lilypond`. Par exemple :
+You can also input music directly into your docoment with the `lilypond` environment.
+This is only recommended for relatively short snippets.  For example:
 
 ```TeX
 \begin{lilypond}
@@ -87,43 +79,41 @@ relativement courts) saisir directement la musique au sein de votre document, gr
 \end{lilypond}
 ```
 
-Enfin, il est possible d'intégrer des fragments vraiment courts grâce à la
-commande `\lilypond`.
-Par exemple :
+Finally, for truly short snippets, there is also the `\lily` command.  Example:
 
 ```TeX
 \lilypond[staffsize=12]{c' d' g'}
 ```
 
-Voyez les documents dans le dossier `examples` pour un exemple, et la
-documentation complète dans `lyluatex.md`.
+**Nota bene:** The `\lilypond` command *does not* support blocks of LilyPond
+code with explicit `\score` blocks.  Such code must be included with the
+`lilypond` environment or as a separate file.
 
-## Migration depuis `lilypond-book`
+## Migration from `lilypond-book`
 
-Afin de faciliter la migration depuis `lilypond-book`, la commande
-`\lilypondfile` accepte les mêmes options que ce dernier. De même,
-l'environnement `lilypond` et la commande `\lilypond` fonctionnent
-à peu près comme avec `lilypond-book` ; pour un fonctionnement plus
-identique encore, utilisez la commande suivante pour appeler `lyluatex` :
+In order to facilitate the migration from `lilypond-book`, `\lilypondfile`,
+the environment `lilypond` and the command `\lilypond` should work nearly
+as with `lilypond-book` ; for even more identical behaviour, call `lyluatex`
+like follows:
 
 ```TeX
-\usepackage[nofragment, insert=systems]{lyluatex}
+\usepackage[program=/opt/lilypond-dev/lilypond]{lyluatex}
 ```
 
-De la sorte, les documents saisis auparavant avec l'aide de `lilypond-book`
-devraient s'utiliser sans grande difficulté avec `lyluatex`.
+That way, documents typeset with `lilypond-book` can be adapted to use
+`lyluatex` without much difficulty.
 
-# Remerciements
+# Credits
 
 Cf. [Contributors.md](Contributors.md)
 
-# Contribuer
+# Contributing
 
-Si vous souhaitez des améliorations ou rencontrez une erreur, n'hésitez pas
-à [signaler le problème](https://github.com/jperon/lyluatex/issues).
-Vous pouvez aussi, si vous maîtrisez la programmation, proposer vos changements
-via une [*pull request*](https://github.com/jperon/lyluatex/pulls).
+If you want improvements or encounter an error, do not hesitate to
+to report the [issue](https://github.com/jperon/lyluatex/issues).
+If you have programming skills, you may also propose your changes
+via a [pull request](https://github.com/jperon/lyluatex/pulls).
 
-Cette extension est et demeurera libre et gratuite ; si elle vous est utile et
-que vous souhaitez en encourager le développement par un
-[don](https://www.paypal.me/abjperon), vous en êtes vivement remercié !
+This extension is and will remain free; if you find it useful and
+wish to encourage its development by a
+[donation](https://www.paypal.me/abjperon), many thanks!
