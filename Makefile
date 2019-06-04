@@ -21,5 +21,5 @@ ctan: manual
 	echo 'Main author: [Fr. Jacques Peron](mailto:cataclop@hotmail.com)\nThis material is subject to the MIT license.\n' \
 		> ./ctan/lyluatex/README.md
 	echo '# Lyluatex' >> ./ctan/lyluatex/README.md
-	sed -n -e '/## Usage/,$$p' README.en.md | sed '/test.en.tex/d' >> ./ctan/lyluatex/README.md
+	sed -n -e '/## Usage/,$$p' README.md | sed '/test.en.tex/d' >> ./ctan/lyluatex/README.md
 	(cd ctan/ ; zip -r lyluatex lyluatex)
