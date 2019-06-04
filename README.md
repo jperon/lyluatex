@@ -2,6 +2,8 @@
 
 Alternative to lilypond-book for lualatex
 
+[![Build Status](https://travis-ci.com/jperon/lyluatex.svg?branch=master)](https://travis-ci.com/jperon/lyluatex)
+
 ## Installation
 
 ### For a single document
