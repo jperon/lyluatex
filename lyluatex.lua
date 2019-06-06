@@ -300,7 +300,8 @@ function latex.includepdf(pdfname, range, papersize)
     ))
 end
 
-function latex.includesystems(filename, range, protrusion, gutter, staffsize, indent_offset)
+function latex.includesystems(filename, range, protrusion, gutter,
+    staffsize, indent_offset, slashsep, slashsep_angle, slashsep_size)
     local h_offset = protrusion + indent_offset
     local texoutput = '\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi\n'
     texoutput = texoutput..'\\par\n'
@@ -313,14 +314,33 @@ function latex.includesystems(filename, range, protrusion, gutter, staffsize, in
                 h_offset + gutter, filename..'-'..system
             )
         if index < #range then
-            texoutput = texoutput..
-                string.format([[
-\ifx\betweenLilyPondSystem\undefined\par\vspace{%fpt plus %fpt minus %fpt}%%
-\else\betweenLilyPondSystem{%s}\fi%%
-]],
-                    staffsize / 4, staffsize / 12, staffsize / 16,
-                    index
-                )
+            if slashsep then
+              if not ly.tikz_loaded then err("tikz not loaded") end
+                print()
+                print("tikz loaded?")
+                print(ly.tikz_loaded)
+                print()
+                texoutput = texoutput..
+                    string.format([[
+    \setbox0\leftline{\hskip-%spt
+    \begin{tikzpicture}[x=%spt,y=%spt]
+    \draw[fill] (0,0) -- (1,1) -- (1,1.25) -- (0,0.25) -- cycle;
+    \draw[fill] (0,-0.5) -- (1,0.5) -- (1,0.75) -- (0,-0.25) -- cycle;
+    \end{tikzpicture}
+    }
+    \lysystemsep
+    ]],
+                    14, 28, 28) -- TODO: Continue here, calculating the values
+            else
+                texoutput = texoutput..
+                    string.format([[
+    \ifx\betweenLilyPondSystem\undefined\par\vspace{%fpt plus %fpt minus %fpt}%%
+    \else\betweenLilyPondSystem{%s}\fi%%
+    ]],
+                        staffsize / 4, staffsize / 12, staffsize / 16,
+                        index
+                    )
+            end
         end
     end
     texoutput = texoutput..'\n\\ifx\\postLilyPondExample\\undefined\\else\\postLilyPondExample\\fi'
@@ -1186,7 +1206,8 @@ function Score:write_latex(do_compile)
     elseif self.insert == 'systems' then
         latex.includesystems(
             self.output, self.range, self.protrusion_left,
-            self.leftgutter, self.staffsize, self.indent_offset
+            self.leftgutter, self.staffsize, self.indent_offset,
+            self.slashsep, self['slashsep-angle'], self['slashsep-size']
         )
     else  -- inline
         if self:count_systems() > 1 then
