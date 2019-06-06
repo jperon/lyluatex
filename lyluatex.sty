@@ -105,6 +105,9 @@
     ['relative'] = {'false', _opt.is_num},
         ['norelative'] = {'default', _opt.is_neg},
     ['showfailed'] = {'false', 'true' ,''},
+    ['slashsep'] = {'false', 'true', ''},
+        ['slashsep_angle'] = {'45', _opt.is_num},
+        ['slashsep_size'] = {'1', _opt.is_num},
     ['staffsize'] = {'0', _opt.is_dim},
         ['inline-staffsize'] = {'0', _opt.is_dim},
     ['system-count'] = {'0', _opt.is_dim},
@@ -179,6 +182,24 @@
     \directlua{ly.set_fonts(\rmfamilyid, \sffamilyid, \ttfamilyid)}%
   \endgroup%
 }
+
+% Prepare a drawn \lysystemsep command for a (slash) separator between
+% included LilyPond systems - if tikz has been loaded.
+\makeatletter
+\@ifpackageloaded{tikz}%
+{
+\directlua{ly.tikz_loaded = true}
+% Define a dummy box, the actual tikzpicture will be generated on-the-fly
+\setbox0\leftline{}
+\def\lysystemsep{%
+	\par
+	\medskip
+	\cleaders\copy0\vskip\dimexpr\ht0+\dp0\relax
+	\bigskip}
+}
+\makeatother
+
+\directlua{print() print() print("Has tikz been loaded?") print(ly.tikz_loaded)}
 
 % Main commands
 % Score processing
