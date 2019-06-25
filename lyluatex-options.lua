@@ -144,6 +144,20 @@ function Opts:set_option(k, v)
     end
 end
 
+function Opts:use_option(key)
+--[[
+    Call an option and write its value to the TeX space.
+    This is a shorthand for accessing options from the TeX side
+    (rather than having to write tex.print(XX_opts.some_options))
+--]]
+    local option = self.options[key]
+    if option then
+        tex.print(option:explode('\n'))
+    else
+        err(string.format("Trying to access non-existent option %s", key))
+    end
+end
+
 function Opts:validate_option(key, options_obj)
 --[[
     Validate an (already sanitized) option against its expected values.
