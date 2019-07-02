@@ -803,7 +803,7 @@ function Score:lilypond_cmd()
         "-dno-point-and-click "..
         "-djob-count=2 "..
         "-dno-delete-intermediate-files "
-    if self['optimize-pdf'] and self:lilypond_has_TeXGS() then cmd = cmd.."-O TeX-GS " end
+    if self['optimize-pdf'] and self:lilypond_has_TeXGS() then cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts " end
     if self.input_file then
         cmd = cmd..'-I "'..lib.dirname(self.input_file):gsub('^%./', lfs.currentdir()..'/')..'" '
     end
@@ -1015,28 +1015,29 @@ function Score:optimize_pdf()
             end,
             'lyluatex optimize-pdf'
         )
-    end
-    local pdf2ps, ps2pdf, path
-    for file in lfs.dir(self.tmpdir) do
-        path = self.tmpdir..'/'..file
-        if path:match(self.output) and path:sub(-4) == '.pdf' then
-            pdf2ps = io.popen(
-                'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE '..path..' -c quit',
-                'r'
-            )
-            ps2pdf = io.popen(
-                'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile='..path..'-gs -',
-                'w'
-            )
-            if pdf2ps then
-                ps2pdf:write(pdf2ps:read('*a'))
-                pdf2ps:close()
-                ps2pdf:close()
-                os.rename(path..'-gs', path)
-            else
-                warn(
-                    [[You have asked for pdf optimization, but gs wasn't found.]]
+    else
+        local pdf2ps, ps2pdf, path
+        for file in lfs.dir(self.tmpdir) do
+            path = self.tmpdir..'/'..file
+            if path:match(self.output) and path:sub(-4) == '.pdf' then
+                pdf2ps = io.popen(
+                    'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE '..path..' -c quit',
+                    'r'
                 )
+                ps2pdf = io.popen(
+                    'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile='..path..'-gs -',
+                    'w'
+                )
+                if pdf2ps then
+                    ps2pdf:write(pdf2ps:read('*a'))
+                    pdf2ps:close()
+                    ps2pdf:close()
+                    os.rename(path..'-gs', path)
+                else
+                    warn(
+                        [[You have asked for pdf optimization, but gs wasn't found.]]
+                    )
+                end
             end
         end
     end
