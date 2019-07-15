@@ -158,6 +158,12 @@ function Opts:use_option(key)
     end
 end
 
+-- Wrapper macro to simplify the use of Opts:use_option
+local use_option = [[
+\newcommand*{\lyuseoption}[2]{%
+\directlua{#1:use_option('#2')}}]]
+tex.print(use_option:explode('\n'))
+
 function Opts:validate_option(key, options_obj)
 --[[
     Validate an (already sanitized) option against its expected values.
@@ -274,7 +280,6 @@ function optlib.merge_options(base_opt, super_opt)
     for k, v in pairs(super_opt) do result[k] = v end
     return result
 end
-
 
 optlib.Opts = Opts
 return optlib
