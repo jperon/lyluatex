@@ -33,6 +33,9 @@ function Opts:new(opt_prefix, declarations)
         referenced in the parent LaTeX document (preamble or package).
         This is required to write the code calling optlib.set_option into
         the option declaration.
+        If the new Opts object is *not* intended to be used as *package* options
+        then opt_prefix should be nil. In that case the Opts object is simply
+        returned and can be stored by the caller.
     - declarations: a definition table stored in the calling module (see below)
     Each entry in the 'declarations' table represents one package option, with each
     value being an array (table with integer indexes instead of keys). For
@@ -48,16 +51,20 @@ function Opts:new(opt_prefix, declarations)
     local exopt = ''
     for k, v in pairs(declarations) do
         o.options[k] = v[1] or ''
-        tex.sprint(string.format([[
+        if opt_prefix then
+            tex.sprint(string.format([[
 \DeclareOptionX{%s}{\directlua{
     %s:set_option('%s', '\luatexluaescapestring{#1}')
 }}%%
 ]],
-            k, opt_prefix, k
-        ))
-        exopt = exopt..k..'='..(v[1] or '')..','
+                k, opt_prefix, k
+            ))
+            exopt = exopt..k..'='..(v[1] or '')..','
+        end
     end
-    tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
+    if opt_prefix then
+        tex.sprint([[\ExecuteOptionsX{]]..exopt..[[}%%]], [[\ProcessOptionsX]])
+    end
     return o
 end
 
