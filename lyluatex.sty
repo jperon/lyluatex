@@ -42,7 +42,7 @@
 \catcode`-=11
 \directlua{
   local _opt = lua_options
-  ly_opts = _opt.Opts:new('ly_opts', {
+  lua_options.register('ly', {
     ['addversion'] = {'false', 'true', ''},
     ['autoindent'] = {'true', 'false', ''},
     ['cleantmp'] = {'false', 'true', ''},
