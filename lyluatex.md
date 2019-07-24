@@ -343,11 +343,11 @@ the individual command or environments:
 \end{lilypond}
 ```
 
-\lyCmd{lysetoption}
+\lyCmd{setluaoption{ly}}
 At any place in the document the value of an option can be changed using
 
 ```tex
-\lysetoption{key}{new-value}
+\setluaoption{ly}{key}{new-value}
 ```
 
 The option will take effect from now on as a package option until it is changed
@@ -1161,7 +1161,7 @@ starting with the tilde will implicitly be expanded to absolute paths in that
 process.
 
 ```TeX
-\lysetoption{includepaths}{\string~/lilypond-lib}
+\setluaoption{ly}{includepaths}{\string~/lilypond-lib}
 
 \lilypondfile[includepaths={\string~/lilypond-lib,/home/johndoe/project-lib}]
 ```

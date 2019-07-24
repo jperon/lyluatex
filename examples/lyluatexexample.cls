@@ -2,6 +2,6 @@
 \ProvidesClass{lyluatexexample}
 
 \LoadClass{lyluatexbase}
-\lysetoption{includepaths}{./, ../ly/}
+\setluaoption{ly}{includepaths}{./, ../ly/}
 
 \pagestyle{empty}

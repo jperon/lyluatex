@@ -153,9 +153,6 @@
   \setlength{\hfuzz}{\ly@old@hfuzz}%
 }
 
-% Command to change options during the document
-\newcommand{\lysetoption}[2]{\directlua{ly_opts:set_option([[#1]], [[#2]])}}
-
 % How the filename of a score will look like (if printed)
 \newcommand{\lyFilename}[1]{\noindent #1\par\bigskip}
 
@@ -170,7 +167,9 @@
 % *current* font for optional use.
 \newcommand{\ly@currentfonts}{%
   \begingroup%
-    \directlua{ly_opts:set_option('current-font', ly.get_font_family(font.current()))}%
+    \setluaoption{ly}{current-font}{%
+      \directlua{ly.get_font_family(font.current())}
+    }
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
@@ -184,9 +183,9 @@
 % Score processing
 \newcommand*{\ly@compilescore}[1]{%
   \ly@setunits%
+  \setluaoption{ly}{currfiledir}{\currfiledir}
+  \setluaoption{ly}{twoside}{\ly@istwosided}
   \directlua{
-    ly_opts:set_option('currfiledir', [[\currfiledir]])
-    ly_opts:set_option('twoside', '\ly@istwosided')
     #1
     ly.newpage_if_fullpage()
   }%

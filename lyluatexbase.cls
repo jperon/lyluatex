@@ -16,7 +16,7 @@
 \RequirePackage{pgffor}
 \RequirePackage{fancyvrb}
 \RequirePackage[colorlinks=true]{hyperref}
-\lysetoption{includepaths}{./, ly/}
+\setluaoption{ly}{includepaths}{./, ly/}
 
 
 % Common formatting elements for manual and examples
