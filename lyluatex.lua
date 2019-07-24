@@ -10,7 +10,7 @@ local err, warn, info, log = luatexbase.provides_module({
 })
 
 local lib = require(kpse.find_file("luaoptions-lib.lua") or "luaoptions-lib.lua")
-local ly_opts = ly_opts  -- global ly_opts has been defined before in lyluatex.sty
+local ly_opts = lua_options.client('ly')
 
 local md5 = require 'md5'
 local lfs = require 'lfs'

@@ -129,7 +129,7 @@
 \directlua{
   ly = require(kpse.find_file("lyluatex.lua") or "lyluatex.lua")
   ly.make_list_file()
-  if ly_opts.cleantmp then
+  if lua_options.client('ly').cleantmp then
     luatexbase.add_to_callback('stop_run', ly.clean_tmp_dir, 'lyluatex cleantmp')
     luatexbase.add_to_callback('stop_run', ly.conclusion_text, 'lyluatex conclusion')
   end
