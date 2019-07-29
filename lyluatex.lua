@@ -9,6 +9,12 @@ local err, warn, info, log = luatexbase.provides_module({
     license            = "MIT",
 })
 
+if status.shell_escape ~= 1 then err([[
+Documents using the lyluatex package
+must be compiled using the --shell-escape option.
+]])
+end
+
 local lib = require(kpse.find_file("luaoptions-lib.lua") or "luaoptions-lib.lua")
 local ly_opts = lua_options.client('ly')
 
