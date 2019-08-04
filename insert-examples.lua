@@ -11,12 +11,12 @@ local latex = [[
 local function texoutput(n, i)
     local c = {}
     local f = io.open('examples/'..n..'.tex')
-    local iter = f:read('*a'):gmatch('[^\n]+')
-    f:close()
+    local iter = f:lines()
     repeat until iter() == [[\begin{document}]]
     for l in iter do
         if l == [[\end{document}]] then break else table.insert(c, l) end
     end
+    f:close()
     return latex:format(i, n, table.concat(c, '\n')):gsub('%%','%%%%')
 end
 
