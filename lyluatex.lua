@@ -121,7 +121,7 @@ end
 
 
 local function font_default_staffsize()
-    return lib.fontinfo(font.current()).size/39321.6
+    return lib.current_font_size()/39321.6
 end
 
 
