@@ -67,19 +67,16 @@ local LY_HEAD = [[
 %%File header
 \version "<<<version>>>"
 <<<language>>>
-
-<<<preamble>>>
-
 #(define inside-lyluatex #t)
 #(set-global-staff-size <<<staffsize>>>)
+<<<preamble>>>
 
 \header {
     copyright = ""
     tagline = ##f
 }
 \paper{
-    <<<paper>>>
-    two-sided = ##<<<twoside>>>
+    <<<paper>>>    two-sided = ##<<<twoside>>>
     line-width = <<<linewidth>>>\pt
     <<<indent>>>
     <<<raggedright>>>
@@ -88,8 +85,7 @@ local LY_HEAD = [[
 \layout{
     <<<staffprops>>>
     <<<fixbadlycroppedstaffgroupbrackets>>>
-}
-<<<header>>>
+}<<<header>>>
 
 %%Follows original score
 ]]
@@ -128,6 +124,9 @@ end
 local function includes_parse(list)
     local includes = ''
     if list then
+        includes = [[
+
+]]
         list = list:explode(',')
         for _, included_file in ipairs(list) do
             warn(included_file)
@@ -844,6 +843,7 @@ function Score:ly_fixbadlycroppedstaffgroupbrackets()
                 (ly:grob-set-property! grob 'Y-extent
                   (cons (- (car Y-off) 1.7) (+ (cdr Y-off) 1.7)))))
     }]]
+    or '%% no fix for badly cropped StaffGroup brackets'
 end
 
 function Score:ly_fonts()
@@ -859,6 +859,8 @@ function Score:ly_fonts()
             self.sffamily,
             self.ttfamily
         )
+    else
+        return '%% fonts not set'
     end
 end
 
@@ -869,11 +871,16 @@ end
 function Score:ly_indent()
     if not (self.indent == false and self.insert == 'fullpage') then
         return [[indent = ]]..(self.indent or 0)..[[\pt]]
+    else
+        return '%% no indent set'
     end
 end
 
 function Score:ly_language()
-    if self.language then return '\\language "'..self.language..'"' end
+    if self.language then return '\\language "'..self.language..'"'..[[
+
+]]
+    else return '' end
 end
 
 function Score:ly_linewidth() return self['line-width'] end
@@ -940,7 +947,7 @@ end
 
 function Score:ly_paper()
     local system_count =
-        self['system-count'] == 0 and ''
+        self['system-count'] == '0' and ''
         or 'system-count = '..self['system-count']..'\n    '
 
     local papersize = '#(set-paper-size "'..(self.papersize or 'lyluatexfmt')..'")'
@@ -949,7 +956,7 @@ function Score:ly_paper()
         local pfpn = self['print-first-page-number'] and 't' or 'f'
         local ppn = self['print-page-number'] and 't' or 'f'
         return string.format([[
-%s%s
+    %s%s
     print-page-number = ##%s
     print-first-page-number = ##%s
     first-page-number = %s
@@ -958,24 +965,24 @@ function Score:ly_paper()
           first_page_number, self:ly_margins()
 	    )
     else
-        if self.papersize then
-            papersize = papersize..[[
-]]
-        else
-            papersize = ''
-        end
+        return string.format([[%s%s]], papersize..[[
 
-        return string.format([[%s%s]], papersize, system_count)
+]], system_count)
     end
 end
 
 function Score:ly_preamble()
+    local result = string.format(
+        [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
+        self.paperwidth, self.paperheight
+    )
     if self.insert == 'fullpage' then
-        return string.format(
-            [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
-            self.paperwidth, self.paperheight
-	    )
-    else return [[\include "lilypond-book-preamble.ly"]]
+        return result
+    else
+        return result..[[
+
+
+\include "lilypond-book-preamble.ly"]]
     end
 end
 
@@ -984,11 +991,17 @@ function Score:ly_raggedright()
         if self['ragged-right'] then return 'ragged-right = ##t'
         else return 'ragged-right = ##f'
         end
+    else
+        return '%% no alignment set'
     end
 end
 
 function Score:ly_staffprops()
-    local clef, timing, timesig, staff = '', '', '', ''
+    local clef, timing, timesig, staff =
+        '%% no clef set',
+        '    %% timing not suppressed',
+        '    %% no time signature set',
+        '    %% staff symbol not suppressed'
     if self.noclef then clef = [[\context { \Staff \remove "Clef_engraver" }]] end
     if self.notiming then timing = [[\context { \Score timing = ##f }]] end
     if self.notimesig then timesig = [[\context { \Staff \remove "Time_signature_engraver" }]] end
