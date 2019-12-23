@@ -53,7 +53,7 @@ placing the following command before your first include statement to be so
 affected:
 
 ```TeX
-\lysetoption{staffsize}{24}
+\setluaoption{ly}{staffsize}{24}
 ```
 
 Next, you simply need to compile the document normally with the command

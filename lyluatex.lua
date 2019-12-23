@@ -9,8 +9,8 @@ local err, warn, info, log = luatexbase.provides_module({
     license            = "MIT",
 })
 
-local lib = require(kpse.find_file("lyluatex-lib.lua") or "lyluatex-lib.lua")
-local ly_opts = ly_opts  -- global ly_opts has been defined before in lyluatex.sty
+local lib = require(kpse.find_file("luaoptions-lib.lua") or "luaoptions-lib.lua")
+local ly_opts = lua_options.client('ly')
 
 local md5 = require 'md5'
 local lfs = require 'lfs'
@@ -117,7 +117,7 @@ end
 
 
 local function font_default_staffsize()
-    return lib.fontinfo(font.current()).size/39321.6
+    return lib.current_font_size()/39321.6
 end
 
 

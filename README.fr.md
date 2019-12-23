@@ -51,7 +51,7 @@ pouvez changer la taille pour l'ensemble des partitions en saisissant, avant
 l'inclusion des partitions concernées :
 
 ```TeX
-\lysetoption{staffsize}{24}
+\setluaoption{ly}{staffsize}{24}
 ```
 
 Si `staffsize` est défini à 0 (sa valeur par défaut), la taille de partition

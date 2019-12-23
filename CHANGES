@@ -1,0 +1,31 @@
+% lyluatex Changelog file.
+%
+% Copyright (C) 2015-2019 jperon and others (see CONTRIBUTORS.md)
+% License: MIT
+% This file is part of lyluatex.
+
+
+Changes since release v1.0f:
+============================
+
+New Features
+------------
+
+Modifications (syntax and internal)
+-----------------------------------
+
+The following changes may affect code that worked with v1.0f:
+
+- ly_opts is not a global variable anymore but can be accessed
+  through lua_options.client('ly') instead
+- Replace macro \lysetoption with \setluaoption (from luaoptions package)
+  \lysetoption{key}{value} should be replaced with
+  \setluaoption{ly}{key}{value} in any documents/packages
+- Extracted package `luaoptions` as separate repository
+  (causing a number of follow-up changes)
+
+Bugfixes
+--------
+
+=====================================
+Start with release v1.0f (2019-05-27)

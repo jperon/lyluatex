@@ -9,6 +9,7 @@ before_install:
 - sudo pip install pygments
 - sudo mkdir -p /usr/share/fonts/truetype/inconsolata/
 - sudo wget -O /usr/share/fonts/truetype/inconsolata/Inconsolata.otf https://github.com/processing/p5.js-editor/raw/master/public/fonts/Inconsolata.otf
-
+- mkdir -p ~/texmf/tex/luatex
+- git clone https://github.com/lualatex-tools/luaoptions.git ~/texmf/tex/luatex/luaoptions
 script:
 - make manual
