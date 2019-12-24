@@ -35,7 +35,7 @@
 		local PC = string.char(37)
 		local date_fmt = PC..'Y-'..PC..'m-'..PC..'d'
 		local p = io.popen('git log -n1 --date=short --format='..PC..'"ad"', 'r')
-		tex.sprint(p and p:read('*a') or os.date(date_fmt))
+		tex.sprint(p and p:read('*a'):sub(1,-2) or os.date(date_fmt))
 		if p then p:close() end
 	}
 }
