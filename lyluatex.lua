@@ -15,7 +15,6 @@ local ly_opts = lua_options.client('ly')
 local md5 = require 'md5'
 local lfs = require 'lfs'
 
-local latex = {}
 local ly = {
     err = err,
     varwidth_available = kpse.find_file('varwidth.sty')
@@ -196,12 +195,11 @@ end
 
 --[[ ================ Bounding box calculations =========================== --]]
 
-local bbox = {}
-function bbox.get(filename, line_width)
-    return bbox.read(filename) or bbox.parse(filename, line_width)
+function bbox_get(filename, line_width)
+    return bbox_read(filename) or bbox_parse(filename, line_width)
 end
 
-function bbox.calc(x_1, x_2, y_1, y_2, line_width)
+function bbox_calc(x_1, x_2, y_1, y_2, line_width)
     local bb = {
         ['protrusion'] = -lib.convert_unit(("%fbp"):format(x_1)),
         ['r_protrusion'] = lib.convert_unit(("%fbp"):format(x_2)) - line_width,
@@ -215,7 +213,7 @@ function bbox.calc(x_1, x_2, y_1, y_2, line_width)
     return bb
 end
 
-function bbox.parse(filename, line_width)
+function bbox_parse(filename, line_width)
     -- get BoundingBox from EPS file
     local bbline = lib.readlinematching('^%%%%BoundingBox', io.open(filename..'.eps', 'r'))
     if not bbline then return end
@@ -241,21 +239,21 @@ function bbox.parse(filename, line_width)
         string.format("return %f, %f, %f, %f, %f", x_1, y_1, x_2, y_2, line_width)
     )
     f:close()
-    return bbox.calc(x_1, x_2, y_1, y_2, line_width)
+    return bbox_calc(x_1, x_2, y_1, y_2, line_width)
 end
 
-function bbox.read(f)
+function bbox_read(f)
     f = f .. '.bbox'
     if lfs.isfile(f) then
         local x_1, y_1, x_2, y_2, line_width = dofile(f)
-        return bbox.calc(x_1, x_2, y_1, y_2, line_width)
+        return bbox_calc(x_1, x_2, y_1, y_2, line_width)
     end
 end
 
 
 --[[ =============== Functions that output LaTeX code ===================== --]]
 
-function latex.filename(printfilename, insert, input_file)
+function latex_filename(printfilename, insert, input_file)
     if printfilename and input_file then
         if insert ~= 'systems' then
             warn('`printfilename` only works with `insert=systems`')
@@ -266,7 +264,7 @@ function latex.filename(printfilename, insert, input_file)
     end
 end
 
-function latex.fullpagestyle(style, ppn)
+function latex_fullpagestyle(style, ppn)
     local function texoutput(s) tex.sprint('\\includepdfset{pagecommand='..s..'}%') end
     if style == '' then
         if ppn then texoutput('\\thispagestyle{empty}')
@@ -276,7 +274,7 @@ function latex.fullpagestyle(style, ppn)
     end
 end
 
-function latex.includeinline(pdfname, height, valign, hpadding, voffset)
+function latex_includeinline(pdfname, height, valign, hpadding, voffset)
     local v_base
     if valign == 'bottom' then v_base = 0
     elseif valign == 'top' then v_base = lib.convert_unit('1em') - height
@@ -290,16 +288,14 @@ function latex.includeinline(pdfname, height, valign, hpadding, voffset)
     )
 end
 
-function latex.includepdf(pdfname, range, papersize)
-    local noautoscale = ''
-    if papersize then noautoscale = 'noautoscale' end
+function latex_includepdf(pdfname, range, papersize)
     tex.sprint(string.format(
         [[\includepdf[pages={%s},%s]{%s}]],
-        table.concat(range, ','), noautoscale, pdfname
+        table.concat(range, ','), papersize and 'noautoscale' or '', pdfname
     ))
 end
 
-function latex.includesystems(filename, range, protrusion, gutter, staffsize, indent_offset)
+function latex_includesystems(filename, range, protrusion, gutter, staffsize, indent_offset)
     local h_offset = protrusion + indent_offset
     local texoutput = '\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi\n'
     texoutput = texoutput..'\\par\n'
@@ -326,13 +322,13 @@ function latex.includesystems(filename, range, protrusion, gutter, staffsize, in
     tex.sprint(texoutput:explode('\n'))
 end
 
-function latex.label(label, labelprefix)
+function latex_label(label, labelprefix)
     if label then tex.sprint('\\label{'..labelprefix..label..'}%%') end
 end
 
 
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
-function latex.verbatim(verbatim, ly_code, intertext, version)
+function latex_verbatim(verbatim, ly_code, intertext, version)
     if verbatim then
         if version then tex.sprint('\\lyVersion{'..version..'}') end
         local content = table.concat(ly_code:explode('\n'), '\n'):gsub(
@@ -371,12 +367,12 @@ function Score:bbox(system)
         if not self.bboxes then
             self.bboxes = {}
             for i = 1, self:count_systems() do
-                table.insert(self.bboxes, bbox.get(self.output..'-'..i, self['line-width']))
+                table.insert(self.bboxes, bbox_get(self.output..'-'..i, self['line-width']))
             end
         end
         return self.bboxes[system]
     else
-        if not self.bbox then self.bbox = bbox.get(self.output, self['line-width']) end
+        if not self.bbox then self.bbox = bbox_get(self.output, self['line-width']) end
         return self.bbox
     end
 end
@@ -1095,9 +1091,9 @@ points to a valid LilyPond executable.
             err(warning)
         end
     end
-    -- with bbox.read check_protrusion will only execute with
+    -- with bbox_read check_protrusion will only execute with
     -- a prior compilation, otherwise it will be ignored
-    local do_compile = not self:check_protrusion(bbox.read)
+    local do_compile = not self:check_protrusion(bbox_read)
     if self['force-compilation'] or do_compile then
         repeat
             self.complete_ly_code = self:header()..self:content()..self:footer()
@@ -1108,7 +1104,7 @@ points to a valid LilyPond executable.
                 self:clean_failed_compilation()
                 break
             end
-        until self:check_protrusion(bbox.get)
+        until self:check_protrusion(bbox_get)
         self:optimize_pdf()
     else table.insert(self.output_names, self.output)
     end
@@ -1188,16 +1184,16 @@ function Score:tex_margin_top()
 end
 
 function Score:write_latex(do_compile)
-    latex.filename(self.printfilename, self.insert, self.input_file)
-    latex.verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
+    latex_filename(self.printfilename, self.insert, self.input_file)
+    latex_verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
     if do_compile and not self:check_compilation() then return end
     --[[ Now we know there is a proper score --]]
-    latex.fullpagestyle(self.fullpagestyle, self['print-page-number'])
-    latex.label(self.label, self.labelprefix)
+    latex_fullpagestyle(self.fullpagestyle, self['print-page-number'])
+    latex_label(self.label, self.labelprefix)
     if self.insert == 'fullpage' then
-        latex.includepdf(self.output, self.range, self.papersize)
+        latex_includepdf(self.output, self.range, self.papersize)
     elseif self.insert == 'systems' then
-        latex.includesystems(
+        latex_includesystems(
             self.output, self.range, self.protrusion_left,
             self.leftgutter, self.staffsize, self.indent_offset
         )
@@ -1210,7 +1206,7 @@ This will probably cause bad output.]]
         end
         local bb = self:bbox(1)
         if bb then
-            latex.includeinline(
+            latex_includeinline(
                 self.output, bb.height, self.valign, self.hpadding, self.voffset
             )
         end
