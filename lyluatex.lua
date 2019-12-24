@@ -965,7 +965,7 @@ function Score:ly_paper()
           first_page_number, self:ly_margins()
 	    )
     else
-        return string.format([[%s%d]], papersize..[[
+        return string.format([[%s%s]], papersize..[[
 
 ]], system_count)
     end
