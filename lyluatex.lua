@@ -238,7 +238,7 @@ function bbox.parse(filename, line_width)
     end
     local f = io.open(filename .. '.bbox', 'w')
     f:write(
-        string.format("return %s, %s, %s, %s, %s", x_1, y_1, x_2, y_2, line_width)
+        string.format("return %f, %f, %f, %f, %f", x_1, y_1, x_2, y_2, line_width)
     )
     f:close()
     return bbox.calc(x_1, x_2, y_1, y_2, line_width)
@@ -699,7 +699,7 @@ function Score:content()
         elseif self.relative > 0 then
             for _ = 1, self.relative do n = n.."'" end
         end
-        return string.format([[\relative c%s {%s}]], n, ly_code)
+        return string.format([[\relative c%d {%s}]], n, ly_code)
     elseif self.fragment then return [[{]]..ly_code..[[}]]
     else return ly_code
     end
@@ -890,16 +890,16 @@ function Score:ly_staffsize() return self.staffsize end
 function Score:ly_margins()
     local horizontal_margins =
         self.twoside and string.format([[
-            inner-margin = %s\pt]], self:tex_margin_inner())
+            inner-margin = %f\pt]], self:tex_margin_inner())
         or string.format([[
-            left-margin = %s\pt]], self:tex_margin_left())
+            left-margin = %f\pt]], self:tex_margin_left())
 
     local tex_top = self['extra-top-margin'] + self:tex_margin_top()
     local tex_bottom = self['extra-bottom-margin'] + self:tex_margin_bottom()
     if self.fullpagealign == 'crop' then
         return string.format([[
-    top-margin = %s\pt
-    bottom-margin = %s\pt
+    top-margin = %f\pt
+    bottom-margin = %f\pt
     %s]],
             tex_top, tex_bottom, horizontal_margins
         )
@@ -911,18 +911,18 @@ function Score:ly_margins()
     bottom-margin = 0\pt
     %s
     top-system-spacing =
-    #'((basic-distance . %s)
-        (minimum-distance . %s)
+    #'((basic-distance . %f)
+        (minimum-distance . %f)
         (padding . 0)
         (stretchability . 0))
     top-markup-spacing =
-    #'((basic-distance . %s)
-        (minimum-distance . %s)
+    #'((basic-distance . %f)
+        (minimum-distance . %f)
         (padding . 0)
         (stretchability . 0))
     last-bottom-spacing =
-    #'((basic-distance . %s)
-        (minimum-distance . %s)
+    #'((basic-distance . %f)
+        (minimum-distance . %f)
         (padding . 0)
         (stretchability . 0))
 ]],
@@ -959,13 +959,13 @@ function Score:ly_paper()
     %s%s
     print-page-number = ##%s
     print-first-page-number = ##%s
-    first-page-number = %s
+    first-page-number = %d
 %s]],
           system_count, papersize, ppn, pfpn,
           first_page_number, self:ly_margins()
 	    )
     else
-        return string.format([[%s%s]], papersize..[[
+        return string.format([[%s%d]], papersize..[[
 
 ]], system_count)
     end
@@ -973,7 +973,7 @@ end
 
 function Score:ly_preamble()
     local result = string.format(
-        [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %s pt) (* %s pt))) paper-alist))]],
+        [[#(set! paper-alist (cons '("lyluatexfmt" . (cons (* %f pt) (* %f pt))) paper-alist))]],
         self.paperwidth, self.paperheight
     )
     if self.insert == 'fullpage' then
