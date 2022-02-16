@@ -282,7 +282,7 @@ function latex_includeinline(pdfname, height, valign, hpadding, voffset)
     end
     tex.sprint(
         string.format(
-            [[\hspace{%fpt}\raisebox{%fpt}{\includegraphics{%s-1.pdf}}\hspace{%fpt}]],
+            [[\hspace{%fpt}\raisebox{%fpt}{\includegraphics{%s-1}}\hspace{%fpt}]],
             hpadding, v_base + voffset, pdfname, hpadding
         )
     )
@@ -300,7 +300,7 @@ function latex_includesystems(filename, range, protrusion, gutter, staffsize, in
     local texoutput = '\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi\n'
     texoutput = texoutput..'\\par\n'
     for index, system in pairs(range) do
-        if not lfs.isfile(filename..'-'..system..'.pdf') then break end
+        if not lfs.isfile(filename..'-'..system..'.eps') then break end
         texoutput = texoutput..
             string.format([[
 \noindent\hspace*{%fpt}\includegraphics{%s}%%
@@ -695,20 +695,23 @@ function Score:content()
         elseif self.relative > 0 then
             for _ = 1, self.relative do n = n.."'" end
         end
-        return string.format([[\relative c%d {%s}]], n, ly_code)
+        return string.format([[\relative c%s {%s}]], n, ly_code)
     elseif self.fragment then return [[{]]..ly_code..[[}]]
     else return ly_code
     end
 end
 
 function Score:count_systems(force)
-    if force or not self.system_count then
-        local f = io.open(self.output..'-systems.count', 'r')
-        if f then
-            self.system_count = tonumber(f:read('*all'))
-            f:close()
-        else self.system_count = 0
+    local count = 0
+    if force or not count then
+        local systems = self.output:match("[^/]*$").."%-?%d*%.eps"
+        for f in lfs.dir(self.tmpdir) do
+            if f:match(systems) then
+                count = count + 1
+            end
         end
+        if count > 1 then count = count - 1 end
+        self.system_count = count
     end
     return self.system_count
 end
@@ -717,11 +720,9 @@ function Score:delete_intermediate_files()
     for _, filename in pairs(self.output_names) do
         if self.insert == 'fullpage' then os.remove(filename..'.ps')
         else
-            for i = 1, self:count_systems() do os.remove(filename..'-'..i..'.eps') end
             os.remove(filename..'-systems.tex')
             os.remove(filename..'-systems.texi')
             os.remove(filename..'.eps')
-            os.remove(filename..'.pdf')
         end
     end
 end
@@ -780,7 +781,7 @@ end
 
 function Score:is_compiled()
     if self['force-compilation'] then return false end
-    return lfs.isfile(self.output..'.pdf') or self:count_systems(true) ~= 0
+    return lfs.isfile(self.output..'.pdf') or lfs.isfile(self.output..'.eps') or self:count_systems(true) ~= 0
 end
 
 function Score:is_odd_page() return tex.count['c@page'] % 2 == 1 end
@@ -794,10 +795,9 @@ function Score:lilypond_cmd()
         input = self.output..".ly 2>&1"
         mode = 'r'
     end
-    local cmd = '"'..self.program..'" '..
-        "-dno-point-and-click "..
-        "-djob-count=2 "..
-        "-dno-delete-intermediate-files "
+    local cmd = '"'..self.program..'" '
+        .. (self.insert == "fullpage" and "" or "-E ")
+        .. "-dno-point-and-click -djob-count=2 -dno-delete-intermediate-files "
     if self['optimize-pdf'] and self:lilypond_has_TeXGS() then cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts " end
     if self.input_file then
         cmd = cmd..'-I "'..lib.dirname(self.input_file):gsub('^%./', lfs.currentdir()..'/')..'" '
@@ -957,8 +957,8 @@ function Score:ly_paper()
     print-first-page-number = ##%s
     first-page-number = %d
 %s]],
-          system_count, papersize, ppn, pfpn,
-          first_page_number, self:ly_margins()
+            system_count, papersize, ppn, pfpn,
+            first_page_number, self:ly_margins()
 	    )
     else
         return string.format([[%s%s]], papersize..[[
@@ -1122,9 +1122,9 @@ end
 
 function Score:run_lily_proc(p)
         if self.debug then
-          local f = io.open(self.output..".log", 'w')
-          f:write(p:read('*a'))
-          f:close()
+            local f = io.open(self.output..".log", 'w')
+            f:write(p:read('*a'))
+            f:close()
         else p:write(self.complete_ly_code)
         end
         return p:close()
@@ -1136,6 +1136,11 @@ function Score:run_lilypond()
     if not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code))) and not self.debug then
         self.debug = true
         self.lilypond_error = not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code)))
+    end
+    local lilypond_pdf, mode = self:lilypond_cmd(self.complete_ly_code)
+    if lilypond_pdf:match"-E" then
+        lilypond_pdf = lilypond_pdf:gsub(" %-E", " --pdf")
+        self:run_lily_proc(io.popen(lilypond_pdf, mode))
     end
 end
 
@@ -1150,7 +1155,7 @@ end
 function Score:tex_margin_inner()
     self._tex_margin_inner = self._tex_margin_inner or
         lib.convert_unit((
-          tex.sp('1in') + tex.dimen.oddsidemargin + tex.dimen.hoffset
+            tex.sp('1in') + tex.dimen.oddsidemargin + tex.dimen.hoffset
         )..'sp')
     return self._tex_margin_inner
 end
@@ -1352,20 +1357,20 @@ end
 
 
 function ly.set_fonts(rm, sf, tt)
-if ly.score.rmfamily..ly.score.sffamily..ly.score.ttfamily ~= '' then
-    ly.score['pass-fonts'] = 'true'
-    info("At least one font family set explicitly. Activate 'pass-fonts'")
-end
-  if ly.score.rmfamily == '' then ly.score.rmfamily = ly.get_font_family(rm)
-  else
-      -- if explicitly set don't override rmfamily with 'current' font
-      if ly.score['current-font-as-main'] then
-          info("rmfamily set explicitly. Deactivate 'current-font-as-main'")
-      end
-      ly.score['current-font-as-main'] = false
-  end
-  if ly.score.sffamily == '' then ly.score.sffamily = ly.get_font_family(sf) end
-  if ly.score.ttfamily == '' then ly.score.ttfamily = ly.get_font_family(tt) end
+    if ly.score.rmfamily..ly.score.sffamily..ly.score.ttfamily ~= '' then
+        ly.score['pass-fonts'] = 'true'
+        info("At least one font family set explicitly. Activate 'pass-fonts'")
+    end
+    if ly.score.rmfamily == '' then ly.score.rmfamily = ly.get_font_family(rm)
+    else
+        -- if explicitly set don't override rmfamily with 'current' font
+        if ly.score['current-font-as-main'] then
+            info("rmfamily set explicitly. Deactivate 'current-font-as-main'")
+        end
+        ly.score['current-font-as-main'] = false
+    end
+    if ly.score.sffamily == '' then ly.score.sffamily = ly.get_font_family(sf) end
+    if ly.score.ttfamily == '' then ly.score.ttfamily = ly.get_font_family(tt) end
 end
 
 

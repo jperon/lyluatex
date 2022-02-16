@@ -1,0 +1,3 @@
+[submodule "luaoptions"]
+	path = luaoptions
+	url = https://github.com/lualatex-tools/luaoptions.git
