@@ -702,18 +702,18 @@ function Score:content()
 end
 
 function Score:count_systems(force)
-    local count = 0
+    local count = self.system_count
     if force or not count then
-        local systems = self.output:match("[^/]*$").."%-?%d*%.eps"
+        count = 0
+        local systems = self.output:match("[^/]*$").."%-%d+%.eps"
         for f in lfs.dir(self.tmpdir) do
             if f:match(systems) then
                 count = count + 1
             end
         end
-        if count > 1 then count = count - 1 end
         self.system_count = count
     end
-    return self.system_count
+    return count
 end
 
 function Score:delete_intermediate_files()
