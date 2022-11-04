@@ -1347,7 +1347,7 @@ end
 
 
 function ly.get_font_family(font_id)
-    return lib.fontinfo(font_id).shared.rawdata.metadata['familyname']
+    return lib.fontinfo(font_id).fullname
 end
 
 
