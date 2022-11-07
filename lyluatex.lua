@@ -1347,7 +1347,7 @@ end
 
 
 function ly.get_font_family(font_id)
-    return lib.fontinfo(font_id).fullname
+    return lib.fontinfo(font_id).fullname:match("[^-]*")
 end
 
 
