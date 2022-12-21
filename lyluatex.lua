@@ -105,7 +105,13 @@ end
 
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
-    local cfd = Score.currfiledir:gsub('^$', './')
+
+    if lib.tex_engine.dist == 'MiKTeX' then
+        local cfd = Score.currfiledir:gsub('^$', '.\\')
+    else
+        local cfd = Score.currfiledir:gsub('^$', './')
+    end
+    
     table.insert(includepaths, 1, cfd)
     for i, path in ipairs(includepaths) do
         -- delete initial space (in case someone puts a space after the comma)
@@ -788,7 +794,7 @@ function Score:is_odd_page() return tex.count['c@page'] % 2 == 1 end
 
 function Score:lilypond_cmd()
     local input, mode = '-s -', 'w'
-    if self.debug then
+    if self.debug or lib.tex_engine.dist == 'MiKTeX' then
         local f = io.open(self.output..'.ly', 'w')
         f:write(self.complete_ly_code)
         f:close()
@@ -806,7 +812,6 @@ function Score:lilypond_cmd()
         cmd = cmd..'-I "'..dir:gsub('^%./', lfs.currentdir()..'/')..'" '
     end
     cmd = cmd..'-o "'..self.output..'" '..input
-    if lib.tex_engine.dist == 'MiKTeX' then cmd = '"'..cmd..'"' end
     debug("Command:\n"..cmd)
     return cmd, mode
 end
