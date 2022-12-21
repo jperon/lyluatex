@@ -6,7 +6,7 @@ manual:
 	pandoc -s -V fontfamily=libertine --toc-depth=4 -o lyluatex-tmp.tex lyluatex.md
 	@echo Inserting examples
 	@./insert-examples.lua lyluatex-tmp.tex lyluatex.tex || echo "Lua not found. Please make sure it's accessible in your PATH."
-	TEXINPUTS=luaoptions: latexmk lyluatex
+	TEXINPUTS=luaoptions:ly: latexmk lyluatex
 
 clean:
 	git clean -fXd

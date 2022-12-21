@@ -1,8 +1,8 @@
 -- luacheck: ignore ly log self luatexbase internalversion font fonts tex token kpse status ly_opts
 local err, warn, info, log = luatexbase.provides_module({
     name               = "lyluatex",
-    version            = '1.1.1',  --LYLUATEX_VERSION
-    date               = "2022/11/07",  --LYLUATEX_DATE
+    version            = '1.1.2',  --LYLUATEX_VERSION
+    date               = "2022/12/21",  --LYLUATEX_DATE
     description        = "Module lyluatex.",
     author             = "The Gregorio Project  − (see Contributors.md)",
     copyright          = "2015-2022 - jperon and others",
@@ -149,8 +149,13 @@ local function locate(file, includepaths, ext)
         result = d..file
         if lfs.isfile(result) then break end
     end
-    if not lfs.isfile(result) and ext and file:match('%.[^%.]+$') ~= ext then return locate(file..ext, includepaths) end
-    if not lfs.isfile(result) then result = kpse.find_file(file) end
+    if not (result and lfs.isfile(result)) then
+        if ext and file:match('%.[^%.]+$') ~= ext then
+            return locate(file..ext, includepaths)
+        else
+            return kpse.find_file(file)
+        end
+    end
     return result
 end
 

@@ -110,6 +110,14 @@ as follows:
 That way, documents typeset with `lilypond-book` can be adapted to use
 `lyluatex` without much difficulty.
 
+## Note about MiKTeX
+
+The main author doesn’t use MiKTeX, and won’t make any effort to support it.
+Nevertheless, pull requests in order to support it will be taken in account.
+
+Actually, *lyluatex* works with MiKTeX with *LilyPond 2.22*: there’s a known
+bug with *LilyPond 2.24*: #301.
+
 # Credits
 
 See [Contributors.md](Contributors.md).

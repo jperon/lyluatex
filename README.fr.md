@@ -113,6 +113,15 @@ identique encore, utilisez la commande suivante pour appeler `lyluatex` :
 De la sorte, les documents saisis auparavant avec l'aide de `lilypond-book`
 devraient s'utiliser sans grande difficulté avec `lyluatex`.
 
+## À propos de MiKTeX
+
+L’auteur principal de lyluatex n’utilise pas MiKTeX et ne fera pas d’effort
+particulier pour assurer la compatibilité avec ce dernier. Si néanmoins vous
+voulez proposer une *pull request* en ce sens, elle sera examinée et intégrée.
+
+En l’état des choses, lyluatex fonctionne avec MiKTeX à condition d’utiliser
+LilyPond 2.22. Il y a un bug connu avec LilyPond 2.24 sous MiKTeX: #301.
+
 # Remerciements
 
 Cf. [Contributors.md](Contributors.md)
