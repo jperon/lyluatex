@@ -1,4 +1,4 @@
-dist: xenial
+dist: jammmy
 
 language: minimal
 
