@@ -106,10 +106,11 @@ end
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
 
+    local cfd
     if lib.tex_engine.dist == 'MiKTeX' then
-        local cfd = Score.currfiledir:gsub('^$', '.\\')
+        cfd = Score.currfiledir:gsub('^$', '.\\')
     else
-        local cfd = Score.currfiledir:gsub('^$', './')
+        cfd = Score.currfiledir:gsub('^$', './')
     end
     
     table.insert(includepaths, 1, cfd)
@@ -134,7 +135,6 @@ local function includes_parse(list)
 ]]
         list = list:explode(',')
         for _, included_file in ipairs(list) do
-            warn(included_file)
             includes = includes .. '\\include "'..included_file..'.ly"\n'
         end
     end
