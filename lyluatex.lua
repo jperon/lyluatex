@@ -1357,7 +1357,21 @@ end
 
 
 function ly.get_font_family(font_id)
-    return lib.fontinfo(font_id).fullname:match("[^-]*")
+    local ft = lib.fontinfo(font_id)
+    if ft.shared.rawdata then return ft.shared.rawdata.metadata.familyname
+    else
+        warn([[
+Some useful informations aren’t available:
+you probably loaded polyglossia
+before defining the main font, and we have
+to "guess" the font’s familyname.
+If the text of your scores looks weird,
+you should consider using babel instead,
+or at least loading polyglossia
+after defining the main font.
+]])
+        return ft.fullname:match("[^-]*")
+    end
 end
 
 
