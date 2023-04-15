@@ -1,8 +1,8 @@
 #! /usr/bin/env lua
 local lfs = require"lfs"
 
-local VERSION = '1.1.3'
-local DATE = '2023/03/01'
+local VERSION = '1.1.4'
+local DATE = '2023/04/15'
 
 local function read(stream)
   if not stream then return end
