@@ -112,7 +112,7 @@ local function extract_includepaths(includepaths)
     else
         cfd = Score.currfiledir:gsub('^$', './')
     end
-    
+
     table.insert(includepaths, 1, cfd)
     for i, path in ipairs(includepaths) do
         -- delete initial space (in case someone puts a space after the comma)
@@ -825,19 +825,20 @@ function Score:lilypond_has_TeXGS()
     return lib.readlinematching('TeX%-GS', io.popen('"'..self.program..'" --help', 'r'))
 end
 
-function Score:lilypond_version(number)
-    local result = lib.readlinematching('GNU LilyPond', io.popen('"'..self.program..'" --version', 'r'))
-    if result then
-        if number then return result:match('%d+%.%d+%.?%d*')
-        else
-            info(
-                "Compiling score %s with LilyPond executable '%s'.",
-                self.output, self.program
-            )
-            debug(result)
-            return true
-        end
+function Score:lilypond_version()
+    local version = self._lilypond_version
+    if not version then
+        version = lib.readlinematching('GNU LilyPond', io.popen('"'..self.program..'" --version', 'r'))
+        info(
+            "Compiling score %s with LilyPond executable '%s'.",
+            self.output, self.program
+        )
+        if not version then return end
+        version = ly.v{version:match('(%d+)%.(%d+)%.?(%d*)')}
+        debug("VERSION " .. tostring(version))
+        self._lilypond_version = version
     end
+    return version
 end
 
 function Score:ly_fixbadlycroppedstaffgroupbrackets()
@@ -854,17 +855,21 @@ end
 
 function Score:ly_fonts()
     if self['pass-fonts'] then
-        return string.format([[
+        local fonts_def
+        if self:lilypond_version() >= ly.v{2, 25, 4} then
+            fonts_def = [[fonts.roman = "%s"
+    fonts.sans = "%s"
+    fonts.typewriter = "%s"]]
+        else
+            fonts_def = [[
 #(define fonts
     (make-pango-font-tree "%s"
                           "%s"
                           "%s"
                           (/ staff-height pt 20)))
-]],
-            self.rmfamily,
-            self.sffamily,
-            self.ttfamily
-        )
+]]
+        end
+        return fonts_def:format(self.rmfamily, self.sffamily, self.ttfamily)
     else
         return '%% fonts not set'
     end
@@ -1395,6 +1400,26 @@ function ly.set_fonts(rm, sf, tt)
     end
     if ly.score.sffamily == '' then ly.score.sffamily = ly.get_font_family(sf) end
     if ly.score.ttfamily == '' then ly.score.ttfamily = ly.get_font_family(tt) end
+end
+
+
+do
+    local _ = {}
+    function _:__sub(other)
+        for i = 1, lib.max(#self, #other) do
+            local diff = (self[i] or 0) - (other[i] or 0)
+            if diff ~= 0 then return diff, i end
+        end
+        return 0
+    end
+    function _:__eq(other) return self - other == 0 end
+    function _:__lt(other) return self - other < 0 end
+    function _:__call(v)
+        for i = 1, #v do v[i] = tonumber(v[i]) end
+        return setmetatable(v, self)
+    end
+    function _:__tostring() return table.concat(self, ".") end
+    ly.v = setmetatable(_, _)
 end
 
 
