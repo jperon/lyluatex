@@ -74,22 +74,85 @@ local LY_HEAD = [[%%File header
 <<<preamble>>>
 
 \header {
-    copyright = ""
-    tagline = ##f
+  copyright = ""
+  tagline = ##f
 }
 \paper{
-    <<<paper>>>    two-sided = ##<<<twoside>>>
-    line-width = <<<linewidth>>>\pt
-    <<<indent>>>
-    <<<raggedright>>>
-    <<<fonts>>>
+  <<<paper>>>
+  two-sided = ##<<<twoside>>>
+  line-width = <<<linewidth>>>\pt
+  <<<indent>>>
+  <<<raggedright>>>
+  <<<fonts>>>
 }
 \layout{
-    <<<staffprops>>>
-    <<<fixbadlycroppedstaffgroupbrackets>>>
+  <<<staffprops>>>
+  <<<fixbadlycroppedstaffgroupbrackets>>>
 }<<<header>>>
 
 %%Follows original score
+]]
+local LY_FIX_BADLY_CROPPED_STAFFGROUP_BRACKETS = [[\context {
+      \Score
+      \override SystemStartBracket.after-line-breaking =
+      #(lambda (grob)
+        (let ((Y-off (ly\grob-property grob 'Y-extent)))
+          (ly\grob-set-property! grob 'Y-extent
+          (cons (- (car Y-off) 1.7) (+ (cdr Y-off) 1.7)))))
+}]]
+local LY_FONTS_DEF = [[fonts.roman = "%s"
+  fonts.sans = "%s"
+  fonts.typewriter = "%s"
+]]
+local LY_FONTS_DEF_OLD = [[#(define fonts (make-pango-font-tree "%s" "%s" "%s" (/ staff-height pt 20)))]]
+local LY_MARGINS_CROP = [[  top-margin = %f\pt
+  bottom-margin = %f\pt
+  %s
+]]
+local LY_MARGINS_STAFFLINE = [[  top-margin = 0\pt
+  bottom-margin = 0\pt
+  %s
+  top-system-spacing =
+  #'((basic-distance . %f)
+    (minimum-distance . %f)
+    (padding . 0)
+    (stretchability . 0))
+  top-markup-spacing =
+  #'((basic-distance . %f)
+    (minimum-distance . %f)
+    (padding . 0)
+    (stretchability . 0))
+  last-bottom-spacing =
+  #'((basic-distance . %f)
+    (minimum-distance . %f)
+    (padding . 0)
+    (stretchability . 0))
+]]
+local LY_PAPER = [[  %s%s
+  print-page-number = ##%s
+  print-first-page-number = ##%s
+  first-page-number = %d
+  %s
+]]
+local MSG_GET_FONT_FAMILY = [[Some useful informations aren’t available:
+you probably loaded polyglossia
+before defining the main font, and we have
+to "guess" the font’s familyname.
+If the text of your scores looks weird,
+you should consider using babel instead,
+or at least loading polyglossia
+after defining the main font.
+]]
+local MSG_PROCESS = [[LilyPond could not be started.
+Please check that LuaLaTeX is started with the
+--shell-escape option, and that 'program'
+points to a valid LilyPond executable.
+]]
+local MSG_RANGE_PARSE = [[Invalid value '%s' for item
+in list of page ranges. Possible entries:
+- Single number
+- Range (M-N, N-M or N-)
+This item will be skipped!
 ]]
 local oldinfo = info
 info = function(...)
@@ -105,12 +168,7 @@ end
 local extract_includepaths
 extract_includepaths = function(self)
   self = self:explode(",")
-  local cfd
-  if tex_engine.dist == 'MiKTeX' then
-    cfd = Score.currfiledir:gsub('^$', '.\\')
-  else
-    Score.currfiledir:gsub('^$', './')
-  end
+  local cfd = Score.currfiledir:gsub('^$', tex_engine.dist == 'MiKTeX' and '.\\' or './')
   table.insert(self, 1, cfd)
   for i, path in ipairs(self) do
     self[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME")):gsub('^%.%.', './..')
@@ -174,12 +232,7 @@ range_parse = function(self, nsystems)
     self = self .. nsystems
   end
   if not (self == '' or self:match('^%d+%s*-%s*%d*$')) then
-    warn([[Invalid value '%s' for item
-in list of page ranges. Possible entries:
-- Single number
-- Range (M-N, N-M or N-)
-This item will be skipped!
-]], self)
+    warn(MSG_RANGE_PARSE, self)
     return 
   end
   local result = { }
@@ -308,21 +361,21 @@ end
 local latex_includesystems
 latex_includesystems = function(self, range, protrusion, gutter, staffsize, indent_offset)
   local h_offset = protrusion + indent_offset
-  local texoutput = '\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi\n\\par\n'
+  local texoutput = {
+    "\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi",
+    "\\par"
+  }
   for index, system in pairs(range) do
     if not lfs.isfile(tostring(self) .. "-" .. tostring(system) .. ".eps") then
       break
     end
-    texoutput = texoutput .. ([[\noindent\hspace*{%fpt}\includegraphics{%s}%%
-]]):format(h_offset + gutter, tostring(self) .. "-" .. tostring(system))
+    texoutput[#texoutput + 1] = ("\\noindent\\hspace*{%fpt}\\includegraphics{" .. tostring(self) .. "-" .. tostring(system) .. "}%%"):format(h_offset + gutter)
     if index < #range then
-      texoutput = texoutput .. ([[\ifx\betweenLilyPondSystem\undefined\par\vspace{%fpt plus %fpt minus %fpt}%%
-\else\betweenLilyPondSystem{%s}\fi%%
-]]):format(staffsize / 4, staffsize / 12, staffsize / 16, index)
+      texoutput[#texoutput + 1] = ("\\ifx\\betweenLilyPondSystem\\undefined\\par\\vspace{%fpt plus %fpt minus %fpt}\\else\\betweenLilyPondSystem{" .. tostring(index) .. "}\\fi%%"):format(staffsize / 4, staffsize / 12, staffsize / 16)
     end
   end
-  texoutput = texoutput .. '\n\\ifx\\postLilyPondExample\\undefined\\else\\postLilyPondExample\\fi'
-  return tex.sprint(texoutput:explode("\n"))
+  texoutput[#texoutput + 1] = "\\ifx\\postLilyPondExample\\undefined\\else\\postLilyPondExample\\fi"
+  return tex.sprint(texoutput)
 end
 local latex_label
 latex_label = function(self, labelprefix)
@@ -493,53 +546,29 @@ do
   _.check_compilation = function(self)
     local debug_msg, doc_debug_msg
     if self.debug then
-      debug_msg = ([[Please check the log file
-and the generated LilyPond code in
-%s
-%s
-]]):format(self.output .. '.log', self.output .. '.ly')
-      doc_debug_msg = [[A log file and a LilyPond file have been written.\\
-See log for details.]]
+      debug_msg = "Please check the log file\nand the generated LilyPond code in\n" .. tostring(self.output) .. ".log\n" .. tostring(self.output) .. ".ly\n"
+      doc_debug_msg = "A log file and a LilyPond file have been written.\\\\See log for details."
     else
-      debug_msg = [[If you need more information
-than the above message,
-please retry with option debug=true.
-]]
+      debug_msg = "If you need more information\nthan the above message,\nplease retry with option debug=true."
       doc_debug_msg = "Re-run with \\texttt{debug} option to investigate."
     end
     if self.fragment then
-      local frag_msg = '\n' .. [[As the input code has been automatically wrapped
-with a music expression, you may try repeating
-with the `nofragment` option.]]
-      debug_msg = debug_msg .. frag_msg
-      doc_debug_msg = doc_debug_msg .. frag_msg
+      local frag_msg = "As the input code has been automatically wrapped\nwith a music expression, you may try repeating\nwith the `nofragment` option."
+      debug_msg = tostring(debug_msg) .. "\n" .. tostring(frag_msg)
+      doc_debug_msg = tostring(doc_debug_msg) .. "\n" .. tostring(frag_msg)
     end
     if self:is_compiled() then
       if self.lilypond_error then
-        warn([[
-LilyPond reported a failed compilation but
-produced a score. %s
-]], debug_msg)
+        warn("\n\nLilyPond reported a failed compilation but\nproduced a score. " .. tostring(debug_msg))
       end
       return true
     else
       self:clean_failed_compilation()
       if self.showfailed then
-        tex.sprint(([[\begin{quote}
-\minibox[frame]{LilyPond failed to compile a score.\\
-%s}
-\end{quote}
-
-]]):format(doc_debug_msg))
-        warn([[
-LilyPond failed to compile the score.
-%s
-]], debug_msg)
+        tex.sprint("\\begin{quote}\n\\minibox[frame]{LilyPond failed to compile a score.\\\\\n" .. tostring(doc_debug_msg) .. "}\n\\end{quote}\n\n")
+        warn("\n\nLilyPond failed to compile the score.\n" .. tostring(debug_msg) .. "\n")
       else
-        err([[
-LilyPond failed to compile the score.
-%s
-]], debug_msg)
+        err("\n\nLilyPond failed to compile the score.\n" .. tostring(debug_msg) .. "\n")
       end
       return false
     end
@@ -599,7 +628,7 @@ LilyPond failed to compile the score.
     for _index_0 = 1, #TEXINFO_OPTIONS do
       local k = TEXINFO_OPTIONS[_index_0]
       if self[k] then
-        info("Option %s is specific to Texinfo: ignoring it.", k)
+        info("Option " .. tostring(k) .. " is specific to Texinfo: ignoring it.")
       end
     end
     if self.fragment then
@@ -669,7 +698,7 @@ LilyPond failed to compile the score.
           n = n .. "'"
         end
       end
-      return ("\\relative c%s {%s}"):format(n, ly_code)
+      return "\\relative c" .. tostring(n) .. " {" .. tostring(ly_code) .. "}"
     elseif self.fragment then
       return "{" .. tostring(ly_code) .. "}"
     else
@@ -705,14 +734,10 @@ LilyPond failed to compile the score.
   end
   _.flatten_content = function(self, ly_code)
     ly_code = ly_code:gsub('%%', '#')
-    local f
-    local includepaths = tostring(self.includepaths) .. "," .. tostring(self.tmpdir)
-    if self.input_file then
-      includepaths = tostring(self.includepaths) .. "," .. tostring(dirname(self.input_file))
-    end
+    local includepaths = self.input_file and tostring(self.includepaths) .. "," .. tostring(dirname(self.input_file)) or tostring(self.includepaths) .. "," .. tostring(self.tmpdir)
     for iline in ly_code:gmatch('\\include%s*"[^"]*"') do
       do
-        f = io.open(locate(iline:match('\\include%s*"([^"]*)"'), includepaths, '.ly') or '')
+        local f = io.open(locate(iline:match('\\include%s*"([^"]*)"'), includepaths, '.ly') or "")
         if f then
           ly_code = ly_code:gsub(iline, self:flatten_content(f:read("*a")))
           f:close()
@@ -727,7 +752,7 @@ LilyPond failed to compile the score.
   _.header = function(self)
     local header = LY_HEAD
     for element in LY_HEAD:gmatch("<<<(%w+)>>>") do
-      header = header:gsub("<<<" .. tostring(element) .. ">>>", self['ly_' .. element](self) or '')
+      header = header:gsub("<<<" .. tostring(element) .. ">>>", self["ly_" .. tostring(element)](self) or '')
     end
     do
       local wh_dest = self['write-headers']
@@ -788,7 +813,7 @@ LilyPond failed to compile the score.
     local version = self._lilypond_version
     if not version then
       version = readlinematching('GNU LilyPond', io.popen("\"" .. tostring(self.program) .. "\" --version", 'r'))
-      info("Compiling score %s with LilyPond executable '%s'.", self.output, self.program)
+      info("Compiling score " .. tostring(self.output) .. " with LilyPond executable '" .. tostring(self.program) .. "'.")
       if not version then
         return 
       end
@@ -801,29 +826,15 @@ LilyPond failed to compile the score.
     return version
   end
   _.ly_fixbadlycroppedstaffgroupbrackets = function(self)
-    return self.fix_badly_cropped_staffgroup_brackets and [[\context {
-            \Score
-            \override SystemStartBracket.after-line-breaking =
-            #(lambda (grob)
-                (let ((Y-off (ly\grob-property grob 'Y-extent)))
-                    (ly\grob-set-property! grob 'Y-extent
-                    (cons (- (car Y-off) 1.7) (+ (cdr Y-off) 1.7)))))
-        }]] or '%% no fix for badly cropped StaffGroup brackets'
+    return self.fix_badly_cropped_staffgroup_brackets and LY_FIX_BADLY_CROPPED_STAFFGROUP_BRACKETS or '%% no fix for badly cropped StaffGroup brackets'
   end
   _.ly_fonts = function(self)
     if self['pass-fonts'] then
-      local fonts_def = self:lilypond_version() >= ly.v({
+      local fonts_def = (self:lilypond_version() >= ly.v({
         2,
         25,
         4
-      } and [[fonts.roman = "%s"
-    fonts.sans = "%s"
-    fonts.typewriter = "%s"]] or [[#(define fonts
-    (make-pango-font-tree "%s"
-                        "%s"
-                        "%s"
-                        (/ staff-height pt 20)))
-]])
+      })) and LY_FONTS_DEF or LY_FONTS_DEF_OLD
       return fonts_def:format(self.rmfamily, self.sffamily, self.ttfamily)
     else
       return '%% fonts not set'
@@ -849,56 +860,29 @@ LilyPond failed to compile the score.
     return self.staffsize
   end
   _.ly_margins = function(self)
-    local horizontal_margins = self.twoside and ([[            inner-margin = %f\pt]]):format(self:tex_margin_inner()) or ([[            left-margin = %f\pt]]):format(self:tex_margin_left())
+    local horizontal_margins = self.twoside and ("inner-margin = %f\\pt"):format(self:tex_margin_inner()) or ("left-margin = %f\\pt"):format(self:tex_margin_left())
     local tex_top = self['extra-top-margin'] + self:tex_margin_top()
     local tex_bottom = self['extra-bottom-margin'] + self:tex_margin_bottom()
     if self.fullpagealign == 'crop' then
-      return ([[    top-margin = %f\pt
-    bottom-margin = %f\pt
-    %s]]):format(tex_top, tex_bottom, horizontal_margins)
+      return LY_MARGINS_CROP:format(tex_top, tex_bottom, horizontal_margins)
     elseif self.fullpagealign == 'staffline' then
       local top_distance = 4 * tex_top / self.staffsize + 2
       local bottom_distance = 4 * tex_bottom / self.staffsize + 2
-      return ([[    top-margin = 0\pt
-    bottom-margin = 0\pt
-    %s
-    top-system-spacing =
-    #'((basic-distance . %f)
-        (minimum-distance . %f)
-        (padding . 0)
-        (stretchability . 0))
-    top-markup-spacing =
-    #'((basic-distance . %f)
-        (minimum-distance . %f)
-        (padding . 0)
-        (stretchability . 0))
-    last-bottom-spacing =
-    #'((basic-distance . %f)
-        (minimum-distance . %f)
-        (padding . 0)
-        (stretchability . 0))
-]]):format(horizontal_margins, top_distance, top_distance, top_distance, top_distance, bottom_distance, bottom_distance)
+      return LY_MARGINS_STAFFLINE:format(horizontal_margins, top_distance, top_distance, top_distance, top_distance, bottom_distance, bottom_distance)
     else
-      return err([[Invalid argument for option 'fullpagealign'.
-Allowed: 'crop', 'staffline'.
-Given: %s
-]], self.fullpagealign)
+      return err("Invalid argument for option 'fullpagealign'.\nAllowed: 'crop', 'staffline'.\nGiven: " .. tostring(self.fullpagealign))
     end
   end
   _.ly_paper = function(self)
-    local system_count = self['system-count'] == '0' and '' or "system-count = " .. tostring(self['system-count']) .. "\n    "
+    local system_count = self['system-count'] == '0' and '' or "system-count = " .. tostring(self['system-count']) .. "\n"
     local papersize = "#(set-paper-size \"" .. tostring(self.papersize or 'lyluatexfmt') .. "\")"
     if self.insert == 'fullpage' then
       local first_page_number = self['first-page-number'] or tex.count['c@page']
       local pfpn = self['print-first-page-number'] and 't' or 'f'
       local ppn = self['print-page-number'] and 't' or 'f'
-      return ([[    %s%s
-    print-page-number = ##%s
-    print-first-page-number = ##%s
-    first-page-number = %d
-%s]]):format(system_count, papersize, ppn, pfpn, first_page_number, self:ly_margins())
+      return LY_PAPER:format(system_count, papersize, ppn, pfpn, first_page_number, self:ly_margins())
     else
-      return ("%s%s"):format(tostring(papersize) .. "\n\n", system_count)
+      return tostring(papersize) .. "\n" .. tostring(system_count)
     end
   end
   _.ly_preamble = function(self)
@@ -913,23 +897,11 @@ Given: %s
     end
   end
   _.ly_staffprops = function(self)
-    local clef = '%% no clef set'
-    local timing = '    %% timing not suppressed'
-    local timesig = '    %% no time signature set'
-    local staff = '    %% staff symbol not suppressed'
-    if self.noclef then
-      clef = [[\context { \Staff \remove "Clef_engraver" }]]
-    end
-    if self.notiming then
-      timing = [[\context { \Score timing = ##f }]]
-    end
-    if self.notimesig then
-      timesig = [[\context { \Staff \remove "Time_signature_engraver" }]]
-    end
-    if self.nostaffsymbol then
-      staff = [[\context { \Staff \remove "Staff_symbol_engraver" }]]
-    end
-    return ('%s\n%s\n%s\n%s'):format(clef, timing, timesig, staff)
+    local clef = self.noclef and [[\context { \Staff \remove "Clef_engraver" }]] or '%% no clef set'
+    local timing = self.notiming and [[\context { \Score timing = ##f }]] or '%% timing not suppressed'
+    local timesig = self.notimesig and [[\context { \Staff \remove "Time_signature_engraver" }]] or '%% no time signature set'
+    local staff = self.nostaffsymbol and [[\context { \Staff \remove "Staff_symbol_engraver" }]] or '%% staff symbol not suppressed'
+    return tostring(clef) .. "\n  " .. tostring(timing) .. "\n  " .. tostring(timesig) .. "\n  " .. tostring(staff)
   end
   _.ly_twoside = function(self)
     return self.twoside and 't' or 'f'
@@ -982,21 +954,12 @@ Given: %s
     self:check_properties()
     self:calc_properties()
     if not self:lilypond_version() then
-      local warning = [[LilyPond could not be started.
-Please check that LuaLaTeX is started with the
---shell-escape option, and that 'program'
-points to a valid LilyPond executable.
-]]
       if self.showfailed then
-        warn(warning)
-        tex.sprint([[\begin{quote}
-\minibox[frame]{LilyPond could not be started.}
-\end{quote}
-
-]])
+        warn(MSG_PROCESS)
+        tex.sprint("\\begin{quote}\\minibox[frame]{LilyPond could not be started.}\\end{quote}\n\n")
         return 
       else
-        err(warning)
+        err(MSG_PROCESS)
       end
     end
     local do_compile = not self:check_protrusion(bbox_read)
@@ -1198,15 +1161,15 @@ ly.file_musicxml = function(self, options)
       xmlopts = xmlopts .. " --" .. tostring(opt)
     end
   end
-  local i = assert(io.popen(tostring(ly_opts.xml2ly) .. " --out=-" .. tostring(xmlopts) .. " \"" .. tostring(file) .. "\"", 'r'), tostring(ly_opts.xml2ly) .. " couldn’t be launched.")
-  if not i then
-    err([[%s could not be started.
-Please check that LuaLaTeX is started with the
---shell-escape option.
-]], ly_opts.xml2ly)
+  do
+    local i = io.popen(tostring(ly_opts.xml2ly) .. " --out=-" .. tostring(xmlopts) .. " \"" .. tostring(file) .. "\"", 'r')
+    if i then
+      ly.score = Score:new(i:read("*a"), options, file)
+      return i:close()
+    else
+      return err(tostring(ly_opts.xml2ly) .. " could not be started.\nPlease check that LuaLaTeX is started with the\n--shell-escape option.")
+    end
   end
-  ly.score = Score:new(i:read("*a"), options, file)
-  return i:close()
 end
 ly.fragment = function(self, options)
   options = ly_opts:check_local_options(options)
@@ -1222,15 +1185,7 @@ ly.get_font_family = function(self)
   if ft.shared.rawdata then
     return ft.shared.rawdata.metadata.familyname
   end
-  warn([[Some useful informations aren’t available:
-you probably loaded polyglossia
-before defining the main font, and we have
-to "guess" the font’s familyname.
-If the text of your scores looks weird,
-you should consider using babel instead,
-or at least loading polyglossia
-after defining the main font.
-]])
+  warn(MSG_GET_FONT_FAMILY)
   return ft.fullname:match("[^-]*")
 end
 ly.newpage_if_fullpage = function()
