@@ -14,8 +14,8 @@ do
   basename, contains, convert_unit, current_font_size, dirname, fontinfo, max, min, mkdirs, orderedpairs, readlinematching, splitext, tex_engine = _obj_0.basename, _obj_0.contains, _obj_0.convert_unit, _obj_0.current_font_size, _obj_0.dirname, _obj_0.fontinfo, _obj_0.max, _obj_0.min, _obj_0.mkdirs, _obj_0.orderedpairs, _obj_0.readlinematching, _obj_0.splitext, _obj_0.tex_engine
 end
 local ly_opts = lua_options.client("ly")
-local md5 = require("md5")
 local lfs = require("lfs")
+local md5 = require("md5")
 local ly = {
   err = err,
   varwidth_available = kpse.find_file("varwidth.sty")
@@ -165,10 +165,22 @@ debug = function(...)
     return info(...)
   end
 end
+local path = {
+  __tostring = function(self)
+    return os.type == 'windows' and tex_engine.dist == 'MiKTeX' and '\\' or '/'
+  end,
+  join = function(self, ...)
+    local t = select(1, ...)
+    return table.concat((type(t) == 'table' and t or {
+      ...
+    }), tostring(self))
+  end
+}
+setmetatable(path, path)
 local extract_includepaths
 extract_includepaths = function(self)
   self = self:explode(",")
-  local cfd = Score.currfiledir:gsub('^$', tex_engine.dist == 'MiKTeX' and '.\\' or './')
+  local cfd = Score.currfiledir:gsub('^$', "." .. tostring(path))
   table.insert(self, 1, cfd)
   for i, path in ipairs(self) do
     self[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME")):gsub('^%.%.', './..')
@@ -262,7 +274,7 @@ set_lyscore = function(self)
     if hoffset == '' then
       hoffset = 0
     end
-    self.hoffset = hoffset .. 'pt'
+    self.hoffset = tostring(hoffset) .. "pt"
     for s = 1, self.nsystems do
       table.insert(self, tostring(self.output) .. "-" .. tostring(s))
     end
@@ -270,6 +282,60 @@ set_lyscore = function(self)
     self[1] = self.output
   end
   ly.score = self
+end
+local Pool
+do
+  local _ = {
+    __call = function(self, n, o)
+      print(n, o)
+      o = o or (type(n) == 'table' and n or { })
+      o.n = o.n or tonumber(n)
+      o.running = o.running or { }
+      return setmetatable(o, self)
+    end,
+    add = function(self, fn)
+      return table.insert(self, coroutine.create(fn))
+    end,
+    cycle = function(self)
+      while rawget(self, 1) and not self.running[self.n] do
+        self.running[#self.running + 1] = table.remove(self, 1)
+      end
+      local co = table.remove(self.running, 1)
+      coroutine.resume(co)
+      if coroutine.status(co) ~= 'dead' then
+        self.running[#self.running + 1] = co
+      end
+    end,
+    wait = function(self)
+      while self.running[1] or rawget(self, 1) do
+        self:cycle()
+      end
+    end
+  }
+  _.__index = _
+  Pool = setmetatable(_, _)
+end
+local pool
+do
+  local n = ly_opts.parallel
+  if n then
+    if not tonumber(n) then
+      local p
+      n, p = 4, io.popen("nproc")
+      if p then
+        n = (tonumber(p:read():match("%d+")) + 1)
+        p:close()
+      end
+    end
+    pool = Pool(n)
+    luatexbase.add_to_callback('stop_run', function()
+      if rawget(pool, 1) then
+        info("Waiting for " .. tostring(#pool) .. " pending compilations.")
+        pool:wait()
+        return warn("Please rerun to get compiled scores included.")
+      end
+    end, 'pending_compilations')
+  end
 end
 local bbox_calc
 bbox_calc = function(x_1, x_2, y_1, y_2, line_width)
@@ -285,7 +351,7 @@ bbox_calc = function(x_1, x_2, y_1, y_2, line_width)
 end
 local bbox_parse
 bbox_parse = function(self, line_width)
-  local bbline = readlinematching('^%%%%BoundingBox', io.open(self .. '.eps', 'r'))
+  local bbline = readlinematching('^%%%%BoundingBox', io.open(tostring(self) .. ".eps", 'r'))
   if not bbline then
     return 
   end
@@ -391,7 +457,7 @@ local latex_verbatim
 latex_verbatim = function(self, ly_code, intertext, version)
   if self then
     if version then
-      tex.sprint('\\lyVersion{' .. version .. '}')
+      tex.sprint("\\lyVersion{" .. tostring(version) .. "}")
     end
     local content = table.concat(ly_code:explode('\n'), '\n'):gsub('.*%%%s*begin verbatim', ''):gsub('%%%s*end verbatim.*', '')
     local fname = tostring(ly_opts.tmpdir) .. "/verb.tex"
@@ -633,9 +699,7 @@ do
     end
     if self.fragment then
       if (self.input_file or self.ly_code:find([[\book]]) or self.ly_code:find([[\header]]) or self.ly_code:find([[\layout]]) or self.ly_code:find([[\paper]]) or self.ly_code:find([[\score]])) then
-        warn([[Found something incompatible with `fragment`
-(or `relative`). Setting them to false.
-]])
+        warn("Found something incompatible with `fragment`\n(or `relative`). Setting them to false.")
         self.fragment = false
         self.relative = false
       end
@@ -776,14 +840,14 @@ do
     if self['force-compilation'] then
       return false
     end
-    return lfs.isfile(self.output .. '.pdf') or lfs.isfile(self.output .. '.eps') or self:count_systems(true) ~= 0
+    return lfs.isfile(tostring(self.output) .. ".pdf") or lfs.isfile(tostring(self.output) .. ".eps") or self:count_systems(true) ~= 0
   end
   _.is_odd_page = function(self)
     return tex.count['c@page'] % 2 == 1
   end
   _.lilypond_cmd = function(self)
     local input, mode = '-s -', 'w'
-    if self.debug or tex_engine.dist == 'MiKTeX' then
+    if self.debug or self.parallel or tex_engine.dist == 'MiKTeX' then
       local f = assert(io.open(tostring(self.output) .. ".ly", 'w'), tostring(self.output) .. ".ly can’t be written.")
       f:write(self.complete_ly_code)
       f:close()
@@ -802,7 +866,7 @@ do
       local dir = _list_0[_index_0]
       cmd = cmd .. " -I \"" .. tostring(dir:gsub('^%./', lfs.currentdir() .. '/')) .. "\""
     end
-    cmd = cmd .. " -o \"" .. tostring(self.output) .. "\" " .. tostring(input)
+    cmd = cmd .. " -o \"" .. tostring(self.output) .. "\" " .. tostring(input) .. " > " .. tostring(self.output) .. ".log"
     debug("Command:\n" .. tostring(cmd))
     return cmd, mode
   end
@@ -916,7 +980,7 @@ do
     if self:lilypond_has_TeXGS() and not ly.final_optimization_message then
       ly.final_optimization_message = true
       return luatexbase.add_to_callback('stop_run', function()
-        return info("Optimization enabled: remember to run\n'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.", tex.jobname .. '-final.pdf', tex.jobname .. '.pdf')
+        return info("Optimization enabled: remember to run\n'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.", tostring(tex.jobname) .. "-final.pdf", tostring(tex.jobname) .. ".pdf")
       end, 'lyluatex optimize-pdf')
     else
       local pdf2ps, ps2pdf, path
@@ -926,6 +990,9 @@ do
           pdf2ps = io.popen("gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE " .. tostring(path) .. " -c quit", "r")
           ps2pdf = io.popen("gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=" .. tostring(path) .. "-gs -", "w")
           if pdf2ps then
+            if self.parallel then
+              coroutine.yield()
+            end
             ps2pdf:write(pdf2ps:read("*a"))
             pdf2ps:close()
             ps2pdf:close()
@@ -948,7 +1015,7 @@ do
       properties = properties .. tostring(self:tex_margin_top()) .. tostring(self:tex_margin_bottom()) .. tostring(self:tex_margin_left()) .. tostring(self:tex_margin_right())
     end
     local filename = md5.sumhexa(tostring(self:flatten_content(self.ly_code)) .. tostring(properties))
-    return tostring(self.tmpdir) .. "/" .. tostring(filename)
+    return path:join(self.tmpdir, filename)
   end
   _.process = function(self)
     self:check_properties()
@@ -964,26 +1031,34 @@ do
     end
     local do_compile = not self:check_protrusion(bbox_read)
     if self['force-compilation'] or do_compile then
-      while true do
-        self.complete_ly_code = self:header() .. self:content() .. self:footer()
-        self:run_lilypond()
-        self['force-compilation'] = false
-        if self:is_compiled() then
-          table.insert(self.output_names, self.output)
-        else
-          self:clean_failed_compilation()
-          break
+      local proc
+      proc = function()
+        while true do
+          self.complete_ly_code = self:header() .. self:content() .. self:footer()
+          self:run_lilypond()
+          self['force-compilation'] = false
+          if self:is_compiled() then
+            table.insert(self.output_names, self.output)
+          else
+            self:clean_failed_compilation()
+            break
+          end
+          if self:check_protrusion(bbox_get) then
+            break
+          end
         end
-        if self:check_protrusion(bbox_get) then
-          break
-        end
+        return self:optimize_pdf()
       end
-      self:optimize_pdf()
+      if self.parallel then
+        pool:add(proc)
+      else
+        proc()
+      end
     else
       table.insert(self.output_names, self.output)
     end
     set_lyscore(self)
-    if self:count_systems() == 0 then
+    if not (do_compile and self.parallel) and self:count_systems() == 0 then
       warn("The score doesn't contain any music:\nthis will probably cause bad output.")
     end
     if not self['raw-pdf'] then
@@ -994,11 +1069,13 @@ do
       return self:delete_intermediate_files()
     end
   end
-  _.run_lily_proc = function(self, p)
-    if self.debug then
-      local f = assert(io.open(tostring(self.output) .. ".log", 'w'), tostring(self.output) .. " can’t be written.")
-      f:write(p:read("*a"))
-      f:close()
+  _.run_lily_proc = function(self, cmd, mode)
+    local p = io.popen(cmd, mode)
+    if self.parallel then
+      coroutine.yield()
+    end
+    if self.parallel or self.debug then
+      p:read()
     else
       p:write(self.complete_ly_code)
     end
@@ -1009,14 +1086,14 @@ do
       return 
     end
     mkdirs(dirname(self.output))
-    if not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code))) and not self.debug then
+    if not self.debug and not self:run_lily_proc(self:lilypond_cmd(self.complete_ly_code)) then
       self.debug = true
-      self.lilypond_error = not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code)))
+      self.lilypond_error = not self:run_lily_proc(self:lilypond_cmd(self.complete_ly_code))
     end
     local lilypond_pdf, mode = self:lilypond_cmd(self.complete_ly_code)
     if lilypond_pdf:match("-E") then
       lilypond_pdf = lilypond_pdf:gsub(" %-E", " --pdf")
-      return self:run_lily_proc(io.popen(lilypond_pdf, mode))
+      return self:run_lily_proc(lilypond_pdf, mode)
     end
   end
   _.tex_margin_bottom = function(self)
@@ -1044,8 +1121,14 @@ do
   _.write_latex = function(self, do_compile)
     latex_filename(self.printfilename, self.insert, self.input_file)
     latex_verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
-    if do_compile and not self:check_compilation() then
-      return 
+    if do_compile then
+      if self.parallel then
+        return true
+      end
+    else
+      if not self:check_compilation() then
+        return 
+      end
     end
     latex_fullpagestyle(self.fullpagestyle, self['print-page-number'])
     latex_label(self.label, self.labelprefix)
@@ -1117,7 +1200,7 @@ ly.clean_tmp_dir = function()
         end
       end
       if not file_is_used then
-        os.remove(Score.tmpdir .. '/' .. file)
+        os.remove(tostring(Score.tmpdir) .. "/" .. tostring(file))
       end
     end
   end

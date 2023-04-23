@@ -12,8 +12,8 @@ err, warn, info = luatexbase.provides_module {
 import basename, contains, convert_unit, current_font_size, dirname, fontinfo, max, min, mkdirs, orderedpairs, readlinematching, splitext, tex_engine from require(kpse.find_file"luaoptions-lib.lua" or "luaoptions-lib.lua")
 ly_opts = lua_options.client"ly"
 
-md5 = require"md5"
 lfs = require"lfs"
+md5 = require"md5"
 
 ly = :err, varwidth_available: kpse.find_file"varwidth.sty"
 
@@ -177,11 +177,19 @@ info = (...) ->
 debug = (...) ->
   info(...) if Score.debug
 
+path = {
+  __tostring: => os.type == 'windows' and tex_engine.dist == 'MiKTeX' and '\\' or '/'
+  join: (...) =>
+    t = select 1, ...
+    table.concat (type(t) == 'table' and t or {...}), "#{@}"
+}
+setmetatable path, path
+
 extract_includepaths = =>
   @ = @explode","
-  cfd = Score.currfiledir\gsub '^$', tex_engine.dist == 'MiKTeX' and '.\\' or './'
+  cfd = Score.currfiledir\gsub '^$', ".#{path}"
   table.insert @, 1, cfd
-  for i, path in ipairs(@)
+  for i, path in ipairs @
     -- delete initial space (in case someone puts a space after the comma)
     @[i] = path\gsub('^ ', '')\gsub('^~', os.getenv"HOME")\gsub('^%.%.', './..')
   @
@@ -224,12 +232,52 @@ set_lyscore = =>
   if @insert != "fullpage" then  -- systems and inline
     hoffset = @protrusion or 0
     hoffset = 0 if hoffset == ''
-    @hoffset = hoffset..'pt'
+    @hoffset = "#{hoffset}pt"
     for s = 1, @nsystems
       table.insert @, "#{@output}-#{s}"
   else @[1] = @output
   ly.score = @
 
+
+-- ======================= Jobs queue ================================ --
+
+Pool = do
+  _ = {
+    __call: (n, o) =>
+      print(n, o)
+      o or= type(n) == 'table' and n or {}
+      o.n or= tonumber n
+      o.running or= {}
+      setmetatable o, @
+    add: (fn) => table.insert @, coroutine.create fn,
+    cycle: =>
+      while rawget(@, 1) and not @running[@n]
+        @running[#@running+1] = table.remove @, 1
+      co = table.remove @running, 1
+      coroutine.resume co
+      @running[#@running+1] = co if coroutine.status(co) != 'dead'
+    wait: =>
+      while @running[1] or rawget @, 1
+        @cycle!
+  }
+  _.__index = _
+  setmetatable _, _
+
+local pool
+if n = ly_opts.parallel
+  if not tonumber(n)
+    n, p = 4, io.popen"nproc"
+    if p
+      n = (tonumber(p\read!\match"%d+") + 1)
+      p\close!
+  pool = Pool n
+  luatexbase.add_to_callback 'stop_run',
+    ->
+      if rawget pool, 1
+        info"Waiting for #{#pool} pending compilations."
+        pool\wait!
+        warn"Please rerun to get compiled scores included.",
+    'pending_compilations'
 
 -- ================ Bounding box calculations =========================== --
 
@@ -245,7 +293,7 @@ bbox_calc = (x_1, x_2, y_1, y_2, line_width) ->
 
 bbox_parse = (line_width) =>
   -- get BoundingBox from EPS file
-  bbline = readlinematching '^%%%%BoundingBox', io.open @..'.eps', 'r'
+  bbline = readlinematching '^%%%%BoundingBox', io.open "#{@}.eps", 'r'
   return if not bbline
   x_1, y_1, x_2, y_2 = bbline\match"(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)"
   -- try to get HiResBoundingBox from PDF (if 'gs' works)
@@ -323,7 +371,7 @@ latex_label = (labelprefix) => tex.sprint"\\label{#{labelprefix}#{@}}%%" if @
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
 latex_verbatim = (ly_code, intertext, version) =>
   if @
-    if version then tex.sprint('\\lyVersion{'..version..'}')
+    tex.sprint"\\lyVersion{#{version}}" if version
     content = table.concat(ly_code\explode('\n'), '\n')\gsub('.*%%%s*begin verbatim', '')\gsub('%%%s*end verbatim.*', '')
     --We unfortunately need an external file, as verbatim environments are quite special.
     fname = "#{ly_opts.tmpdir}/verb.tex"
@@ -516,10 +564,7 @@ do
         @ly_code\find([[\paper]]) or
         @ly_code\find([[\score]])
       )
-        warn[[
-Found something incompatible with `fragment`
-(or `relative`). Setting them to false.
-]]
+        warn"Found something incompatible with `fragment`\n(or `relative`). Setting them to false."
         @fragment = false
         @relative = false
 
@@ -631,25 +676,25 @@ Found something incompatible with `fragment`
 
   _.is_compiled = =>
     return false if @['force-compilation']
-    lfs.isfile(@output..'.pdf') or lfs.isfile(@output..'.eps') or @count_systems(true) != 0
+    lfs.isfile("#{@output}.pdf") or lfs.isfile("#{@output}.eps") or @count_systems(true) != 0
 
   _.is_odd_page = => tex.count['c@page'] % 2 == 1
 
   _.lilypond_cmd = =>
     input, mode = '-s -', 'w'
-    if @debug or tex_engine.dist == 'MiKTeX'
+    if @debug or @parallel or tex_engine.dist == 'MiKTeX'
       f = assert io.open("#{@output}.ly", 'w'), "#{@output}.ly can’t be written."
       f\write @complete_ly_code
       f\close!
       input = "#{@output}.ly 2>&1"
       mode = 'r'
     cmd = "\"#{@program}\" #{@insert == 'fullpage' and '' or '-E'} -dno-point-and-click -djob-count=2 -dno-delete-intermediate-files"
-    if @['optimize-pdf'] and @lilypond_has_TeXGS! then cmd ..= " -O TeX-GS -dgs-never-embed-fonts"
+    cmd ..= " -O TeX-GS -dgs-never-embed-fonts" if @['optimize-pdf'] and @lilypond_has_TeXGS!
     if @input_file
       cmd ..= " -I \"#{dirname(@input_file)\gsub '^%./', lfs.currentdir!..'/'}\""
     for dir in *extract_includepaths @includepaths
       cmd ..= " -I \"#{dir\gsub '^%./', lfs.currentdir!..'/'}\""
-    cmd ..= " -o \"#{@output}\" #{input}"
+    cmd ..= " -o \"#{@output}\" #{input} > #{@output}.log"
     debug "Command:\n#{cmd}"
     cmd, mode
 
@@ -740,7 +785,7 @@ Found something incompatible with `fragment`
       ly.final_optimization_message = true
       luatexbase.add_to_callback 'stop_run',
         -> info "Optimization enabled: remember to run\n'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.",
-          tex.jobname..'-final.pdf', tex.jobname..'.pdf',
+          "#{tex.jobname}-final.pdf", "#{tex.jobname}.pdf",
         'lyluatex optimize-pdf'
     else
       local pdf2ps, ps2pdf, path
@@ -750,6 +795,7 @@ Found something incompatible with `fragment`
           pdf2ps = io.popen "gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE #{path} -c quit", "r"
           ps2pdf = io.popen "gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=#{path}-gs -", "w"
           if pdf2ps
+            coroutine.yield! if @parallel
             ps2pdf\write pdf2ps\read"*a"
             pdf2ps\close!
             ps2pdf\close!
@@ -765,7 +811,7 @@ Found something incompatible with `fragment`
     if @insert == 'fullpage'
       properties ..= "#{@tex_margin_top!}#{@tex_margin_bottom!}#{@tex_margin_left!}#{@tex_margin_right!}"
     filename = md5.sumhexa "#{@flatten_content @ly_code}#{properties}"
-    return "#{@tmpdir}/#{filename}"
+    return path\join @tmpdir, filename
 
   _.process = =>
     @check_properties!
@@ -781,41 +827,44 @@ Found something incompatible with `fragment`
     -- a prior compilation, otherwise it will be ignored
     do_compile = not @check_protrusion bbox_read
     if @['force-compilation'] or do_compile
-      while true
-        @complete_ly_code = @header!..@content!..@footer!
-        @run_lilypond!
-        @['force-compilation'] = false
-        if @is_compiled! then table.insert @output_names, @output
-        else
-          @clean_failed_compilation!
-          break
-        break if @check_protrusion bbox_get
-      @optimize_pdf!
+      proc = ->
+        while true
+          @complete_ly_code = @header!..@content!..@footer!
+          @run_lilypond!
+          @['force-compilation'] = false
+          if @is_compiled! then table.insert @output_names, @output
+          else
+            @clean_failed_compilation!
+            break
+          break if @check_protrusion bbox_get
+        @optimize_pdf!
+      pool\add(proc) if @parallel else proc!
     else table.insert @output_names, @output
     set_lyscore @
-    warn"The score doesn't contain any music:\nthis will probably cause bad output." if @count_systems! == 0
+    warn"The score doesn't contain any music:\nthis will probably cause bad output." if not (do_compile and @parallel) and @count_systems! == 0
     @write_latex(do_compile) if not @['raw-pdf']
     @write_to_filelist!
     @delete_intermediate_files! if not @debug
 
-  _.run_lily_proc = (p) =>
-      if @debug
-        f = assert io.open("#{@output}.log", 'w'), "#{@output} can’t be written."
-        f\write p\read"*a"
-        f\close!
-      else p\write @complete_ly_code
-      p\close!
+  _.run_lily_proc = (cmd, mode) =>
+    p = io.popen cmd, mode
+    coroutine.yield! if @parallel
+    if @parallel or @debug
+      p\read!
+    else
+      p\write @complete_ly_code
+    p\close!
 
   _.run_lilypond = =>
     return if @is_compiled!
     mkdirs dirname @output
-    if not @run_lily_proc(io.popen @lilypond_cmd @complete_ly_code) and not @debug
+    if not @debug and not @run_lily_proc @lilypond_cmd @complete_ly_code
       @debug = true
-      @lilypond_error = not @run_lily_proc(io.popen @lilypond_cmd @complete_ly_code)
+      @lilypond_error = not @run_lily_proc @lilypond_cmd @complete_ly_code
     lilypond_pdf, mode = @lilypond_cmd @complete_ly_code
     if lilypond_pdf\match"-E"
       lilypond_pdf = lilypond_pdf\gsub " %-E", " --pdf"
-      @run_lily_proc io.popen lilypond_pdf, mode
+      @run_lily_proc lilypond_pdf, mode
 
   _.tex_margin_bottom = =>
     @_tex_margin_bottom or= convert_unit"#{tex.dimen.paperheight}sp" - @tex_margin_top! - convert_unit"#{tex.dimen.textheight}sp"
@@ -840,7 +889,8 @@ Found something incompatible with `fragment`
   _.write_latex = (do_compile) =>
     latex_filename @printfilename, @insert, @input_file
     latex_verbatim @verbatim, @ly_code, @intertext, @addversion
-    if do_compile and not @check_compilation! then return
+    if do_compile
+      return true if @parallel else return if not @check_compilation!
     -- Now we know there is a proper score
     latex_fullpagestyle @fullpagestyle, @['print-page-number']
     latex_label @label, @labelprefix
@@ -890,7 +940,7 @@ ly.clean_tmp_dir = ->
       for lhash in *hash_list
         file_is_used = file\find lhash
         break if file_is_used
-      os.remove(Score.tmpdir..'/'..file) if not file_is_used
+      os.remove("#{Score.tmpdir}/#{file}") if not file_is_used
 
 ly.conclusion_text = -> info "Output written on %s.pdf.\nTranscript written on %s.log.", tex.jobname, tex.jobname
 
@@ -969,7 +1019,7 @@ ly.v = do
     __call: (v) =>
       v[i] = tonumber v[i] for i = 1, #v
       setmetatable v, @
-    __tostring: => table.concat(@, ".")
+    __tostring: => table.concat @, "."
   }
   setmetatable _, _
 
@@ -979,3 +1029,4 @@ ly.write_to_file = (content) =>
   f\close!
 
 ly
+
