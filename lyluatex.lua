@@ -809,6 +809,7 @@ function Score:lilypond_cmd()
     local cmd = '"'..self.program..'" '
         .. (self.insert == "fullpage" and "" or "-E ")
         .. "-dno-point-and-click -djob-count=2 -dno-delete-intermediate-files "
+    if self:lilypond_version() >= ly.v{2, 24} then cmd = cmd.."-dtall-page-formats=pdf " end
     if self['optimize-pdf'] and self:lilypond_has_TeXGS() then cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts " end
     if self.input_file then
         cmd = cmd..'-I "'..lib.dirname(self.input_file):gsub('^%./', lfs.currentdir()..'/')..'" '
