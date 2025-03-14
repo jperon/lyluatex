@@ -168,8 +168,8 @@
 \newcommand{\ly@currentfonts}{%
   \begingroup%
     \setluaoption{ly}{current-font}{%
-      \directlua{ly.get_font_family(font.current())}
-    }
+      \directlua{ly.get_font_family(font.current())}%
+    }%
     \rmfamily \edef\rmfamilyid{\fontid\font}%
     \sffamily \edef\sffamilyid{\fontid\font}%
     \ttfamily \edef\ttfamilyid{\fontid\font}%
@@ -183,8 +183,8 @@
 % Score processing
 \newcommand*{\ly@compilescore}[1]{%
   \ly@setunits%
-  \setluaoption{ly}{currfiledir}{\currfiledir}
-  \setluaoption{ly}{twoside}{\ly@istwosided}
+  \setluaoption{ly}{currfiledir}{\currfiledir}%
+  \setluaoption{ly}{twoside}{\ly@istwosided}%
   \directlua{
     #1
     ly.newpage_if_fullpage()
