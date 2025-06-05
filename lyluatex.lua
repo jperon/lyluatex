@@ -857,10 +857,21 @@ end
 function Score:ly_fonts()
     if self['pass-fonts'] then
         local fonts_def
-        if self:lilypond_version() >= ly.v{2, 25, 4} then
-            fonts_def = [[fonts.roman = "%s"
-    fonts.sans = "%s"
-    fonts.typewriter = "%s"]]
+        if self:lilypond_version() >= ly.v{2, 25, 6} then
+            fonts_def = [[
+property-defaults.fonts.serif = "%s"
+property-defaults.fonts.sans = "%s"
+property-defaults.fonts.typewriter = "%s"]]
+        elseif self:lilypond_version() >= ly.v{2, 25, 5} then
+            fonts_def = [[
+fonts.serif = "%s"
+fonts.sans = "%s"
+fonts.typewriter = "%s"]]
+        elseif self:lilypond_version() >= ly.v{2, 25, 4} then
+            fonts_def = [[
+fonts.roman = "%s"
+fonts.sans = "%s"
+fonts.typewriter = "%s"]]
         else
             fonts_def = [[
 #(define fonts
