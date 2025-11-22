@@ -102,6 +102,16 @@ LY_FONTS_DEF = [[fonts.roman = "%s"
   fonts.typewriter = "%s"
 ]]
 
+LY_FONTS_DEF_2_25_5 = [[fonts.serif = "%s"
+  fonts.sans = "%s"
+  fonts.typewriter = "%s"
+]]
+
+LY_FONTS_DEF_2_25_6 = [[property-defaults.fonts.serif = "%s"
+  property-defaults.fonts.sans = "%s"
+  property-defaults.fonts.typewriter = "%s"
+]]
+
 LY_FONTS_DEF_OLD = [[#(define fonts (make-pango-font-tree "%s" "%s" "%s" (/ staff-height pt 20)))]]
 
 LY_MARGINS_CROP = [[
@@ -606,9 +616,10 @@ Found something incompatible with `fragment`
     ly_code = ly_code\gsub '%%', '#'
     includepaths = @input_file and "#{@includepaths},#{dirname @input_file}" or "#{@includepaths},#{@tmpdir}"
     for iline in ly_code\gmatch'\\include%s*"[^"]*"'
-      if f = io.open(locate(iline\match'\\include%s*"([^"]*)"', includepaths, '.ly') or "")
-        ly_code = ly_code\gsub iline, @flatten_content f\read"*a"
-        f\close!
+      if filename = locate(iline\match'\\include%s*"([^"]*)"', includepaths, '.ly')
+        if f = io.open(filename)
+          ly_code = ly_code\gsub iline, @flatten_content f\read"*a"
+          f\close!
     ly_code
 
   _.footer = => includes_parse @include_footer
@@ -644,6 +655,7 @@ Found something incompatible with `fragment`
       input = "#{@output}.ly 2>&1"
       mode = 'r'
     cmd = "\"#{@program}\" #{@insert == 'fullpage' and '' or '-E'} -dno-point-and-click -djob-count=2 -dno-delete-intermediate-files"
+    cmd ..= " -dtall-page-formats=pdf" if @lilypond_version! >= ly.v{2, 24}
     if @['optimize-pdf'] and @lilypond_has_TeXGS! then cmd ..= " -O TeX-GS -dgs-never-embed-fonts"
     if @input_file
       cmd ..= " -I \"#{dirname(@input_file)\gsub '^%./', lfs.currentdir!..'/'}\""
@@ -671,7 +683,13 @@ Found something incompatible with `fragment`
 
   _.ly_fonts = =>
     if @['pass-fonts']
-      fonts_def = (@lilypond_version! >= ly.v{2, 25, 4}) and LY_FONTS_DEF or LY_FONTS_DEF_OLD
+      fonts_def = LY_FONTS_DEF_OLD
+      if @lilypond_version! >= ly.v{2, 25, 6}
+        fonts_def = LY_FONTS_DEF_2_25_6
+      elseif @lilypond_version! >= ly.v{2, 25, 5}
+        fonts_def = LY_FONTS_DEF_2_25_5
+      elseif @lilypond_version! >= ly.v{2, 25, 4}
+        fonts_def = LY_FONTS_DEF
       return fonts_def\format @rmfamily, @sffamily, @ttfamily
     else
       return '%% fonts not set'
@@ -749,12 +767,14 @@ Found something incompatible with `fragment`
         if path\match(@output) and path\sub(-4) == '.pdf'
           pdf2ps = io.popen "gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE #{path} -c quit", "r"
           ps2pdf = io.popen "gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=#{path}-gs -", "w"
-          if pdf2ps
+          if pdf2ps and ps2pdf
             ps2pdf\write pdf2ps\read"*a"
             pdf2ps\close!
             ps2pdf\close!
             os.rename "#{path}-gs", path
           else
+            pdf2ps\close! if pdf2ps
+            ps2pdf\close! if ps2pdf
             warn"You have asked for pdf optimization, but gs wasn't found."
 
   _.output_filename = =>
@@ -799,6 +819,7 @@ Found something incompatible with `fragment`
     @delete_intermediate_files! if not @debug
 
   _.run_lily_proc = (p) =>
+      return false unless p
       if @debug
         f = assert io.open("#{@output}.log", 'w'), "#{@output} can’t be written."
         f\write p\read"*a"
