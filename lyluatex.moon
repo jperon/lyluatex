@@ -14,6 +14,7 @@ ly_opts = lua_options.client"ly"
 
 md5 = require"md5"
 lfs = require"lfs"
+:concat, :insert, :remove = table
 
 ly = :err, varwidth_available: kpse.find_file"varwidth.sty"
 
@@ -190,7 +191,7 @@ debug = (...) ->
 extract_includepaths = =>
   @ = @explode","
   cfd = Score.currfiledir\gsub '^$', tex_engine.dist == 'MiKTeX' and '.\\' or './'
-  table.insert @, 1, cfd
+  insert @, 1, cfd
   for i, path in ipairs(@)
     -- delete initial space (in case someone puts a space after the comma)
     @[i] = path\gsub('^ ', '')\gsub('^~', os.getenv"HOME")\gsub('^%.%.', './..')
@@ -198,7 +199,7 @@ extract_includepaths = =>
 
 font_default_staffsize = -> current_font_size!/39321.6
 
-includes_parse = => "" if not @ else "\n\n" .. table.concat ["\\include \"#{included_file}.ly\"" for included_file in *@explode","], "\n"
+includes_parse = => "" if not @ else "\n\n" .. concat ["\\include \"#{included_file}.ly\"" for included_file in *@explode","], "\n"
 
 locate = (includepaths, ext) =>
   local result
@@ -225,7 +226,7 @@ range_parse = (nsystems) =>
   _from, _to = tonumber(@match"^%d+"), tonumber(@match"%d+$")
   if _to
     dir = 1 if _from <= _to else -1
-    for i = _from, _to, dir do table.insert result, i
+    for i = _from, _to, dir do insert result, i
     return result
   else return {@}  -- N- with insert=fullpage
 
@@ -236,7 +237,7 @@ set_lyscore = =>
     hoffset = 0 if hoffset == ''
     @hoffset = hoffset..'pt'
     for s = 1, @nsystems
-      table.insert @, "#{@output}-#{s}"
+      insert @, "#{@output}-#{s}"
   else @[1] = @output
   ly.score = @
 
@@ -286,62 +287,61 @@ bbox_get = (line_width) => bbox_read(@) or bbox_parse(@, line_width)
 
 -- =============== Functions that output LaTeX code ===================== --
 
-latex_filename = (insert, input_file) =>
-  if @ and input_file
-    if insert != 'systems'
+latex_filename = =>
+  if @printfilename and @input_file
+    if @insert != 'systems'
       warn"`printfilename` only works with `insert=systems`"
     else
-      @ = input_file\gsub "(.*/)(.*)", "\\lyFilename{%2}\\par"
-      tex.sprint @
+      tex.sprint (@input_file\gsub "(.*/)(.*)", "\\lyFilename{%2}\\par")
 
-latex_fullpagestyle = (ppn) =>
-  texoutput = => tex.sprint"\\includepdfset{pagecommand=#{@}}%"
-  if @ == ''
-    if ppn then texoutput"\\thispagestyle{empty}"
+latex_fullpagestyle = =>
+  texoutput = (style) -> tex.sprint"\\includepdfset{pagecommand=#{style}}%"
+  if @fullpagestyle == ''
+    if @['print-page-number'] then texoutput"\\thispagestyle{empty}"
     else texoutput''
-  else texoutput"\\thispagestyle{#{@}}"
+  else texoutput"\\thispagestyle{#{@fullpagestyle}}"
 
-latex_includeinline = (height, valign, hpadding, voffset) =>
-  v_base = switch valign
+latex_includeinline = (height) =>
+  v_base = switch @valign
     when 'bottom' 0
     when 'top' convert_unit"1em" - height
     else (convert_unit"1em" - height) / 2
   tex.sprint "\\hspace{%fpt}\\raisebox{%fpt}{\\includegraphics{%s-1}}\\hspace{%fpt}"\format(
-      hpadding, v_base + voffset, @, hpadding
+      @hpadding, v_base + @voffset, @output, @hpadding
     )
 
-latex_includepdf = (range, papersize) =>
+latex_includepdf = =>
   tex.sprint "\\includepdf[pages={%s},%s]{%s}"\format(
-    table.concat range, ','
-    papersize and 'noautoscale' or ''
-    @
+    concat(@range, ','),
+    @papersize and 'noautoscale' or '',
+    @output
   )
 
-latex_includesystems = (range, protrusion, gutter, staffsize, indent_offset) =>
-  h_offset = protrusion + indent_offset
+latex_includesystems = =>
+  h_offset = @protrusion_left + @indent_offset
   texoutput = {"\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi", "\\par"}
-  for index, system in pairs range
-    break if not lfs.isfile"#{@}-#{system}.eps"
-    texoutput[#texoutput+1] = "\\noindent\\hspace*{%fpt}\\includegraphics{#{@}-#{system}}%%"\format h_offset + gutter
-    if index < #range
-      texoutput[#texoutput+1] = "\\ifx\\betweenLilyPondSystem\\undefined\\par\\vspace{%fpt plus %fpt minus %fpt}\\else\\betweenLilyPondSystem{#{index}}\\fi%%"\format staffsize / 4, staffsize / 12, staffsize / 16
+  for index, system in pairs @range
+    break if not lfs.isfile"#{@output}-#{system}.eps"
+    texoutput[#texoutput+1] = "\\noindent\\hspace*{%fpt}\\includegraphics{#{@output}-#{system}}%%"\format h_offset + @leftgutter
+    if index < #@range
+      texoutput[#texoutput+1] = "\\ifx\\betweenLilyPondSystem\\undefined\\par\\vspace{%fpt plus %fpt minus %fpt}\\else\\betweenLilyPondSystem{#{index}}\\fi%%"\format @staffsize / 4, @staffsize / 12, @staffsize / 16
   texoutput[#texoutput+1] = "\\ifx\\postLilyPondExample\\undefined\\else\\postLilyPondExample\\fi"
   tex.sprint texoutput
 
-latex_label = (labelprefix) => tex.sprint"\\label{#{labelprefix}#{@}}%%" if @
+latex_label = => tex.sprint"\\label{#{@labelprefix}#{@label}}%%" if @label
 
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
-latex_verbatim = (ly_code, intertext, version) =>
-  if @
-    if version then tex.sprint('\\lyVersion{'..version..'}')
-    content = table.concat(ly_code\explode('\n'), '\n')\gsub('.*%%%s*begin verbatim', '')\gsub('%%%s*end verbatim.*', '')
+latex_verbatim = =>
+  if @verbatim
+    if @addversion then tex.sprint('\\lyVersion{'..@addversion..'}')
+    content = concat(@ly_code\explode('\n'), '\n')\gsub('.*%%%s*begin verbatim', '')\gsub('%%%s*end verbatim.*', '')
     --We unfortunately need an external file, as verbatim environments are quite special.
     fname = "#{ly_opts.tmpdir}/verb.tex"
     f = assert io.open(fname, 'w'), "#{fname} can’t be written."
     f\write"#{ly.verbenv[1]}\n#{content}\n#{ly.verbenv[2]\gsub([[\end {]], [[\end{]])}\n"
     f\close!
     tex.sprint"\\input{#{fname}}"
-    tex.sprint"\\lyIntertext{#{intertext}}" if intertext
+    tex.sprint"\\lyIntertext{#{@intertext}}" if @intertext
 
 
 -- =============================== Classes =============================== --
@@ -419,13 +419,13 @@ do
     result, rm_result = {}, {}
     for r in *printonly\explode","
       if range = range_parse r\gsub('^%s', '')\gsub('%s$', ''), nsystems
-        table.insert(result, v) for v in *range
+        insert(result, v) for v in *range
     for r in *donotprint\explode","
       if range = range_parse r\gsub('^%s', '')\gsub('%s$', ''), nsystems
-        table.insert(rm_result, v) for v in *range
+        insert(rm_result, v) for v in *range
     for v in *rm_result
       if k = contains result, v
-        table.remove result, k
+        remove result, k
     return result
 
   _.calc_staff_properties = =>
@@ -516,8 +516,7 @@ do
 
   _.check_properties = =>
     ly_opts\validate_options @
-    for k in *TEXINFO_OPTIONS
-      if @[k] then info"Option #{k} is specific to Texinfo: ignoring it."
+    info"Option #{k} is specific to Texinfo: ignoring it." for k in *TEXINFO_OPTIONS when @[k]
     if @fragment
       if (@input_file or
         @ly_code\find([[\book]]) or
@@ -654,14 +653,19 @@ Found something incompatible with `fragment`
       f\close!
       input = "#{@output}.ly 2>&1"
       mode = 'r'
-    cmd = "\"#{@program}\" #{@insert == 'fullpage' and '' or '-E'} -dno-point-and-click -djob-count=2 -dno-delete-intermediate-files"
-    cmd ..= " -dtall-page-formats=pdf" if @lilypond_version! >= ly.v{2, 24}
-    if @['optimize-pdf'] and @lilypond_has_TeXGS! then cmd ..= " -O TeX-GS -dgs-never-embed-fonts"
-    if @input_file
-      cmd ..= " -I \"#{dirname(@input_file)\gsub '^%./', lfs.currentdir!..'/'}\""
-    for dir in *extract_includepaths @includepaths
-      cmd ..= " -I \"#{dir\gsub '^%./', lfs.currentdir!..'/'}\""
-    cmd ..= " -o \"#{@output}\" #{input}"
+    cmd = {
+      "\"#{@program}\""
+      @insert != 'fullpage' and '-E' or ''
+      "-dno-point-and-click"
+      "-djob-count=2"
+      "-dno-delete-intermediate-files"
+    }
+    cmd[#cmd+1] = "-dtall-page-formats=pdf" if @lilypond_version! >= ly.v{2, 24}
+    cmd[#cmd+1] = "-O TeX-GS -dgs-never-embed-fonts" if @['optimize-pdf'] and @lilypond_has_TeXGS()
+    cmd[#cmd+1] = "-I \"#{dirname(@input_file)\gsub '^%./', lfs.currentdir!..'/'}\"" if @input_file
+    cmd[#cmd+1] = "-I \"#{dir\gsub '^%./', lfs.currentdir!..'/'}\"" for dir in *extract_includepaths @includepaths
+    cmd[#cmd+1] = "-o \"#{@output}\" #{input}"
+    cmd = concat cmd, " "
     debug "Command:\n#{cmd}"
     cmd, mode
 
@@ -753,7 +757,7 @@ Found something incompatible with `fragment`
   _.ly_version = => @['ly-version']
 
   _.optimize_pdf = =>
-    if not @['optimize-pdf'] then return
+    return unless @['optimize-pdf']
     if @lilypond_has_TeXGS() and not ly.final_optimization_message
       ly.final_optimization_message = true
       luatexbase.add_to_callback 'stop_run',
@@ -805,13 +809,13 @@ Found something incompatible with `fragment`
         @complete_ly_code = @header!..@content!..@footer!
         @run_lilypond!
         @['force-compilation'] = false
-        if @is_compiled! then table.insert @output_names, @output
+        if @is_compiled! then insert @output_names, @output
         else
           @clean_failed_compilation!
           break
         break if @check_protrusion bbox_get
       @optimize_pdf!
-    else table.insert @output_names, @output
+    else insert @output_names, @output
     set_lyscore @
     warn"The score doesn't contain any music:\nthis will probably cause bad output." if @count_systems! == 0
     @write_latex(do_compile) if not @['raw-pdf']
@@ -859,21 +863,21 @@ Found something incompatible with `fragment`
     @_tex_margin_top
 
   _.write_latex = (do_compile) =>
-    latex_filename @printfilename, @insert, @input_file
-    latex_verbatim @verbatim, @ly_code, @intertext, @addversion
+    latex_filename @
+    latex_verbatim @
     if do_compile and not @check_compilation! then return
     -- Now we know there is a proper score
-    latex_fullpagestyle @fullpagestyle, @['print-page-number']
-    latex_label @label, @labelprefix
+    latex_fullpagestyle @
+    latex_label @
     if @insert == 'fullpage'
-      latex_includepdf @output, @range, @papersize
+      latex_includepdf @
     elseif @insert == 'systems'
-      latex_includesystems @output, @range, @protrusion_left, @leftgutter, @staffsize, @indent_offset
+      latex_includesystems @
     else  -- inline
       if @count_systems! > 1
         warn"Score with more than one system included inline.\nThis will probably cause bad output."
       if bb = @bbox 1
-        latex_includeinline @output, bb.height, @valign, @hpadding, @voffset
+        latex_includeinline @, bb.height
 
   _.write_to_filelist = =>
     f = assert io.open(FILELIST, 'a'), "#{FILELIST} can’t be written."
@@ -885,16 +889,17 @@ Found something incompatible with `fragment`
 
 -- ========================== Public functions ========================== --
 
+buffenv = =>
+  insert ly.score_content, @
+  return '' unless @find [[\end{%w+}]]
+
 ly.buffenv_begin = ->
-  ly.buffenv = =>
-    table.insert ly.score_content, @
-    return '' if not @find [[\end{%w+}]]
   ly.score_content = {}
-  luatexbase.add_to_callback 'process_input_buffer', ly.buffenv, 'readline'
+  luatexbase.add_to_callback 'process_input_buffer', buffenv, 'readline'
 
 ly.buffenv_end = ->
   luatexbase.remove_from_callback 'process_input_buffer', 'readline'
-  table.remove ly.score_content
+  remove ly.score_content
 
 ly.clean_tmp_dir = ->
   local hash, file_is_used
@@ -904,7 +909,7 @@ ly.clean_tmp_dir = ->
       i = assert io.open"#{Score.tmpdir}/#{file}", "#{Score.tmpdir}/#{file} can’t be written."
       for line in *i\read"*a"\explode"\n"
         hash = line\explode"\t"[1]
-        table.insert(hash_list, hash) if hash != ''
+        insert(hash_list, hash) if hash != ''
       i\close!
   for file in lfs.dir Score.tmpdir
     if file != '.' and file != '..' and file\sub(-5, -1) != '.list'
@@ -926,7 +931,7 @@ ly.file = (options) =>
   -- as it really doesn't mean anything as a option.
   file = locate @, Score.includepaths, '.ly'
   options = ly_opts\check_local_options(options)
-  err("File %s doesn't exist.", @) if not file
+  err("File %s doesn't exist.", @) unless file
   i = assert io.open(file, 'r'), "#{file} can’t be read"
   ly.score = Score\new i\read"*a", options, file
   i\close!
@@ -936,7 +941,7 @@ ly.file_musicxml = (options) =>
   -- as it really doesn't mean anything as a option.
   file = locate @, Score.includepaths, '.xml'
   options = ly_opts\check_local_options options
-  err("File %s doesn't exist.", @) if not file
+  err("File %s doesn't exist.", @) unless file
   xmlopts = ''
   for opt in *MXML_OPTIONS
     if options[opt] != nil
@@ -953,7 +958,7 @@ ly.fragment = (options) =>
   options = ly_opts\check_local_options(options)
   if type(@) == 'string'
     @ = @gsub('\\par ', '\n')\gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
-  else @ = table.concat @, '\n'
+  else @ = concat @, '\n'
   ly.score = Score\new @, options
 
 ly.get_font_family = =>
@@ -983,14 +988,14 @@ ly.v = do
     __sub: (other) =>
       for i = 1, max #@, #other
         diff = (@[i] or 0) - (other[i] or 0)
-        if diff != 0 then return diff, i
+        return diff, i if diff != 0
       0
     __eq: (other) => return @ - other == 0
     __lt: (other) => return @ - other < 0
     __call: (v) =>
       v[i] = tonumber v[i] for i = 1, #v
       setmetatable v, @
-    __tostring: => table.concat(@, ".")
+    __tostring: => concat(@, ".")
   }
   setmetatable _, _
 

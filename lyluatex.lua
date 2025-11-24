@@ -16,6 +16,11 @@ end
 local ly_opts = lua_options.client("ly")
 local md5 = require("md5")
 local lfs = require("lfs")
+local concat, insert, remove
+do
+  local _obj_0 = table
+  concat, insert, remove = _obj_0.concat, _obj_0.insert, _obj_0.remove
+end
 local ly = {
   err = err,
   varwidth_available = kpse.find_file("varwidth.sty")
@@ -104,6 +109,14 @@ local LY_FONTS_DEF = [[fonts.roman = "%s"
   fonts.sans = "%s"
   fonts.typewriter = "%s"
 ]]
+local LY_FONTS_DEF_2_25_5 = [[fonts.serif = "%s"
+  fonts.sans = "%s"
+  fonts.typewriter = "%s"
+]]
+local LY_FONTS_DEF_2_25_6 = [[property-defaults.fonts.serif = "%s"
+  property-defaults.fonts.sans = "%s"
+  property-defaults.fonts.typewriter = "%s"
+]]
 local LY_FONTS_DEF_OLD = [[#(define fonts (make-pango-font-tree "%s" "%s" "%s" (/ staff-height pt 20)))]]
 local LY_MARGINS_CROP = [[  top-margin = %f\pt
   bottom-margin = %f\pt
@@ -169,7 +182,7 @@ local extract_includepaths
 extract_includepaths = function(self)
   self = self:explode(",")
   local cfd = Score.currfiledir:gsub('^$', tex_engine.dist == 'MiKTeX' and '.\\' or './')
-  table.insert(self, 1, cfd)
+  insert(self, 1, cfd)
   for i, path in ipairs(self) do
     self[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME")):gsub('^%.%.', './..')
   end
@@ -184,7 +197,7 @@ includes_parse = function(self)
   if not self then
     return ""
   else
-    return "\n\n" .. table.concat((function()
+    return "\n\n" .. concat((function()
       local _accum_0 = { }
       local _len_0 = 1
       local _list_0 = self:explode(",")
@@ -245,7 +258,7 @@ range_parse = function(self, nsystems)
       local _ = -1
     end
     for i = _from, _to, dir do
-      table.insert(result, i)
+      insert(result, i)
     end
     return result
   else
@@ -264,7 +277,7 @@ set_lyscore = function(self)
     end
     self.hoffset = hoffset .. 'pt'
     for s = 1, self.nsystems do
-      table.insert(self, tostring(self.output) .. "-" .. tostring(s))
+      insert(self, tostring(self.output) .. "-" .. tostring(s))
     end
   else
     self[1] = self.output
@@ -315,36 +328,35 @@ bbox_get = function(self, line_width)
   return bbox_read(self) or bbox_parse(self, line_width)
 end
 local latex_filename
-latex_filename = function(self, insert, input_file)
-  if self and input_file then
-    if insert ~= 'systems' then
+latex_filename = function(self)
+  if self.printfilename and self.input_file then
+    if self.insert ~= 'systems' then
       return warn("`printfilename` only works with `insert=systems`")
     else
-      self = input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")
-      return tex.sprint(self)
+      return tex.sprint((self.input_file:gsub("(.*/)(.*)", "\\lyFilename{%2}\\par")))
     end
   end
 end
 local latex_fullpagestyle
-latex_fullpagestyle = function(self, ppn)
+latex_fullpagestyle = function(self)
   local texoutput
-  texoutput = function(self)
-    return tex.sprint("\\includepdfset{pagecommand=" .. tostring(self) .. "}%")
+  texoutput = function(style)
+    return tex.sprint("\\includepdfset{pagecommand=" .. tostring(style) .. "}%")
   end
-  if self == '' then
-    if ppn then
+  if self.fullpagestyle == '' then
+    if self['print-page-number'] then
       return texoutput("\\thispagestyle{empty}")
     else
       return texoutput('')
     end
   else
-    return texoutput("\\thispagestyle{" .. tostring(self) .. "}")
+    return texoutput("\\thispagestyle{" .. tostring(self.fullpagestyle) .. "}")
   end
 end
 local latex_includeinline
-latex_includeinline = function(self, height, valign, hpadding, voffset)
+latex_includeinline = function(self, height)
   local v_base
-  local _exp_0 = valign
+  local _exp_0 = self.valign
   if 'bottom' == _exp_0 then
     v_base = 0
   elseif 'top' == _exp_0 then
@@ -352,35 +364,35 @@ latex_includeinline = function(self, height, valign, hpadding, voffset)
   else
     v_base = (convert_unit("1em") - height) / 2
   end
-  return tex.sprint(("\\hspace{%fpt}\\raisebox{%fpt}{\\includegraphics{%s-1}}\\hspace{%fpt}"):format(hpadding, v_base + voffset, self, hpadding))
+  return tex.sprint(("\\hspace{%fpt}\\raisebox{%fpt}{\\includegraphics{%s-1}}\\hspace{%fpt}"):format(self.hpadding, v_base + self.voffset, self.output, self.hpadding))
 end
 local latex_includepdf
-latex_includepdf = function(self, range, papersize)
-  return tex.sprint(("\\includepdf[pages={%s},%s]{%s}"):format(table.concat(range, ','), papersize and 'noautoscale' or '', self))
+latex_includepdf = function(self)
+  return tex.sprint(("\\includepdf[pages={%s},%s]{%s}"):format(concat(self.range, ','), self.papersize and 'noautoscale' or '', self.output))
 end
 local latex_includesystems
-latex_includesystems = function(self, range, protrusion, gutter, staffsize, indent_offset)
-  local h_offset = protrusion + indent_offset
+latex_includesystems = function(self)
+  local h_offset = self.protrusion_left + self.indent_offset
   local texoutput = {
     "\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi",
     "\\par"
   }
-  for index, system in pairs(range) do
-    if not lfs.isfile(tostring(self) .. "-" .. tostring(system) .. ".eps") then
+  for index, system in pairs(self.range) do
+    if not lfs.isfile(tostring(self.output) .. "-" .. tostring(system) .. ".eps") then
       break
     end
-    texoutput[#texoutput + 1] = ("\\noindent\\hspace*{%fpt}\\includegraphics{" .. tostring(self) .. "-" .. tostring(system) .. "}%%"):format(h_offset + gutter)
-    if index < #range then
-      texoutput[#texoutput + 1] = ("\\ifx\\betweenLilyPondSystem\\undefined\\par\\vspace{%fpt plus %fpt minus %fpt}\\else\\betweenLilyPondSystem{" .. tostring(index) .. "}\\fi%%"):format(staffsize / 4, staffsize / 12, staffsize / 16)
+    texoutput[#texoutput + 1] = ("\\noindent\\hspace*{%fpt}\\includegraphics{" .. tostring(self.output) .. "-" .. tostring(system) .. "}%%"):format(h_offset + self.leftgutter)
+    if index < #self.range then
+      texoutput[#texoutput + 1] = ("\\ifx\\betweenLilyPondSystem\\undefined\\par\\vspace{%fpt plus %fpt minus %fpt}\\else\\betweenLilyPondSystem{" .. tostring(index) .. "}\\fi%%"):format(self.staffsize / 4, self.staffsize / 12, self.staffsize / 16)
     end
   end
   texoutput[#texoutput + 1] = "\\ifx\\postLilyPondExample\\undefined\\else\\postLilyPondExample\\fi"
   return tex.sprint(texoutput)
 end
 local latex_label
-latex_label = function(self, labelprefix)
-  if self then
-    return tex.sprint("\\label{" .. tostring(labelprefix) .. tostring(self) .. "}%%")
+latex_label = function(self)
+  if self.label then
+    return tex.sprint("\\label{" .. tostring(self.labelprefix) .. tostring(self.label) .. "}%%")
   end
 end
 ly.verbenv = {
@@ -388,19 +400,19 @@ ly.verbenv = {
   [[\end{verbatim}]]
 }
 local latex_verbatim
-latex_verbatim = function(self, ly_code, intertext, version)
-  if self then
-    if version then
-      tex.sprint('\\lyVersion{' .. version .. '}')
+latex_verbatim = function(self)
+  if self.verbatim then
+    if self.addversion then
+      tex.sprint('\\lyVersion{' .. self.addversion .. '}')
     end
-    local content = table.concat(ly_code:explode('\n'), '\n'):gsub('.*%%%s*begin verbatim', ''):gsub('%%%s*end verbatim.*', '')
+    local content = concat(self.ly_code:explode('\n'), '\n'):gsub('.*%%%s*begin verbatim', ''):gsub('%%%s*end verbatim.*', '')
     local fname = tostring(ly_opts.tmpdir) .. "/verb.tex"
     local f = assert(io.open(fname, 'w'), tostring(fname) .. " can’t be written.")
     f:write(tostring(ly.verbenv[1]) .. "\n" .. tostring(content) .. "\n" .. tostring(ly.verbenv[2]:gsub([[\end {]], [[\end{]])) .. "\n")
     f:close()
     tex.sprint("\\input{" .. tostring(fname) .. "}")
-    if intertext then
-      return tex.sprint("\\lyIntertext{" .. tostring(intertext) .. "}")
+    if self.intertext then
+      return tex.sprint("\\lyIntertext{" .. tostring(self.intertext) .. "}")
     end
   end
 end
@@ -500,7 +512,7 @@ do
         if range then
           for _index_1 = 1, #range do
             local v = range[_index_1]
-            table.insert(result, v)
+            insert(result, v)
           end
         end
       end
@@ -513,7 +525,7 @@ do
         if range then
           for _index_1 = 1, #range do
             local v = range[_index_1]
-            table.insert(rm_result, v)
+            insert(rm_result, v)
           end
         end
       end
@@ -523,7 +535,7 @@ do
       do
         local k = contains(result, v)
         if k then
-          table.remove(result, k)
+          remove(result, k)
         end
       end
     end
@@ -737,10 +749,15 @@ do
     local includepaths = self.input_file and tostring(self.includepaths) .. "," .. tostring(dirname(self.input_file)) or tostring(self.includepaths) .. "," .. tostring(self.tmpdir)
     for iline in ly_code:gmatch('\\include%s*"[^"]*"') do
       do
-        local f = io.open(locate(iline:match('\\include%s*"([^"]*)"'), includepaths, '.ly') or "")
-        if f then
-          ly_code = ly_code:gsub(iline, self:flatten_content(f:read("*a")))
-          f:close()
+        local filename = locate(iline:match('\\include%s*"([^"]*)"'), includepaths, '.ly')
+        if filename then
+          do
+            local f = io.open(filename)
+            if f then
+              ly_code = ly_code:gsub(iline, self:flatten_content(f:read("*a")))
+              f:close()
+            end
+          end
         end
       end
     end
@@ -790,19 +807,32 @@ do
       input = tostring(self.output) .. ".ly 2>&1"
       mode = 'r'
     end
-    local cmd = "\"" .. tostring(self.program) .. "\" " .. tostring(self.insert == 'fullpage' and '' or '-E') .. " -dno-point-and-click -djob-count=2 -dno-delete-intermediate-files"
+    local cmd = {
+      "\"" .. tostring(self.program) .. "\"",
+      self.insert ~= 'fullpage' and '-E' or '',
+      "-dno-point-and-click",
+      "-djob-count=2",
+      "-dno-delete-intermediate-files"
+    }
+    if self:lilypond_version() >= ly.v({
+      2,
+      24
+    }) then
+      cmd[#cmd + 1] = "-dtall-page-formats=pdf"
+    end
     if self['optimize-pdf'] and self:lilypond_has_TeXGS() then
-      cmd = cmd .. " -O TeX-GS -dgs-never-embed-fonts"
+      cmd[#cmd + 1] = "-O TeX-GS -dgs-never-embed-fonts"
     end
     if self.input_file then
-      cmd = cmd .. " -I \"" .. tostring(dirname(self.input_file):gsub('^%./', lfs.currentdir() .. '/')) .. "\""
+      cmd[#cmd + 1] = "-I \"" .. tostring(dirname(self.input_file):gsub('^%./', lfs.currentdir() .. '/')) .. "\""
     end
     local _list_0 = extract_includepaths(self.includepaths)
     for _index_0 = 1, #_list_0 do
       local dir = _list_0[_index_0]
-      cmd = cmd .. " -I \"" .. tostring(dir:gsub('^%./', lfs.currentdir() .. '/')) .. "\""
+      cmd[#cmd + 1] = "-I \"" .. tostring(dir:gsub('^%./', lfs.currentdir() .. '/')) .. "\""
     end
-    cmd = cmd .. " -o \"" .. tostring(self.output) .. "\" " .. tostring(input)
+    cmd[#cmd + 1] = "-o \"" .. tostring(self.output) .. "\" " .. tostring(input)
+    cmd = concat(cmd, " ")
     debug("Command:\n" .. tostring(cmd))
     return cmd, mode
   end
@@ -830,11 +860,26 @@ do
   end
   _.ly_fonts = function(self)
     if self['pass-fonts'] then
-      local fonts_def = (self:lilypond_version() >= ly.v({
+      local fonts_def = LY_FONTS_DEF_OLD
+      if self:lilypond_version() >= ly.v({
+        2,
+        25,
+        6
+      }) then
+        fonts_def = LY_FONTS_DEF_2_25_6
+      elseif self:lilypond_version() >= ly.v({
+        2,
+        25,
+        5
+      }) then
+        fonts_def = LY_FONTS_DEF_2_25_5
+      elseif self:lilypond_version() >= ly.v({
         2,
         25,
         4
-      })) and LY_FONTS_DEF or LY_FONTS_DEF_OLD
+      }) then
+        fonts_def = LY_FONTS_DEF
+      end
       return fonts_def:format(self.rmfamily, self.sffamily, self.ttfamily)
     else
       return '%% fonts not set'
@@ -910,7 +955,7 @@ do
     return self['ly-version']
   end
   _.optimize_pdf = function(self)
-    if not self['optimize-pdf'] then
+    if not (self['optimize-pdf']) then
       return 
     end
     if self:lilypond_has_TeXGS() and not ly.final_optimization_message then
@@ -925,12 +970,18 @@ do
         if path:match(self.output) and path:sub(-4) == '.pdf' then
           pdf2ps = io.popen("gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE " .. tostring(path) .. " -c quit", "r")
           ps2pdf = io.popen("gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=" .. tostring(path) .. "-gs -", "w")
-          if pdf2ps then
+          if pdf2ps and ps2pdf then
             ps2pdf:write(pdf2ps:read("*a"))
             pdf2ps:close()
             ps2pdf:close()
             os.rename(tostring(path) .. "-gs", path)
           else
+            if pdf2ps then
+              pdf2ps:close()
+            end
+            if ps2pdf then
+              ps2pdf:close()
+            end
             warn("You have asked for pdf optimization, but gs wasn't found.")
           end
         end
@@ -969,7 +1020,7 @@ do
         self:run_lilypond()
         self['force-compilation'] = false
         if self:is_compiled() then
-          table.insert(self.output_names, self.output)
+          insert(self.output_names, self.output)
         else
           self:clean_failed_compilation()
           break
@@ -980,7 +1031,7 @@ do
       end
       self:optimize_pdf()
     else
-      table.insert(self.output_names, self.output)
+      insert(self.output_names, self.output)
     end
     set_lyscore(self)
     if self:count_systems() == 0 then
@@ -995,6 +1046,9 @@ do
     end
   end
   _.run_lily_proc = function(self, p)
+    if not (p) then
+      return false
+    end
     if self.debug then
       local f = assert(io.open(tostring(self.output) .. ".log", 'w'), tostring(self.output) .. " can’t be written.")
       f:write(p:read("*a"))
@@ -1042,17 +1096,17 @@ do
     return self._tex_margin_top
   end
   _.write_latex = function(self, do_compile)
-    latex_filename(self.printfilename, self.insert, self.input_file)
-    latex_verbatim(self.verbatim, self.ly_code, self.intertext, self.addversion)
+    latex_filename(self)
+    latex_verbatim(self)
     if do_compile and not self:check_compilation() then
       return 
     end
-    latex_fullpagestyle(self.fullpagestyle, self['print-page-number'])
-    latex_label(self.label, self.labelprefix)
+    latex_fullpagestyle(self)
+    latex_label(self)
     if self.insert == 'fullpage' then
-      return latex_includepdf(self.output, self.range, self.papersize)
+      return latex_includepdf(self)
     elseif self.insert == 'systems' then
-      return latex_includesystems(self.output, self.range, self.protrusion_left, self.leftgutter, self.staffsize, self.indent_offset)
+      return latex_includesystems(self)
     else
       if self:count_systems() > 1 then
         warn("Score with more than one system included inline.\nThis will probably cause bad output.")
@@ -1060,7 +1114,7 @@ do
       do
         local bb = self:bbox(1)
         if bb then
-          return latex_includeinline(self.output, bb.height, self.valign, self.hpadding, self.voffset)
+          return latex_includeinline(self, bb.height)
         end
       end
     end
@@ -1076,19 +1130,20 @@ do
     return f:close()
   end
 end
-ly.buffenv_begin = function()
-  ly.buffenv = function(self)
-    table.insert(ly.score_content, self)
-    if not self:find([[\end{%w+}]]) then
-      return ''
-    end
+local buffenv
+buffenv = function(self)
+  insert(ly.score_content, self)
+  if not (self:find([[\end{%w+}]])) then
+    return ''
   end
+end
+ly.buffenv_begin = function()
   ly.score_content = { }
-  return luatexbase.add_to_callback('process_input_buffer', ly.buffenv, 'readline')
+  return luatexbase.add_to_callback('process_input_buffer', buffenv, 'readline')
 end
 ly.buffenv_end = function()
   luatexbase.remove_from_callback('process_input_buffer', 'readline')
-  return table.remove(ly.score_content)
+  return remove(ly.score_content)
 end
 ly.clean_tmp_dir = function()
   local hash, file_is_used
@@ -1101,7 +1156,7 @@ ly.clean_tmp_dir = function()
         local line = _list_0[_index_0]
         hash = line:explode("\t")[1]
         if hash ~= '' then
-          table.insert(hash_list, hash)
+          insert(hash_list, hash)
         end
       end
       i:close()
@@ -1134,7 +1189,7 @@ end
 ly.file = function(self, options)
   local file = locate(self, Score.includepaths, '.ly')
   options = ly_opts:check_local_options(options)
-  if not file then
+  if not (file) then
     err("File %s doesn't exist.", self)
   end
   local i = assert(io.open(file, 'r'), tostring(file) .. " can’t be read")
@@ -1144,7 +1199,7 @@ end
 ly.file_musicxml = function(self, options)
   local file = locate(self, Score.includepaths, '.xml')
   options = ly_opts:check_local_options(options)
-  if not file then
+  if not (file) then
     err("File %s doesn't exist.", self)
   end
   local xmlopts = ''
@@ -1176,7 +1231,7 @@ ly.fragment = function(self, options)
   if type(self) == 'string' then
     self = self:gsub('\\par ', '\n'):gsub('\\([^%s]*) %-([^%s])', '\\%1-%2')
   else
-    self = table.concat(self, '\n')
+    self = concat(self, '\n')
   end
   ly.score = Score:new(self, options)
 end
@@ -1237,7 +1292,7 @@ do
       return setmetatable(v, self)
     end,
     __tostring = function(self)
-      return table.concat(self, ".")
+      return concat(self, ".")
     end
   }
   ly.v = setmetatable(_, _)
