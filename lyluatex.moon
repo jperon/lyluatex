@@ -646,13 +646,11 @@ Found something incompatible with `fragment`
   _.is_odd_page = => tex.count['c@page'] % 2 == 1
 
   _.lilypond_cmd = =>
-    input, mode = '-s -', 'w'
-    if @debug or tex_engine.dist == 'MiKTeX'
-      f = assert io.open("#{@output}.ly", 'w'), "#{@output}.ly can’t be written."
-      f\write @complete_ly_code
-      f\close!
-      input = "#{@output}.ly 2>&1"
-      mode = 'r'
+    f = assert io.open("#{@output}.ly", 'w'), "#{@output}.ly can’t be written."
+    f\write @complete_ly_code
+    f\close!
+    input = "#{@output}.ly 2>&1"
+    mode = 'r'
     cmd = {
       "\"#{@program}\""
       @insert != 'fullpage' and '-E' or ''
@@ -824,11 +822,11 @@ Found something incompatible with `fragment`
 
   _.run_lily_proc = (p) =>
       return false unless p
+      output = p\read"*a"
       if @debug
         f = assert io.open("#{@output}.log", 'w'), "#{@output} can’t be written."
-        f\write p\read"*a"
+        f\write output
         f\close!
-      else p\write @complete_ly_code
       p\close!
 
   _.run_lilypond = =>

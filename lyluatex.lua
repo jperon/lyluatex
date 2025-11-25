@@ -799,14 +799,11 @@ do
     return tex.count['c@page'] % 2 == 1
   end
   _.lilypond_cmd = function(self)
-    local input, mode = '-s -', 'w'
-    if self.debug or tex_engine.dist == 'MiKTeX' then
-      local f = assert(io.open(tostring(self.output) .. ".ly", 'w'), tostring(self.output) .. ".ly can’t be written.")
-      f:write(self.complete_ly_code)
-      f:close()
-      input = tostring(self.output) .. ".ly 2>&1"
-      mode = 'r'
-    end
+    local f = assert(io.open(tostring(self.output) .. ".ly", 'w'), tostring(self.output) .. ".ly can’t be written.")
+    f:write(self.complete_ly_code)
+    f:close()
+    local input = tostring(self.output) .. ".ly 2>&1"
+    local mode = 'r'
     local cmd = {
       "\"" .. tostring(self.program) .. "\"",
       self.insert ~= 'fullpage' and '-E' or '',
@@ -1049,12 +1046,11 @@ do
     if not (p) then
       return false
     end
+    local output = p:read("*a")
     if self.debug then
       local f = assert(io.open(tostring(self.output) .. ".log", 'w'), tostring(self.output) .. " can’t be written.")
-      f:write(p:read("*a"))
+      f:write(output)
       f:close()
-    else
-      p:write(self.complete_ly_code)
     end
     return p:close()
   end
