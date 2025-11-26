@@ -54,7 +54,8 @@ local HASHIGNORE = {
   'max-right-protrusion',
   'print-only',
   'valign',
-  'voffset'
+  'voffset',
+  'parallel'
 }
 local MXML_OPTIONS = {
   'absolute',
@@ -395,6 +396,39 @@ latex_label = function(self)
     return tex.sprint("\\label{" .. tostring(self.labelprefix) .. tostring(self.label) .. "}%%")
   end
 end
+local Pool = {
+  send = function(self, cmd)
+    self.handle:write(cmd .. "\n")
+    self.handle:flush()
+    self.command_count = self.command_count + 1
+  end,
+  close = function(self)
+    return self.handle:close()
+  end,
+  __call = function(self, num_jobs)
+    if num_jobs == nil then
+      num_jobs = nil
+    end
+    local cmd = "parallel" .. (tonumber(num_jobs) and " -j" .. tostring(num_jobs) or "")
+    local handle = io.popen(cmd, 'w')
+    return setmetatable({
+      handle = handle,
+      num_jobs = num_jobs,
+      command_count = 0
+    }, self)
+  end,
+  __tostring = function(self)
+    local jobs_info
+    if self.num_jobs then
+      jobs_info = self.num_jobs
+    else
+      jobs_info = "auto"
+    end
+    return "Pool(jobs: " .. tostring(jobs_info) .. ", commands_sent: " .. tostring(self.command_count) .. ")"
+  end
+}
+Pool.__index = Pool
+setmetatable(Pool, Pool)
 ly.verbenv = {
   [[\begin{verbatim}]],
   [[\end{verbatim}]]
@@ -445,6 +479,7 @@ do
   end
   _.calc_properties = function(self)
     self:calc_staff_properties()
+    self.parallel = self.parallel or ly_opts['parallel']
     self.ly_code = tostring(includes_parse(self.include_before_body)) .. tostring(self.ly_code) .. tostring(includes_parse(self.include_after_body))
     if self.relative and not self.fragment then
       if _.fragment then
@@ -655,11 +690,15 @@ do
   end
   _.check_protrusion = function(self, bbox_func)
     self.range = self:calc_range()
+    self.protrusion_left = self.protrusion_left or 0
+    self.indent_offset = self.indent_offset or 0
     if self.insert ~= 'systems' then
+      debug("check_protrusion " .. tostring(self.output) .. ": insert mode " .. tostring(self.insert))
       return self:is_compiled()
     end
     local bb = bbox_func(self.output, self['line-width'])
     if not bb then
+      debug("check_protrusion " .. tostring(self.output) .. ": no bounding box found")
       return 
     end
     local lp = { }
@@ -682,9 +721,11 @@ do
         info("Adjusted indent.")
       end
       self.output = self:output_filename()
+      debug("check_protrusion: recompilation needed, new hash: " .. tostring(self.output))
       warn("Recompile or reuse cached score")
       return 
     else
+      debug("check_protrusion: OK, no recompilation needed for " .. tostring(self.output))
       return true
     end
   end
@@ -791,9 +832,23 @@ do
   end
   _.is_compiled = function(self)
     if self['force-compilation'] then
+      debug("Force compilation is active.")
       return false
     end
-    return lfs.isfile(self.output .. '.pdf') or lfs.isfile(self.output .. '.eps') or self:count_systems(true) ~= 0
+    if lfs.isfile(self.output .. '.pdf') then
+      debug("PDF found: " .. tostring(self.output) .. ".pdf")
+      return true
+    end
+    if lfs.isfile(self.output .. '.eps') then
+      debug("EPS found: " .. tostring(self.output) .. ".eps")
+      return true
+    end
+    if self:count_systems(true) ~= 0 then
+      debug("Systems found for " .. tostring(self.output))
+      return true
+    end
+    debug("Not compiled: " .. tostring(self.output))
+    return false
   end
   _.is_odd_page = function(self)
     return tex.count['c@page'] % 2 == 1
@@ -802,7 +857,7 @@ do
     local f = assert(io.open(tostring(self.output) .. ".ly", 'w'), tostring(self.output) .. ".ly can’t be written.")
     f:write(self.complete_ly_code)
     f:close()
-    local input = tostring(self.output) .. ".ly 2>&1"
+    local input = tostring(self.output) .. ".ly"
     local mode = 'r'
     local cmd = {
       "\"" .. tostring(self.program) .. "\"",
@@ -830,6 +885,7 @@ do
     end
     cmd[#cmd + 1] = "-o \"" .. tostring(self.output) .. "\" " .. tostring(input)
     cmd = concat(cmd, " ")
+    cmd = cmd .. " > \"" .. tostring(self.output) .. ".out\" 2> \"" .. tostring(self.output) .. ".err\""
     debug("Command:\n" .. tostring(cmd))
     return cmd, mode
   end
@@ -840,7 +896,6 @@ do
     local version = self._lilypond_version
     if not version then
       version = readlinematching('GNU LilyPond', io.popen("\"" .. tostring(self.program) .. "\" --version", 'r'))
-      info("Compiling score " .. tostring(self.output) .. " with LilyPond executable '" .. tostring(self.program) .. "'.")
       if not version then
         return 
       end
@@ -961,28 +1016,8 @@ do
         return info("Optimization enabled: remember to run\n'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=%s %s'.", tex.jobname .. '-final.pdf', tex.jobname .. '.pdf')
       end, 'lyluatex optimize-pdf')
     else
-      local pdf2ps, ps2pdf, path
-      for file in lfs.dir(self.tmpdir) do
-        path = tostring(self.tmpdir) .. "/" .. tostring(file)
-        if path:match(self.output) and path:sub(-4) == '.pdf' then
-          pdf2ps = io.popen("gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE " .. tostring(path) .. " -c quit", "r")
-          ps2pdf = io.popen("gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=" .. tostring(path) .. "-gs -", "w")
-          if pdf2ps and ps2pdf then
-            ps2pdf:write(pdf2ps:read("*a"))
-            pdf2ps:close()
-            ps2pdf:close()
-            os.rename(tostring(path) .. "-gs", path)
-          else
-            if pdf2ps then
-              pdf2ps:close()
-            end
-            if ps2pdf then
-              ps2pdf:close()
-            end
-            warn("You have asked for pdf optimization, but gs wasn't found.")
-          end
-        end
-      end
+      local path = tostring(self.output) .. ".pdf"
+      return "gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE " .. tostring(path) .. " -c quit | gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=" .. tostring(path) .. "-gs - && mv " .. tostring(path) .. "-gs " .. tostring(path)
     end
   end
   _.output_filename = function(self)
@@ -993,7 +1028,11 @@ do
       end
     end
     if self.insert == 'fullpage' then
-      properties = properties .. tostring(self:tex_margin_top()) .. tostring(self:tex_margin_bottom()) .. tostring(self:tex_margin_left()) .. tostring(self:tex_margin_right())
+      if self.twoside then
+        properties = properties .. tostring(self:tex_margin_top()) .. tostring(self:tex_margin_bottom()) .. tostring(self:tex_margin_inner()) .. tostring(self:tex_margin_outer())
+      else
+        properties = properties .. tostring(self:tex_margin_top()) .. tostring(self:tex_margin_bottom()) .. tostring(self:tex_margin_left()) .. tostring(self:tex_margin_right())
+      end
     end
     local filename = md5.sumhexa(tostring(self:flatten_content(self.ly_code)) .. tostring(properties))
     return tostring(self.tmpdir) .. "/" .. tostring(filename)
@@ -1010,15 +1049,92 @@ do
         err(MSG_PROCESS)
       end
     end
+    if self.parallel and ly.check_parallel() then
+      return self:process_parallel()
+    else
+      return self:process_sequential()
+    end
+  end
+  luatexbase.add_to_callback('stop_run', (function() end), 'lyluatex parallel pool')
+  _.process_parallel = function(self)
+    if not self['force-compilation'] and self:is_compiled() and self:check_protrusion(bbox_read) then
+      self:handle_compiled_score()
+      return 
+    end
+    mkdirs(dirname(self.output))
+    if not (ly.pool) then
+      ly.pool = Pool(ly_opts.parallel ~= 'true' and ly_opts.parallel or nil)
+      ly.scores_to_check = { }
+      luatexbase.remove_from_callback('stop_run', 'lyluatex parallel pool')
+      luatexbase.add_to_callback('stop_run', (function()
+        if not (ly.pool) then
+          return 
+        end
+        info("Waiting for parallel jobs to finish...")
+        ly.pool:close()
+        ly.pool = nil
+        info("Checking protrusion for parallel compilations...")
+        local _list_0 = ly.scores_to_check
+        for _index_0 = 1, #_list_0 do
+          local score = _list_0[_index_0]
+          while not score:check_protrusion(bbox_get) do
+            score.complete_ly_code = score:header() .. score:content() .. score:footer()
+            local cmd = score:lilypond_cmd()
+            do
+              local opt_cmd = score:optimize_pdf()
+              if opt_cmd then
+                cmd = cmd .. (" && " .. opt_cmd)
+              end
+            end
+            debug("Recompiling in callback: " .. tostring(cmd))
+            os.execute(cmd)
+            if score:is_compiled() then
+              insert(score.output_names, score.output)
+            end
+          end
+          score:write_to_filelist()
+        end
+        ly.scores_to_check = { }
+      end), 'lyluatex parallel pool')
+    end
+    self.complete_ly_code = self:header() .. self:content() .. self:footer()
+    info("Compiling score " .. tostring(self.output) .. " with LilyPond executable '" .. tostring(self.program) .. "'.")
+    local cmd = self:lilypond_cmd()
+    do
+      local opt_cmd = self:optimize_pdf()
+      if opt_cmd then
+        cmd = cmd .. (" && " .. opt_cmd)
+      end
+    end
+    debug("Sending to pool: " .. tostring(cmd))
+    ly.pool:send(cmd)
+    insert(ly.scores_to_check, self)
+    insert(self.output_names, self.output)
+    self.parallel_job = true
+    return tex.sprint("\fbox{Parallel compilation in progress...}")
+  end
+  _.process_sequential = function(self)
     local do_compile = not self:check_protrusion(bbox_read)
     if self['force-compilation'] or do_compile then
       while true do
         self.complete_ly_code = self:header() .. self:content() .. self:footer()
-        self:run_lilypond()
-        self['force-compilation'] = false
         if self:is_compiled() then
-          insert(self.output_names, self.output)
+          debug("Score " .. tostring(self.output) .. " already compiled.")
         else
+          mkdirs(dirname(self.output))
+          info("Compiling score " .. tostring(self.output) .. " with LilyPond executable '" .. tostring(self.program) .. "'.")
+          if not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code))) and not self.debug then
+            self.debug = true
+            self.lilypond_error = not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code)))
+          end
+          local lilypond_pdf, mode = self:lilypond_cmd(self.complete_ly_code)
+          if lilypond_pdf:match("-E") then
+            lilypond_pdf = lilypond_pdf:gsub(" %-E", " --pdf")
+            self:run_lily_proc(io.popen(lilypond_pdf, mode))
+          end
+        end
+        self['force-compilation'] = false
+        if not (self:is_compiled()) then
           self:clean_failed_compilation()
           break
         end
@@ -1026,10 +1142,20 @@ do
           break
         end
       end
+      if self:is_compiled() then
+        insert(self.output_names, self.output)
+      end
       self:optimize_pdf()
     else
       insert(self.output_names, self.output)
     end
+    set_lyscore(self)
+    self:finalize_output(do_compile)
+    if not self.debug then
+      return self:delete_intermediate_files()
+    end
+  end
+  _.finalize_output = function(self, do_compile)
     set_lyscore(self)
     if self:count_systems() == 0 then
       warn("The score doesn't contain any music:\nthis will probably cause bad output.")
@@ -1037,10 +1163,12 @@ do
     if not self['raw-pdf'] then
       self:write_latex(do_compile)
     end
-    self:write_to_filelist()
-    if not self.debug then
-      return self:delete_intermediate_files()
-    end
+    return self:write_to_filelist()
+  end
+  _.handle_compiled_score = function(self)
+    debug("Score " .. tostring(self.output) .. " already compiled.")
+    insert(self.output_names, self.output)
+    return self:finalize_output(false)
   end
   _.run_lily_proc = function(self, p)
     if not (p) then
@@ -1053,21 +1181,6 @@ do
       f:close()
     end
     return p:close()
-  end
-  _.run_lilypond = function(self)
-    if self:is_compiled() then
-      return 
-    end
-    mkdirs(dirname(self.output))
-    if not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code))) and not self.debug then
-      self.debug = true
-      self.lilypond_error = not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code)))
-    end
-    local lilypond_pdf, mode = self:lilypond_cmd(self.complete_ly_code)
-    if lilypond_pdf:match("-E") then
-      lilypond_pdf = lilypond_pdf:gsub(" %-E", " --pdf")
-      return self:run_lily_proc(io.popen(lilypond_pdf, mode))
-    end
   end
   _.tex_margin_bottom = function(self)
     self._tex_margin_bottom = self._tex_margin_bottom or (convert_unit(tostring(tex.dimen.paperheight) .. "sp") - self:tex_margin_top() - convert_unit(tostring(tex.dimen.textheight) .. "sp"))
@@ -1082,10 +1195,10 @@ do
     return self._tex_margin_outer
   end
   _.tex_margin_left = function(self)
-    return self:is_odd_page() or not self.twopage and self:tex_margin_inner() or self:tex_margin_outer()
+    return self:is_odd_page() or not self.twoside and self:tex_margin_inner() or self:tex_margin_outer()
   end
   _.tex_margin_right = function(self)
-    return self:is_odd_page() or not self.twopage and self:tex_margin_outer() or self:tex_margin_inner()
+    return self:is_odd_page() or not self.twoside and self:tex_margin_outer() or self:tex_margin_inner()
   end
   _.tex_margin_top = function(self)
     self._tex_margin_top = self._tex_margin_top or convert_unit(tostring(tex.sp('1in') + tex.dimen.voffset + tex.dimen.topmargin + tex.dimen.headheight + tex.dimen.headsep) .. "sp")
@@ -1094,6 +1207,10 @@ do
   _.write_latex = function(self, do_compile)
     latex_filename(self)
     latex_verbatim(self)
+    if ly.pool or not self:is_compiled() then
+      tex.sprint("\fbox{Parallel compilation in progress...}")
+      return 
+    end
     if do_compile and not self:check_compilation() then
       return 
     end
@@ -1140,6 +1257,13 @@ end
 ly.buffenv_end = function()
   luatexbase.remove_from_callback('process_input_buffer', 'readline')
   return remove(ly.score_content)
+end
+ly.check_parallel = function()
+  if ly.parallel_available ~= nil then
+    return ly.parallel_available
+  end
+  ly.parallel_available = os.execute("parallel --version > /dev/null 2>&1") == 0
+  return ly.parallel_available
 end
 ly.clean_tmp_dir = function()
   local hash, file_is_used

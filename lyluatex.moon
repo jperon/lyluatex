@@ -49,6 +49,7 @@ HASHIGNORE = {
   'print-only'
   'valign'
   'voffset'
+  'parallel'
 }
 MXML_OPTIONS = {
   'absolute'
@@ -330,6 +331,27 @@ latex_includesystems = =>
 
 latex_label = => tex.sprint"\\label{#{@labelprefix}#{@label}}%%" if @label
 
+Pool =
+  send: (cmd) =>
+    @handle\write cmd.."\n"
+    @handle\flush!
+    @command_count += 1
+
+  close: =>
+    @handle\close!
+
+  __call: (num_jobs = nil) =>
+    cmd = "parallel" .. (tonumber(num_jobs) and " -j#{num_jobs}" or "")
+    handle = io.popen cmd, 'w'
+    setmetatable {:handle, :num_jobs, command_count: 0}, @
+
+  __tostring: =>
+    jobs_info = if @num_jobs then @num_jobs else "auto"
+    "Pool(jobs: #{jobs_info}, commands_sent: #{@command_count})"
+
+Pool.__index = Pool
+setmetatable Pool, Pool
+
 ly.verbenv = {[[\begin{verbatim}]], [[\end{verbatim}]]}
 latex_verbatim = =>
   if @verbatim
@@ -367,6 +389,8 @@ do
 
   _.calc_properties = =>
     @calc_staff_properties!
+    -- ensure parallel option inherits from global default
+    @parallel = @parallel or ly_opts['parallel']
     -- add includes to lilypond code
     @ly_code = "#{includes_parse @include_before_body}#{@ly_code}#{includes_parse @include_after_body}"
     -- fragment and relative
@@ -534,9 +558,15 @@ Found something incompatible with `fragment`
 
   _.check_protrusion = (bbox_func) =>
     @range = @calc_range!
-    return @is_compiled! if @insert != 'systems'
+    @protrusion_left or= 0
+    @indent_offset or= 0
+    if @insert != 'systems'
+      debug "check_protrusion #{@output}: insert mode #{@insert}"
+      return @is_compiled!
     bb = bbox_func @output, @['line-width']
-    return if not bb
+    if not bb
+      debug "check_protrusion #{@output}: no bounding box found"
+      return
     -- line_props lp
     lp = {}
     -- Determine offset due to left protrusion
@@ -563,9 +593,12 @@ Found something incompatible with `fragment`
         info"Compiled score exceeds protrusion limit(s)"
       info"Adjusted indent." if lp.changed_indent
       @output = @output_filename!
+      debug "check_protrusion: recompilation needed, new hash: #{@output}"
       warn"Recompile or reuse cached score"
       return
-    else return true
+    else
+      debug "check_protrusion: OK, no recompilation needed for #{@output}"
+      return true
 
   _.clean_failed_compilation = =>
     for file in lfs.dir @tmpdir
@@ -640,8 +673,20 @@ Found something incompatible with `fragment`
     header
 
   _.is_compiled = =>
-    return false if @['force-compilation']
-    lfs.isfile(@output..'.pdf') or lfs.isfile(@output..'.eps') or @count_systems(true) != 0
+    if @['force-compilation']
+      debug "Force compilation is active."
+      return false
+    if lfs.isfile(@output..'.pdf')
+      debug "PDF found: #{@output}.pdf"
+      return true
+    if lfs.isfile(@output..'.eps')
+      debug "EPS found: #{@output}.eps"
+      return true
+    if @count_systems(true) != 0
+      debug "Systems found for #{@output}"
+      return true
+    debug "Not compiled: #{@output}"
+    return false
 
   _.is_odd_page = => tex.count['c@page'] % 2 == 1
 
@@ -649,7 +694,7 @@ Found something incompatible with `fragment`
     f = assert io.open("#{@output}.ly", 'w'), "#{@output}.ly can’t be written."
     f\write @complete_ly_code
     f\close!
-    input = "#{@output}.ly 2>&1"
+    input = "#{@output}.ly"
     mode = 'r'
     cmd = {
       "\"#{@program}\""
@@ -664,6 +709,7 @@ Found something incompatible with `fragment`
     cmd[#cmd+1] = "-I \"#{dir\gsub '^%./', lfs.currentdir!..'/'}\"" for dir in *extract_includepaths @includepaths
     cmd[#cmd+1] = "-o \"#{@output}\" #{input}"
     cmd = concat cmd, " "
+    cmd ..= " > \"#{@output}.out\" 2> \"#{@output}.err\""
     debug "Command:\n#{cmd}"
     cmd, mode
 
@@ -673,7 +719,6 @@ Found something incompatible with `fragment`
     version = @_lilypond_version
     if not version
       version = readlinematching 'GNU LilyPond', io.popen "\"#{@program}\" --version", 'r'
-      info"Compiling score #{@output} with LilyPond executable '#{@program}'."
       if not version then return
       version = ly.v{version\match"(%d+)%.(%d+)%.?(%d*)"}
       debug "VERSION #{version}"
@@ -763,21 +808,8 @@ Found something incompatible with `fragment`
           tex.jobname..'-final.pdf', tex.jobname..'.pdf',
         'lyluatex optimize-pdf'
     else
-      local pdf2ps, ps2pdf, path
-      for file in lfs.dir @tmpdir
-        path = "#{@tmpdir}/#{file}"
-        if path\match(@output) and path\sub(-4) == '.pdf'
-          pdf2ps = io.popen "gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE #{path} -c quit", "r"
-          ps2pdf = io.popen "gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=#{path}-gs -", "w"
-          if pdf2ps and ps2pdf
-            ps2pdf\write pdf2ps\read"*a"
-            pdf2ps\close!
-            ps2pdf\close!
-            os.rename "#{path}-gs", path
-          else
-            pdf2ps\close! if pdf2ps
-            ps2pdf\close! if ps2pdf
-            warn"You have asked for pdf optimization, but gs wasn't found."
+      path = "#{@output}.pdf"
+      return "gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE #{path} -c quit | gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile=#{path}-gs - && mv #{path}-gs #{path}"
 
   _.output_filename = =>
     properties = ''
@@ -785,7 +817,10 @@ Found something incompatible with `fragment`
       if (not contains HASHIGNORE, k) and @[k] and type(@[k]) != 'function'
         properties = "#{properties}\n#{k}\t#{@[k]}"
     if @insert == 'fullpage'
-      properties ..= "#{@tex_margin_top!}#{@tex_margin_bottom!}#{@tex_margin_left!}#{@tex_margin_right!}"
+      if @twoside
+        properties ..= "#{@tex_margin_top!}#{@tex_margin_bottom!}#{@tex_margin_inner!}#{@tex_margin_outer!}"
+      else
+        properties ..= "#{@tex_margin_top!}#{@tex_margin_bottom!}#{@tex_margin_left!}#{@tex_margin_right!}"
     filename = md5.sumhexa "#{@flatten_content @ly_code}#{properties}"
     return "#{@tmpdir}/#{filename}"
 
@@ -801,24 +836,96 @@ Found something incompatible with `fragment`
         err MSG_PROCESS
     -- with bbox_read check_protrusion will only execute with
     -- a prior compilation, otherwise it will be ignored
+    if @parallel and ly.check_parallel!
+      @process_parallel!
+    else
+      @process_sequential!
+
+  luatexbase.add_to_callback 'stop_run', (->), 'lyluatex parallel pool'
+  _.process_parallel = =>
+    if not @['force-compilation'] and @is_compiled! and @check_protrusion bbox_read
+      @handle_compiled_score!
+      return
+
+    mkdirs dirname @output
+    unless ly.pool
+      ly.pool = Pool(ly_opts.parallel != 'true' and ly_opts.parallel or nil)
+      ly.scores_to_check = {}
+      luatexbase.remove_from_callback 'stop_run', 'lyluatex parallel pool'
+      luatexbase.add_to_callback 'stop_run', (->
+        return unless ly.pool
+        info "Waiting for parallel jobs to finish..."
+        ly.pool\close!
+        ly.pool = nil
+        info "Checking protrusion for parallel compilations..."
+        for score in *ly.scores_to_check
+          while not score\check_protrusion bbox_get
+            score.complete_ly_code = score\header!..score\content!..score\footer!
+            cmd = score\lilypond_cmd!
+            if opt_cmd = score\optimize_pdf!
+              cmd ..= " && " .. opt_cmd
+            debug "Recompiling in callback: #{cmd}"
+            os.execute cmd
+            insert score.output_names, score.output if score\is_compiled!
+          score\write_to_filelist!
+        ly.scores_to_check = {}
+      ), 'lyluatex parallel pool'
+
+    @complete_ly_code = @header!..@content!..@footer!
+    info"Compiling score #{@output} with LilyPond executable '#{@program}'."
+    cmd = @lilypond_cmd!
+    if opt_cmd = @optimize_pdf!
+      cmd ..= " && " .. opt_cmd
+    debug "Sending to pool: #{cmd}"
+    ly.pool\send cmd
+    insert ly.scores_to_check, @
+    insert @output_names, @output
+    @parallel_job = true
+    tex.sprint "\fbox{Parallel compilation in progress...}"
+
+  _.process_sequential = =>
     do_compile = not @check_protrusion bbox_read
     if @['force-compilation'] or do_compile
       while true
         @complete_ly_code = @header!..@content!..@footer!
-        @run_lilypond!
-        @['force-compilation'] = false
-        if @is_compiled! then insert @output_names, @output
+        if @is_compiled!
+          debug "Score #{@output} already compiled."
         else
+          mkdirs dirname @output
+          info"Compiling score #{@output} with LilyPond executable '#{@program}'."
+          if not @run_lily_proc(io.popen @lilypond_cmd @complete_ly_code) and not @debug
+            @debug = true
+            @lilypond_error = not @run_lily_proc(io.popen @lilypond_cmd @complete_ly_code)
+          lilypond_pdf, mode = @lilypond_cmd @complete_ly_code
+          if lilypond_pdf\match"-E"
+            lilypond_pdf = lilypond_pdf\gsub " %-E", " --pdf"
+            @run_lily_proc io.popen lilypond_pdf, mode
+        
+        @['force-compilation'] = false
+        unless @is_compiled!
           @clean_failed_compilation!
           break
         break if @check_protrusion bbox_get
+      insert @output_names, @output if @is_compiled!
       @optimize_pdf!
     else insert @output_names, @output
     set_lyscore @
-    warn"The score doesn't contain any music:\nthis will probably cause bad output." if @count_systems! == 0
+    @finalize_output do_compile
+    @delete_intermediate_files! if not @debug
+
+  -- Helper: finalize score output
+  _.finalize_output = (do_compile) =>
+    set_lyscore @
+    if @count_systems! == 0
+      warn"The score doesn't contain any music:\nthis will probably cause bad output."
     @write_latex(do_compile) if not @['raw-pdf']
     @write_to_filelist!
-    @delete_intermediate_files! if not @debug
+
+  -- Helper: handle already compiled score
+  _.handle_compiled_score = =>
+    debug "Score #{@output} already compiled."
+    insert @output_names, @output
+    @finalize_output false
 
   _.run_lily_proc = (p) =>
       return false unless p
@@ -828,17 +935,6 @@ Found something incompatible with `fragment`
         f\write output
         f\close!
       p\close!
-
-  _.run_lilypond = =>
-    return if @is_compiled!
-    mkdirs dirname @output
-    if not @run_lily_proc(io.popen @lilypond_cmd @complete_ly_code) and not @debug
-      @debug = true
-      @lilypond_error = not @run_lily_proc(io.popen @lilypond_cmd @complete_ly_code)
-    lilypond_pdf, mode = @lilypond_cmd @complete_ly_code
-    if lilypond_pdf\match"-E"
-      lilypond_pdf = lilypond_pdf\gsub " %-E", " --pdf"
-      @run_lily_proc io.popen lilypond_pdf, mode
 
   _.tex_margin_bottom = =>
     @_tex_margin_bottom or= convert_unit"#{tex.dimen.paperheight}sp" - @tex_margin_top! - convert_unit"#{tex.dimen.textheight}sp"
@@ -852,9 +948,9 @@ Found something incompatible with `fragment`
     @_tex_margin_outer or= convert_unit"#{tex.dimen.paperwidth - tex.dimen.textwidth}sp" - @tex_margin_inner!
     @_tex_margin_outer
 
-  _.tex_margin_left = => @is_odd_page! or not @twopage and @tex_margin_inner! or @tex_margin_outer!
+  _.tex_margin_left = => @is_odd_page! or not @twoside and @tex_margin_inner! or @tex_margin_outer!
 
-  _.tex_margin_right = => @is_odd_page! or not @twopage and @tex_margin_outer! or @tex_margin_inner!
+  _.tex_margin_right = => @is_odd_page! or not @twoside and @tex_margin_outer! or @tex_margin_inner!
 
   _.tex_margin_top = =>
     @_tex_margin_top or= convert_unit"#{tex.sp'1in' + tex.dimen.voffset + tex.dimen.topmargin + tex.dimen.headheight + tex.dimen.headsep}sp"
@@ -863,6 +959,9 @@ Found something incompatible with `fragment`
   _.write_latex = (do_compile) =>
     latex_filename @
     latex_verbatim @
+    if ly.pool or not @is_compiled!
+      tex.sprint "\fbox{Parallel compilation in progress...}"
+      return
     if do_compile and not @check_compilation! then return
     -- Now we know there is a proper score
     latex_fullpagestyle @
@@ -898,6 +997,11 @@ ly.buffenv_begin = ->
 ly.buffenv_end = ->
   luatexbase.remove_from_callback 'process_input_buffer', 'readline'
   remove ly.score_content
+
+ly.check_parallel = ->
+  return ly.parallel_available if ly.parallel_available != nil
+  ly.parallel_available = os.execute("parallel --version > /dev/null 2>&1") == 0
+  ly.parallel_available
 
 ly.clean_tmp_dir = ->
   local hash, file_is_used
