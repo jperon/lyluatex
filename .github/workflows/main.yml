@@ -35,6 +35,7 @@ jobs:
         shell: pwsh
         run: |
           choco install miktex.install -y
+          refreshenv
           initexmf --admin --update-fndb
           initexmf --admin --set-config-value=[MPM]AutoInstall=1
 
