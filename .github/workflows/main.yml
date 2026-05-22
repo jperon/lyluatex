@@ -59,22 +59,9 @@ jobs:
         run: |
           choco install lilypond -y
 
-          $possible = @(
-            "C:\Program Files\LilyPond\usr\bin",
-            "C:\Program Files (x86)\LilyPond\usr\bin"
-          )
-
-          $lilypondBin = $possible | Where-Object { Test-Path (Join-Path $_ "lilypond.exe") } | Select-Object -First 1
-
-          if (!$lilypondBin) {
-            Write-Error "LilyPond bin directory not found"
-          }
-
-          # Current step
-          $env:Path = "$lilypondBin;$env:Path"
-
-          # Following steps
-          $lilypondBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $chocoBin = "C:\ProgramData\chocolatey\bin"
+          $env:Path = "$chocoBin;$env:Path"
+          $chocoBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Show versions
         shell: pwsh
