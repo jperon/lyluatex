@@ -2,6 +2,9 @@ name: MiKTeX Windows test
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - master
   push:
     branches:
       - miktex
