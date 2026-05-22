@@ -35,7 +35,22 @@ jobs:
         shell: pwsh
         run: |
           choco install miktex.install -y
-          refreshenv
+
+          $miktexBin = "C:\Program Files\MiKTeX\miktex\bin\x64"
+
+          if (!(Test-Path $miktexBin)) {
+            Write-Error "MiKTeX bin directory not found: $miktexBin"
+          }
+
+          # Current step
+          $env:Path = "$miktexBin;$env:Path"
+
+          # Following steps
+          $miktexBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          where.exe initexmf
+          where.exe lualatex
+          
           initexmf --admin --update-fndb
           initexmf --admin --set-config-value=[MPM]AutoInstall=1
 
@@ -43,6 +58,23 @@ jobs:
         shell: pwsh
         run: |
           choco install lilypond -y
+
+          $possible = @(
+            "C:\Program Files\LilyPond\usr\bin",
+            "C:\Program Files (x86)\LilyPond\usr\bin"
+          )
+
+          $lilypondBin = $possible | Where-Object { Test-Path (Join-Path $_ "lilypond.exe") } | Select-Object -First 1
+
+          if (!$lilypondBin) {
+            Write-Error "LilyPond bin directory not found"
+          }
+
+          # Current step
+          $env:Path = "$lilypondBin;$env:Path"
+
+          # Following steps
+          $lilypondBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Show versions
         shell: pwsh
