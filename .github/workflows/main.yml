@@ -1,0 +1,61 @@
+name: MiKTeX Windows test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - miktex
+    paths:
+      - 'lyluatex.lua'
+      - 'lyluatex.sty'
+      - 'luaoptions/**'
+      - 'test*.tex'
+      - '.github/workflows/miktex.yml'
+
+jobs:
+  miktex-windows:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Show checkout contents
+        shell: pwsh
+        run: |
+          git submodule status
+          Get-ChildItem
+          Get-ChildItem luaoptions
+
+      - name: Install MiKTeX
+        shell: pwsh
+        run: |
+          choco install miktex.install -y
+          initexmf --admin --update-fndb
+          initexmf --admin --set-config-value=[MPM]AutoInstall=1
+
+      - name: Install LilyPond
+        shell: pwsh
+        run: |
+          choco install lilypond -y
+
+      - name: Show versions
+        shell: pwsh
+        run: |
+          lualatex --version
+          lilypond --version
+          initexmf --report
+          kpsewhich lyluatex.lua
+
+      - name: Run existing tests
+        shell: pwsh
+        run: |
+          if (Get-Command make -ErrorAction SilentlyContinue) {
+            make test
+          } else {
+            $env:TEXINPUTS = "luaoptions:"
+            lualatex -interaction=nonstopmode -shell-escape test.tex
+            lualatex -interaction=nonstopmode -shell-escape test.end.tex
+            lualatex -interaction=nonstopmode -shell-escape test-alignment.tex
+          }
