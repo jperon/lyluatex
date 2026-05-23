@@ -83,7 +83,7 @@ jobs:
           kpsewhich luaoptions-lib.lua
         
           lualatex -interaction=nonstopmode -shell-escape test.tex
-          lualatex -interaction=nonstopmode -shell-escape test.end.tex
+          lualatex -interaction=nonstopmode -shell-escape test.en.tex
           lualatex -interaction=nonstopmode -shell-escape test-alignment.tex
       - name: Upload test artifacts
         if: always()
