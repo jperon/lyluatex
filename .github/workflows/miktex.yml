@@ -5,9 +5,6 @@ on:
   pull_request:
     branches:
       - master
-  push:
-    branches:
-      - miktex
     paths:
       - 'lyluatex.lua'
       - 'lyluatex.sty'
@@ -74,11 +71,26 @@ jobs:
       - name: Run existing tests
         shell: pwsh
         run: |
-          if (Get-Command make -ErrorAction SilentlyContinue) {
-            make test
-          } else {
-            $env:TEXINPUTS = "luaoptions:"
-            lualatex -interaction=nonstopmode -shell-escape test.tex
-            lualatex -interaction=nonstopmode -shell-escape test.end.tex
-            lualatex -interaction=nonstopmode -shell-escape test-alignment.tex
-          }
+          $env:TEXINPUTS = ".;luaoptions;"
+          $env:LUAINPUTS = ".;luaoptions;"
+        
+          Write-Host "TEXINPUTS=$env:TEXINPUTS"
+          Write-Host "LUAINPUTS=$env:LUAINPUTS"
+        
+          kpsewhich lyluatex.sty
+          kpsewhich lyluatex.lua
+          kpsewhich luaoptions.sty
+          kpsewhich luaoptions-lib.lua
+        
+          lualatex -interaction=nonstopmode -shell-escape test.tex
+          lualatex -interaction=nonstopmode -shell-escape test.end.tex
+          lualatex -interaction=nonstopmode -shell-escape test-alignment.tex
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: miktex-test-artifacts
+          path: |
+            *.log
+            *.pdf
+            tmp-ly/**
