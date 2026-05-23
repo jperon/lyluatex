@@ -112,21 +112,25 @@ local function ly_popen(command, mode)
     return io.popen(command, mode)
 end
 
+local function command_path(path)
+    path = tostring(path or '')
+    if path == '' or path == '.' then return './' end
+    return path:gsub('\\', '/')
+end
+
 local function shell_quote(path)
-    return '"' .. tostring(path):gsub('"', '\\"') .. '"'
+    return '"' .. command_path(path):gsub('"', '\\"') .. '"'
 end
 
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
 
-    local cfd = Score.currfiledir
-    if not cfd or cfd == '' then cfd = './' end
-    cfd = cfd:gsub('\\', '/')
+    local cfd = command_path(Score.currfiledir)
 
     table.insert(includepaths, 1, cfd)
     for i, path in ipairs(includepaths) do
         -- delete initial space (in case someone puts a space after the comma)
-        local p = path:gsub('^ ', ''):gsub('^%.%.', './..')
+        local p = path:gsub('^ ', '')
         if p:sub(1, 1) == '~' then p = kpse.expand_braces(p) end
         includepaths[i] = p
         if p ~= path then debug('includepath: %s -> %s', path, p) end
