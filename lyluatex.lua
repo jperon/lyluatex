@@ -119,12 +119,9 @@ end
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
 
-    local cfd
-    if lib.tex_engine.dist == 'MiKTeX' then
-        cfd = Score.currfiledir:gsub('^$', '.\\')
-    else
-        cfd = Score.currfiledir:gsub('^$', './')
-    end
+    local cfd = Score.currfiledir
+    if not cfd or cfd == '' then cfd = './' end
+    cfd = cfd:gsub('\\', '/')
 
     table.insert(includepaths, 1, cfd)
     for i, path in ipairs(includepaths) do
