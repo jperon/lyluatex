@@ -14,7 +14,6 @@ local ly_opts = lua_options.client('ly')
 
 local md5 = require 'md5'
 local lfs = require 'lfs'
-local kpsepopen = os.kpsepopen or io.popen
 
 local ly = {
     err = err,
@@ -103,6 +102,14 @@ local function debug(...)
     if Score.debug then info(...) end
 end
 
+local function ly_popen(command, mode)
+    mode = mode or 'r'
+    if mode == 'r' and os.kpsepopen then
+        return os.kpsepopen(command, mode)
+    end
+    -- fallback on io.popen for write mode
+    return io.popen(command, mode)
+end
 
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
@@ -236,7 +243,7 @@ function bbox_parse(filename, line_width)
     -- try to get HiResBoundingBox from PDF (if 'gs' works)
     bbline = lib.readlinematching(
         '^%%%%HiResBoundingBox',
-        kpsepopen('gs -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..filename..'.pdf 2>&1', 'r')
+        ly_popen('gs -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..filename..'.pdf 2>&1', 'r')
     )
     if bbline then
         local pbb = bbline:gmatch('(%d+%.%d+)')
@@ -827,14 +834,14 @@ function Score:lilypond_cmd()
 end
 
 function Score:lilypond_has_TeXGS()
-    return lib.readlinematching('TeX%-GS', kpsepopen('"'..self.program..'" --help', 'r'))
+    return lib.readlinematching('TeX%-GS', ly_popen('"'..self.program..'" --help', 'r'))
 end
 
 function Score:lilypond_version()
     local version = self._lilypond_version
     if not version then
         debug('popen impl: %s', os.kpsepopen and 'os.kpsepopen' or 'io.popen')
-        version = lib.readlinematching('GNU LilyPond', kpsepopen('"'..self.program..'" --version', 'r'))
+        version = lib.readlinematching('GNU LilyPond', ly_popen('"'..self.program..'" --version', 'r'))
         info(
             "Compiling score %s with LilyPond executable '%s'.",
             self.output, self.program
@@ -1061,11 +1068,11 @@ function Score:optimize_pdf()
         for file in lfs.dir(self.tmpdir) do
             path = self.tmpdir..'/'..file
             if path:match(self.output) and path:sub(-4) == '.pdf' then
-                pdf2ps = kpsepopen(
+                pdf2ps = ly_popen(
                     'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE '..path..' -c quit',
                     'r'
                 )
-                ps2pdf = kpsepopen(
+                ps2pdf = ly_popen(
                     'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile='..path..'-gs -',
                     'w'
                 )
@@ -1165,14 +1172,14 @@ function Score:run_lily_proc(p)
 function Score:run_lilypond()
     if self:is_compiled() then return end
     lib.mkdirs(lib.dirname(self.output))
-    if not self:run_lily_proc(kpsepopen(self:lilypond_cmd(self.complete_ly_code))) and not self.debug then
+    if not self:run_lily_proc(ly_popen(self:lilypond_cmd(self.complete_ly_code))) and not self.debug then
         self.debug = true
-        self.lilypond_error = not self:run_lily_proc(kpsepopen(self:lilypond_cmd(self.complete_ly_code)))
+        self.lilypond_error = not self:run_lily_proc(ly_popen(self:lilypond_cmd(self.complete_ly_code)))
     end
     local lilypond_pdf, mode = self:lilypond_cmd(self.complete_ly_code)
     if lilypond_pdf:match"-E" then
         lilypond_pdf = lilypond_pdf:gsub(" %-E", " --pdf")
-        self:run_lily_proc(kpsepopen(lilypond_pdf, mode))
+        self:run_lily_proc(ly_popen(lilypond_pdf, mode))
     end
 end
 
@@ -1353,7 +1360,7 @@ function ly.file_musicxml(input_file, options)
         elseif ly_opts[opt] then xmlopts = xmlopts..' --'..opt
         end
     end
-    local i = kpsepopen(ly_opts.xml2ly..' --out=-'..xmlopts..' "'..file..'"', 'r')
+    local i = ly_popen(ly_opts.xml2ly..' --out=-'..xmlopts..' "'..file..'"', 'r')
     if not i then
         err([[
 %s could not be started.
