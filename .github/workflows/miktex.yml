@@ -124,4 +124,3 @@ jobs:
             *.log
             *.pdf
             tmp-ly/**
-            C:/Users/runneradmin/AppData/Local/MiKTeX/miktex/log/**

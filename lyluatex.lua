@@ -102,6 +102,13 @@ local function debug(...)
     if Score.debug then info(...) end
 end
 
+local function ghostscript_cmd()
+    if lib.tex_engine.dist == 'MiKTeX' then
+        return 'gswin64c'
+    end
+    return 'gs'
+end
+
 local function ly_popen(command, mode)
     mode = mode or 'r'
     debug("Command: '%s', mode=%s", command, mode)
@@ -246,10 +253,11 @@ function bbox_parse(filename, line_width)
     local bbline = lib.readlinematching('^%%%%BoundingBox', io.open(filename..'.eps', 'r'))
     if not bbline then return end
     local x_1, y_1, x_2, y_2 = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    local gs = ghostscript_cmd()
     -- try to get HiResBoundingBox from PDF (if 'gs' works)
     bbline = lib.readlinematching(
         '^%%%%HiResBoundingBox',
-        ly_popen('gs -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..shell_quote(filename..'.pdf') .. ' 2>&1', 'r')
+        ly_popen(gs .. ' -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..shell_quote(filename..'.pdf') .. ' 2>&1', 'r')
     )
     if bbline then
         local pbb = bbline:gmatch('(%d+%.%d+)')
@@ -834,7 +842,13 @@ function Score:lilypond_cmd()
         .. (self.insert == "fullpage" and "" or "-E ")
         .. "-dno-point-and-click -djob-count=2 -dno-delete-intermediate-files "
     if self:lilypond_version() >= ly.v{2, 24} then cmd = cmd.."-dtall-page-formats=pdf " end
-    if self['optimize-pdf'] and self:lilypond_has_TeXGS() then cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts " end
+    if self:lilypond_has_TeXGS()
+      and (self['optimize-pdf'] or lib.tex_engine.dist == 'MiKTeX') then
+        cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts "
+    elseif lib.tex_engine.dist == 'MiKTeX' then
+        -- font embedding crashes on MiKTeX
+        cmd = cmd .. "-dgs-never-embed-fonts "
+    end
     if self.input_file then
         cmd = cmd..'-I '..shell_quote(lib.dirname(self.input_file):gsub('^%./', cwd..'/'))..' '
     end
@@ -1075,15 +1089,16 @@ function Score:optimize_pdf()
         )
     else
         local pdf2ps, ps2pdf, path
+        local gs = ghostscript_cmd()
         for file in lfs.dir(self.tmpdir) do
             path = self.tmpdir..'/'..file
             if path:match(self.output) and path:sub(-4) == '.pdf' then
                 pdf2ps = ly_popen(
-                    'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE "'..path..'" -c quit',
+                    gs .. ' -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE "'..path..'" -c quit',
                     'r'
                 )
                 ps2pdf = ly_popen(
-                    'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile="'..path..'-gs" -',
+                    gs .. ' -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile="'..path..'-gs" -',
                     'w'
                 )
                 if pdf2ps then
