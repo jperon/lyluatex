@@ -842,12 +842,8 @@ function Score:lilypond_cmd()
         .. (self.insert == "fullpage" and "" or "-E ")
         .. "-dno-point-and-click -djob-count=2 -dno-delete-intermediate-files "
     if self:lilypond_version() >= ly.v{2, 24} then cmd = cmd.."-dtall-page-formats=pdf " end
-    if self:lilypond_has_TeXGS()
-      and (self['optimize-pdf'] or lib.tex_engine.dist == 'MiKTeX') then
+    if self['optimize-pdf'] and self:lilypond_has_TeXGS() then
         cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts "
-    elseif lib.tex_engine.dist == 'MiKTeX' then
-        -- font embedding crashes on MiKTeX
-        cmd = cmd .. "-dgs-never-embed-fonts "
     end
     if self.input_file then
         cmd = cmd..'-I '..shell_quote(lib.dirname(self.input_file):gsub('^%./', cwd..'/'))..' '
@@ -860,8 +856,10 @@ function Score:lilypond_cmd()
     return cmd, mode
 end
 
+local lilypond_help_info = {}
 function Score:lilypond_has_TeXGS()
-    return lib.readlinematching('TeX%-GS', ly_popen(shell_quote(self.program)..' --help', 'r'))
+    lilypond_help_info[self.program] = lilypond_help_info[self.program] or ly_popen(shell_quote(self.program)..' --help', 'r')
+    return lib.readlinematching('TeX%-GS', lilypond_help_info[self.program])
 end
 
 local lilypond_versions = {}
