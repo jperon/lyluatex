@@ -120,12 +120,14 @@ jobs:
             $out = Join-Path $_.DirectoryName ($_.BaseName + "-gswin64c.pdf")
             Write-Host "Converting with gswin64c: $($_.FullName) -> $out"
 
-            gswin64c `
+            & gswin64c `
               -dBATCH `
               -dNOPAUSE `
               -sDEVICE=pdfwrite `
               -sOutputFile="$out" `
               "$($_.FullName)"
+
+            Write-Host "gswin64c exit code: $LASTEXITCODE"
           }
 
           Get-ChildItem eps-test | Select-Object Name, Length
@@ -150,5 +152,3 @@ jobs:
           name: miktex-eps-ghostscript-artifacts
           path: |
             eps-test/**
-            C:/Users/runneradmin/AppData/Local/MiKTeX/miktex/log/**
-            C:/ProgramData/chocolatey/logs/chocolatey.log
