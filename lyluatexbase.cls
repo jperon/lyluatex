@@ -1,11 +1,11 @@
 %Lyluatex LaTeX class.
 %
-% Copyright (C) 2015-2023 jperon and others (see CONTRIBUTORS.md)
+% Copyright (C) 2015-2026 jperon and others (see CONTRIBUTORS.md)
 % License: MIT
 % This file is part of lyluatex.
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{lyluatexbase}[2023/04/18 v1.1.5]  %%LYLUATEX_DATE LYLUATEX_VERSION
+\ProvidesClass{lyluatexbase}[2026/05/26 v1.1.6]  %%LYLUATEX_DATE LYLUATEX_VERSION
 
 \LoadClass[DIV=11]{scrartcl}
 \RequirePackage{lyluatex}

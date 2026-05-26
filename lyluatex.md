@@ -1,7 +1,7 @@
 ---
 documentclass: lyluatexmanual
 title: "\\lyluatex"
-subtitle: "1.1.5"
+subtitle: "1.1.6"
 date: \lyluatexmanualdate
 author:
 - Fr. Jacques Peron
