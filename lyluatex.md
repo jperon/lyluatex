@@ -5,7 +5,7 @@ subtitle: "1.1.5"
 date: \lyluatexmanualdate
 author:
 - Fr. Jacques Peron
-- Urs Liska
+- Urs Liska\deceased{2024}
 - Br. Samuel Springuel
 toc: yes
 ---

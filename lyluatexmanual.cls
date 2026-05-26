@@ -39,3 +39,20 @@
 		if p then p:close() end
 	}
 }
+
+\makeatletter
+
+\newcommand{\@deceasednotes}{}
+
+\newcommand{\deceased}[1]{%
+  \textsuperscript{\dagger}%
+  \g@addto@macro\@deceasednotes{%
+    \par\noindent\textsuperscript{\dagger}Deceased, #1.%
+  }%
+}
+
+\AddToHook{cmd/maketitle/after}{%
+  \@deceasednotes
+}
+
+\makeatother
