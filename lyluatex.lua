@@ -102,21 +102,45 @@ local function debug(...)
     if Score.debug then info(...) end
 end
 
+local function ghostscript_cmd()
+    if lib.tex_engine.dist == 'MiKTeX' then
+        return 'gswin64c'
+    end
+    return 'gs'
+end
+
+local function ly_popen(command, mode)
+    mode = mode or 'r'
+    debug("Command: '%s', mode=%s", command, mode)
+    if mode == 'r' and os.kpsepopen then
+        return os.kpsepopen(command, mode)
+    end
+    -- fallback on io.popen for write mode
+    return io.popen(command, mode)
+end
+
+local function command_path(path)
+    path = tostring(path or '')
+    if path == '' or path == '.' then return './' end
+    return path:gsub('\\', '/')
+end
+
+local function shell_quote(path)
+    return '"' .. command_path(path):gsub('"', '\\"') .. '"'
+end
 
 local function extract_includepaths(includepaths)
     includepaths = includepaths:explode(',')
 
-    local cfd
-    if lib.tex_engine.dist == 'MiKTeX' then
-        cfd = Score.currfiledir:gsub('^$', '.\\')
-    else
-        cfd = Score.currfiledir:gsub('^$', './')
-    end
+    local cfd = command_path(Score.currfiledir)
 
     table.insert(includepaths, 1, cfd)
     for i, path in ipairs(includepaths) do
         -- delete initial space (in case someone puts a space after the comma)
-        includepaths[i] = path:gsub('^ ', ''):gsub('^~', os.getenv("HOME")):gsub('^%.%.', './..')
+        local p = path:gsub('^ ', '')
+        if p:sub(1, 1) == '~' then p = kpse.expand_braces(p) end
+        includepaths[i] = p
+        if p ~= path then debug('includepath: %s -> %s', path, p) end
     end
     return includepaths
 end
@@ -229,10 +253,11 @@ function bbox_parse(filename, line_width)
     local bbline = lib.readlinematching('^%%%%BoundingBox', io.open(filename..'.eps', 'r'))
     if not bbline then return end
     local x_1, y_1, x_2, y_2 = bbline:match('(%--%d+)%s(%--%d+)%s(%--%d+)%s(%--%d+)')
+    local gs = ghostscript_cmd()
     -- try to get HiResBoundingBox from PDF (if 'gs' works)
     bbline = lib.readlinematching(
         '^%%%%HiResBoundingBox',
-        io.popen('gs -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..filename..'.pdf 2>&1', 'r')
+        ly_popen(gs .. ' -sDEVICE=bbox -q -dBATCH -dNOPAUSE '..shell_quote(filename..'.pdf') .. ' 2>&1', 'r')
     )
     if bbline then
         local pbb = bbline:gmatch('(%d+%.%d+)')
@@ -799,45 +824,54 @@ function Score:is_odd_page() return tex.count['c@page'] % 2 == 1 end
 
 function Score:lilypond_cmd()
     local input, mode = '-s -', 'w'
+    local ok, cwd = pcall(lfs.currentdir)
+    if not ok or not cwd or cwd == "" then
+        cwd = kpse.var_value("PWD")
+    end
+    if not cwd or cwd == "" then
+        cwd = "."
+    end
     if self.debug or lib.tex_engine.dist == 'MiKTeX' then
         local f = io.open(self.output..'.ly', 'w')
         f:write(self.complete_ly_code)
         f:close()
-        input = self.output..".ly 2>&1"
+        input = shell_quote(self.output..'.ly') .. ' 2>&1'
         mode = 'r'
     end
-    local cmd = '"'..self.program..'" '
+    local cmd = shell_quote(self.program) .. ' '
         .. (self.insert == "fullpage" and "" or "-E ")
         .. "-dno-point-and-click -djob-count=2 -dno-delete-intermediate-files "
     if self:lilypond_version() >= ly.v{2, 24} then cmd = cmd.."-dtall-page-formats=pdf " end
-    if self['optimize-pdf'] and self:lilypond_has_TeXGS() then cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts " end
+    if self['optimize-pdf'] and self:lilypond_has_TeXGS() then
+        cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts "
+    end
     if self.input_file then
-        cmd = cmd..'-I "'..lib.dirname(self.input_file):gsub('^%./', lfs.currentdir()..'/')..'" '
+        cmd = cmd..'-I '..shell_quote(lib.dirname(self.input_file):gsub('^%./', cwd..'/'))..' '
     end
     for _, dir in ipairs(extract_includepaths(self.includepaths)) do
-        cmd = cmd..'-I "'..dir:gsub('^%./', lfs.currentdir()..'/')..'" '
+        cmd = cmd..'-I '..shell_quote(dir:gsub('^%./', cwd..'/'))..' '
     end
-    cmd = cmd..'-o "'..self.output..'" '..input
+    cmd = cmd..'-o '..shell_quote(self.output)..' '..input
     debug("Command:\n"..cmd)
     return cmd, mode
 end
 
+local lilypond_help_info = {}
 function Score:lilypond_has_TeXGS()
-    return lib.readlinematching('TeX%-GS', io.popen('"'..self.program..'" --help', 'r'))
+    lilypond_help_info[self.program] = lilypond_help_info[self.program] or ly_popen(shell_quote(self.program)..' --help', 'r')
+    return lib.readlinematching('TeX%-GS', lilypond_help_info[self.program])
 end
 
+local lilypond_versions = {}
 function Score:lilypond_version()
-    local version = self._lilypond_version
+    local version = lilypond_versions[self.program]
     if not version then
-        version = lib.readlinematching('GNU LilyPond', io.popen('"'..self.program..'" --version', 'r'))
-        info(
-            "Compiling score %s with LilyPond executable '%s'.",
-            self.output, self.program
-        )
+        debug('popen impl: %s', os.kpsepopen and 'os.kpsepopen' or 'io.popen')
+        version = lib.readlinematching('GNU LilyPond', ly_popen(shell_quote(self.program)..' --version', 'r'))
         if not version then return end
         version = ly.v{version:match('(%d+)%.(%d+)%.?(%d*)')}
         debug("VERSION " .. tostring(version))
-        self._lilypond_version = version
+        lilypond_versions[self.program] = version
     end
     return version
 end
@@ -1053,15 +1087,16 @@ function Score:optimize_pdf()
         )
     else
         local pdf2ps, ps2pdf, path
+        local gs = ghostscript_cmd()
         for file in lfs.dir(self.tmpdir) do
             path = self.tmpdir..'/'..file
             if path:match(self.output) and path:sub(-4) == '.pdf' then
-                pdf2ps = io.popen(
-                    'gs -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE '..path..' -c quit',
+                pdf2ps = ly_popen(
+                    gs .. ' -q -sDEVICE=ps2write -sOutputFile=- -dNOPAUSE "'..path..'" -c quit',
                     'r'
                 )
-                ps2pdf = io.popen(
-                    'gs -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile='..path..'-gs -',
+                ps2pdf = ly_popen(
+                    gs .. ' -q -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile="'..path..'-gs" -',
                     'w'
                 )
                 if pdf2ps then
@@ -1160,14 +1195,18 @@ function Score:run_lily_proc(p)
 function Score:run_lilypond()
     if self:is_compiled() then return end
     lib.mkdirs(lib.dirname(self.output))
-    if not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code))) and not self.debug then
+    info(
+        "Compiling score %s with LilyPond executable '%s'.",
+        self.output, self.program
+    )
+    if not self:run_lily_proc(ly_popen(self:lilypond_cmd(self.complete_ly_code))) and not self.debug then
         self.debug = true
-        self.lilypond_error = not self:run_lily_proc(io.popen(self:lilypond_cmd(self.complete_ly_code)))
+        self.lilypond_error = not self:run_lily_proc(ly_popen(self:lilypond_cmd(self.complete_ly_code)))
     end
     local lilypond_pdf, mode = self:lilypond_cmd(self.complete_ly_code)
     if lilypond_pdf:match"-E" then
         lilypond_pdf = lilypond_pdf:gsub(" %-E", " --pdf")
-        self:run_lily_proc(io.popen(lilypond_pdf, mode))
+        self:run_lily_proc(ly_popen(lilypond_pdf, mode))
     end
 end
 
@@ -1348,7 +1387,7 @@ function ly.file_musicxml(input_file, options)
         elseif ly_opts[opt] then xmlopts = xmlopts..' --'..opt
         end
     end
-    local i = io.popen(ly_opts.xml2ly..' --out=-'..xmlopts..' "'..file..'"', 'r')
+    local i = ly_popen(ly_opts.xml2ly..' --out=-'..xmlopts..' "'..file..'"', 'r')
     if not i then
         err([[
 %s could not be started.

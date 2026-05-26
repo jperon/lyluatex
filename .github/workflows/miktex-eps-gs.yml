@@ -1,0 +1,154 @@
+name: MiKTeX EPS Ghostscript diagnosis
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/miktex-eps-gs.yml'
+      - 'lyluatex.lua'
+      - 'lyluatex.sty'
+
+jobs:
+  eps-ghostscript:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install MiKTeX
+        shell: pwsh
+        run: |
+          choco install miktex.install -y
+
+          $miktexBin = "C:\Program Files\MiKTeX\miktex\bin\x64"
+          if (!(Test-Path $miktexBin)) {
+            Write-Error "MiKTeX bin directory not found: $miktexBin"
+          }
+
+          $env:Path = "$miktexBin;$env:Path"
+          $miktexBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          initexmf --admin --update-fndb
+          initexmf --admin --set-config-value=[MPM]AutoInstall=1
+
+      - name: Install Ghostscript
+        shell: pwsh
+        run: |
+          choco install ghostscript -y
+
+          $gsRoot = Get-ChildItem "C:\Program Files\gs" -Directory |
+            Sort-Object Name -Descending |
+            Select-Object -First 1
+
+          if (!$gsRoot) {
+            Write-Error "Ghostscript installation directory not found"
+          }
+
+          $gsBin = Join-Path $gsRoot.FullName "bin"
+          if (!(Test-Path (Join-Path $gsBin "gswin64c.exe"))) {
+            Write-Error "gswin64c.exe not found in $gsBin"
+          }
+
+          $env:Path = "$gsBin;$env:Path"
+          $gsBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          "MIKTEX_PREFERMIKTEXGHOSTSCRIPT=no" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install LilyPond
+        shell: pwsh
+        run: |
+          choco install lilypond -y
+
+          $chocoBin = "C:\ProgramData\chocolatey\bin"
+          $env:Path = "$chocoBin;$env:Path"
+          $chocoBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Show versions
+        shell: pwsh
+        run: |
+          where.exe lilypond
+          where.exe gswin64c
+          where.exe miktex-epstopdf
+          where.exe lualatex
+
+          lilypond --version
+          gswin64c --version
+          initexmf --report
+
+      - name: Create minimal LilyPond input
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path eps-test | Out-Null
+
+          @'
+          \version "2.26.0"
+          \score {
+            \relative c' { c d e f g a b c }
+          }
+          '@ | Set-Content -Encoding UTF8 eps-test/minimal.ly
+
+          Get-Content eps-test/minimal.ly
+
+      - name: Generate EPS and PDF with LilyPond
+        shell: pwsh
+        run: |
+          lilypond -E -dno-point-and-click -djob-count=2 -dno-delete-intermediate-files -dtall-page-formats=pdf -o eps-test/minimal eps-test/minimal.ly
+          lilypond --pdf -dno-point-and-click -djob-count=2 -dno-delete-intermediate-files -dtall-page-formats=pdf -o eps-test/minimal-pdf eps-test/minimal.ly
+
+          Get-ChildItem eps-test | Select-Object Name, Length
+
+      - name: Convert EPS with miktex-epstopdf
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Get-ChildItem eps-test -Filter "*.eps" | ForEach-Object {
+            Write-Host "Converting with miktex-epstopdf: $($_.FullName)"
+            miktex-epstopdf "$($_.FullName)"
+          }
+
+          Get-ChildItem eps-test | Select-Object Name, Length
+
+      - name: Convert EPS with Ghostscript directly
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Get-ChildItem eps-test -Filter "*.eps" | ForEach-Object {
+            $out = Join-Path $_.DirectoryName ($_.BaseName + "-gswin64c.pdf")
+            Write-Host "Converting with gswin64c: $($_.FullName) -> $out"
+
+            & gswin64c `
+              -dBATCH `
+              -dNOPAUSE `
+              -sDEVICE=pdfwrite `
+              -sOutputFile="$out" `
+              "$($_.FullName)"
+
+            Write-Host "gswin64c exit code: $LASTEXITCODE"
+          }
+
+          Get-ChildItem eps-test | Select-Object Name, Length
+
+      - name: Inspect EPS font references
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Select-String -Path "eps-test/*.eps" -Pattern "FontName|DocumentFonts|Emmentaler|emmentaler|feta|parmesan|CFF|Font" |
+            ForEach-Object { $_.Line }
+
+      - name: Show Ghostscript search paths
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          gswin64c -h
+
+      - name: Upload EPS diagnosis artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: miktex-eps-ghostscript-artifacts
+          path: |
+            eps-test/**
