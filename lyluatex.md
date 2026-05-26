@@ -90,7 +90,7 @@ Run `kpsewhich --var-value=TEXMFHOME` to determine its exact location.
 
 After copying the files, verify which version will be used:
 ```
-kpsewhich lyluatex.sty
+kpsewhich lyluatex.{sty,lua}
 ```
 
 \lyMargin{Note:}
