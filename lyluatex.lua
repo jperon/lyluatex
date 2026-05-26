@@ -102,13 +102,6 @@ local function debug(...)
     if Score.debug then info(...) end
 end
 
-local function ghostscript_cmd()
-    if lib.tex_engine.dist == 'MiKTeX' then
-        return 'gswin64c'
-    end
-    return 'gs'
-end
-
 local function ly_popen(command, mode)
     mode = mode or 'r'
     debug("Command: '%s', mode=%s", command, mode)
@@ -127,6 +120,35 @@ end
 
 local function shell_quote(path)
     return '"' .. command_path(path):gsub('"', '\\"') .. '"'
+end
+
+local function ghostscript_candidates()
+    if lib.tex_engine.dist == 'MiKTeX' then
+        return {'gswin64c', 'gs'}
+    end
+    return {'gs'}
+end
+
+local function ghostscript_works(program)
+    return lib.readlinematching(
+        'Ghostscript',
+        ly_popen(shell_quote(program)..' --help 2>&1', 'r')
+    )
+end
+
+local ghostscript_program
+local function ghostscript_cmd()
+    if ghostscript_program then return ghostscript_program end
+    local candidates = ghostscript_candidates()
+    for _, candidate in ipairs(candidates) do
+        if ghostscript_works(candidate) then
+            ghostscript_program = candidate
+            break
+        end
+    end
+    ghostscript_program = ghostscript_program or candidates[#candidates]
+    debug("Ghostscript executable: '%s'", ghostscript_program)
+    return ghostscript_program
 end
 
 local function extract_includepaths(includepaths)
