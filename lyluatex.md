@@ -23,7 +23,7 @@ and exams.
 
 \lyluatex\ is inspired by and provides a fully compatible drop-in replacement to
 [lilypond-book](http://lilypond.org/doc/v2.18/Documentation/usage/invoking-lilypond_002dbook.html),
-a \LaTeX\ document preprocessor shipping with LilyPond,  which it actually is a
+a \LaTeX\ document preprocessor shipping with LilyPond, which it actually is a
 *superset* of.  However, thanks to the use of \LuaLaTeX\ it can overcome
 substantial usability limitations of the scripted solution and provide numerous
 additional features.
@@ -36,7 +36,7 @@ additional features.
 * Comprehensive configuration through global and per-score options
 
 What \lyluatex\ does *not* try to do is managing the handling of floating
-environments, counters and lists of music examples. The
+environments, counters, and lists of music examples. The
 \emph{ly}\LuaTeX\textsc{mp} package^[\url{https://github.com/uliska/lyluatexmp}]
 is currently under construction and practical testing and will eventually be
 released to become a suitable wrapper for using \lyluatex\ to create numbered
@@ -53,46 +53,52 @@ As the name \lyluatex\ implies this package can only be used with the
 Musical scores are created in real-time (instead of incorporating pre-built
 *image* files) using the GNU LilyPond^[\url{http://lilypond.org}] score writer,
 so of course this has to be installed too. \lyluatex\ should work with any
-versions of LilyPond but it has been developed against the stable and
+versions of LilyPond, but it has been developed against the stable and
 development versions that were current at the time of this writing: 2.18.2 and
 2.19.83.
 
 ### TeXLive and MiKTeX
 
-\lyluatex\ is included in both the TeXLive and MiKTeX \LaTeX\ distributions and
-can be installed through their package management systems. In TeXLive it is
+\lyluatex\ is included in both the \TeX\ Live and MiKTeX \LaTeX\ distributions and
+can be installed through their package management systems. In \TeX\ Live it is
 included in the `texlive-music` collection and -- of course -- in
 `texlive-full`. If neither of these collections is installed \lyluatex\ can be
-added to a TeXLive installation by running
-
+added to a \TeX\ Live installation by running
 ```
 tlmgr install lyluatex
 ```
-
 from the command line.
 
-**TODO:** Document handling with MiKTeX.
+MiK\TeX\ users normally do not need to install \lyluatex\ manually if on-the-fly package installation is enabled.
+MiK\TeX\ can install the \LaTeX\ package automatically when `\usepackage{lyluatex}` is encountered.
+However, LilyPond itself remains an external dependency and must be installed/configured separately.
 
 ### Latest version
 
-The \lyluatex\ versions shipped with the \LaTeX\ distributions may be
-significantly outdated so you may want to install and use the latest version
-from the Github repository^[\url{https://github.com/jperon/lyluatex}] instead.
+For normal use, use the version of \lyluatex\ provided by your \TeX{}
+distribution, such as \TeX\ Live or MiK\TeX. Source code, issue reports,
+and development versions are available from the project repository.^[\url{https://github.com/jperon/lyluatex}]
 
 Copy `lyluatex.sty` and `lyluatex.lua` from this repository into your
-`$TEXMFHOME` tree, or clone this repostory into your `$TEXMFHOME` tree using
-Git. In many cases this will be `$HOME/texmf`, and \lyluatex\ should be located
-below `$TEXMFHOME/tex/luatex`. It is important that this is the `tex/luatex`
-subtree rather than `tex/latex`: if \lyluatex\ should *also* be present in the
-\LaTeX\ distribution \LuaLaTeX\ would otherwise find that version first and use
-that instead of your local clone.
+`$TEXMFHOME` tree, and place them both in the appropriate directory.
+
+ - `lyluatex.sty` goes into `$TEXMFHOME/tex/lualatex/lyluatex/`
+ - `lyluatex.lua` goes into `$TEXMFHOME/scripts/lua/lyluatex/`
+
+In many installations, `$TEXMFHOME` defaults to `$HOME/texmf`.
+Run `kpsewhich --var-value=TEXMFHOME` to determine its exact location.
+
+After copying the files, verify which version will be used:
+```
+kpsewhich lyluatex.sty
+```
 
 \lyMargin{Note:}
 It may be useful to clone the Git repository not into the `$TEXMFHOME` tree
 directly but to some arbitrary location and link to that. Please note that
 \LuaLaTeX\ will only follow such symbolic links if there is at least one *real*
 subdirectory in each directory. So if there is a directory
-`$TEXMFHOME/tex/luatex` containing *only* symbolic links it is necessary to
+`$TEXMFHOME/tex/lualatex` containing *only* symbolic links it is necessary to
 create a dummy subdirectory in it.
 
 ### For a single document
