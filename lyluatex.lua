@@ -1387,6 +1387,7 @@ function ly.file(input_file, options)
     options = ly_opts:check_local_options(options)
     if not file then err("File %s doesn't exist.", input_file) end
     local i = io.open(file, 'r')
+    kpse.record_input_file(file)
     ly.score = Score:new(i:read('*a'), options, file)
     i:close()
 end
