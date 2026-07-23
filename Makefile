@@ -1,5 +1,6 @@
 test:
 	TEXINPUTS=luaoptions: lualatex -interaction=nonstopmode -shell-escape test.tex
+	TEXINPUTS=luaoptions: lualatex -interaction=nonstopmode -shell-escape test-clipregions.tex
 
 manual:
 	@lua -e "if tonumber(io.popen('pandoc -v'):read():gsub('pandoc (.*)', '%1'):sub(1,1)) < 2 then print('Pandoc >= 2 required') ; os.exit(1) ; end"
