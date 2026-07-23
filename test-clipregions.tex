@@ -1,22 +1,22 @@
 \documentclass[a4paper,fontsize=12pt]{scrbook}
-\usepackage{fontspec}
-\usepackage{libertine}
 \usepackage[program=lilypond,debug]{lyluatex}
-\usepackage{multicol}
 
 \title{}
 \author{}
 
-
 \begin{document}
 
-Clip-regions
+    Clip-regions example
 
-\lilypondfile[staffsize=12, clip-regions=5-8 ]{ly/Beethoven/opus-18-1.ly}
+    \begin{enumerate}
+        \item Single system, no ragged--right
+        \lilypondfile[staffsize=12, clip-regions=6-10 ]{ly/Beethoven/opus-18-1.ly}
+    
+        \item Single system, ragged--right
+        \lilypondfile[staffsize=12, clip-regions=6-10, ragged-right=true]{ly/Beethoven/opus-18-1.ly}
 
-\lilypondfile[staffsize=12, clip-regions=4-7, ragged-right=true]{ly/Beethoven/opus-18-1.ly}
-
-\lilypondfile[clip-regions=1-15,ragged-right=true]{ly/Ave Maria De Lourdes/Ave Maria.ly}
-
+        \item Multiple system, ragged--right
+        \lilypondfile[clip-regions=2-15,ragged-right=true]{ly/Ave Maria De Lourdes/Ave Maria.ly}
+    \end{enumerate}
 
 \end{document}
