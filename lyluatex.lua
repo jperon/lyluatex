@@ -90,7 +90,7 @@ local LY_HEAD = [[
 ]]
 
 
---- fsarud: Clip-regions engraver to force a snippet to start on a new system. It can manage multiple fragments, but in lyluatex the feature is limited to a single fragment in the form: "clip-regions=aa-bb", where aa and bb are measure numbers.
+--- Clip-regions engraver to force a snippet to start on a new system. It can manage multiple fragments, but in lyluatex the feature is limited to a single fragment in the form: "clip-regions=aa-bb", where aa and bb are measure numbers.
 local CLIP_BREAK_ENGRAVER = [[
 #(define (Clip_break_engraver context)
    (let ((break-measures '()))
@@ -112,7 +112,6 @@ local CLIP_BREAK_ENGRAVER = [[
                          (cons* start fine break-measures))))
                regions)))))))
 ]]
--- fin fsarud
 
 
 --[[ ========================== Helper functions ========================== --]]
@@ -263,42 +262,36 @@ end
 local function set_lyscore(score)
     ly.score = score
     
-    -- fsarud: if clip-regions is set:
     if score['clip-regions'] and score['clip-regions'] ~= '' then
-        -- Override indent 
-        local hoffset = score.protrusion or 0
-        if hoffset == '' then hoffset = 0 end
-        score.hoffset = hoffset..'pt'
-        
+        score.protrusion_left = 0
+        score.indent_offset = 0
+        score.leftgutter = 0
+
         local base_name = score.output:match("[^/]*$")
         local clips = {}
-        
-        -- collect PDFs belonging to this hash
+
         pcall(function()
             for file in lfs.dir(score.tmpdir) do
-                -- that starts with the hash and contains "-clip"
                 if file:find("^" .. base_name) and file:find("%-clip") and file:sub(-4) == ".pdf" then
                     local clip_name = file:gsub("%.pdf$", "")
                     table.insert(clips, clip_name)
                 end
             end
         end)
-        
-        -- Sort if there are several systems
+
         table.sort(clips, function(a, b)
             local num_a = a:match("%-clip%-(%d+)$")
             local num_b = b:match("%-clip%-(%d+)$")
-            
+
             local n_a = num_a and tonumber(num_a)
             local n_b = num_b and tonumber(num_b)
-            
+
             if n_a and n_b then return n_a > n_b end
             if n_a and not n_b then return true end
             if not n_a and n_b then return false end
             return a < b
         end)
-        
-        -- Inject formatted paths as expected by LaTeX backend
+
         for _, clip_file in ipairs(clips) do
             table.insert(score, score.tmpdir .. '/' .. clip_file)
         end
@@ -307,18 +300,8 @@ local function set_lyscore(score)
         score.range = {}
         for i = 1, score.nsystems do table.insert(score.range, i) end
 
-        -- Remove all intermediate .eps files associated with this hash
-        pcall(function()
-            for file in lfs.dir(score.tmpdir) do
-                if file:find(base_name, 1, true) and file:sub(-4) == ".eps" then
-                    os.remove(score.tmpdir .. '/' .. file)
-                end
-            end
-        end)
-        
         return
     end
-    -- end fsarud
 
     ly.score.nsystems = ly.score:count_systems()
     if score.insert ~= 'fullpage' then
@@ -441,22 +424,16 @@ function latex_includesystems(filename, range, protrusion, gutter, staffsize, in
     local texoutput = '\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi\n'
     texoutput = texoutput..'\\par\n'
     
-    -- fsarud:  if clip-regions is set
-    local es_clip = ly.score and ly.score['clip-regions'] and ly.score['clip-regions'] ~= ''
+    local is_clip = ly.score and ly.score['clip-regions'] and ly.score['clip-regions'] ~= ''
 
     for index, system in pairs(range) do
         local path_graphic
         local h_space = h_offset + gutter
         
-        if es_clip then
-            -- If it is a clip, we take the exact path ordered we stored in table
+        if is_clip then
             path_graphic = ly.score[index]
-            h_offset = 0 -- Override identation. This can be enhanced
-            gutter = 0
-            -- Just in case...
             if not path_graphic then break end
-        else
-            -- If it is a normal score, we use the default lyluatex behavior
+        else -- Default lyluatex behavior
             if not lfs.isfile(filename..'-'..system..'.eps') then break end
             path_graphic = filename..'-'..system
         end
@@ -468,8 +445,6 @@ function latex_includesystems(filename, range, protrusion, gutter, staffsize, in
             h_offset + gutter,path_graphic
             )
         if index < #range then
-    --end fsarud 
-
             texoutput = texoutput..
                 string.format([[
 \ifx\betweenLilyPondSystem\undefined\par\vspace{%fpt plus %fpt minus %fpt}%%
@@ -869,15 +844,13 @@ function Score:count_systems(force)
         count = 0
         local base_name = self.output:match("[^/]*$")
         
-        -- fsarud: if clip-systems is set: count PDFs generated (EPS are no longer there)
         if self['clip-regions'] and self['clip-regions'] ~= '' then
             for f in lfs.dir(self.tmpdir) do
                 if f:find(base_name, 1, true) and f:find("-clip", 1, true) and f:sub(-4) == ".pdf" then
                     count = count + 1
                 end
             end
-        else
-            -- If not, original logic with EPS files
+        else -- original logic
             local systems = base_name.."%-%d+%.eps"
             for f in lfs.dir(self.tmpdir) do
                 if f:match(systems) then
@@ -885,7 +858,6 @@ function Score:count_systems(force)
                 end
             end
         end
-        -- end fsarud
         self.system_count = count
     end
     return count
@@ -893,11 +865,23 @@ end
 
 function Score:delete_intermediate_files()
     for _, filename in pairs(self.output_names) do
-        if self.insert == 'fullpage' then os.remove(filename..'.ps')
+        if self.insert == 'fullpage' then 
+            os.remove(filename..'.ps')
         else
             os.remove(filename..'-systems.tex')
             os.remove(filename..'-systems.texi')
-            os.remove(filename..'.eps')
+
+            -- If clip-regions
+            if self['clip-regions'] and self['clip-regions'] ~= '' then
+                local base_name = filename:match("[^/]*$")
+                for file in lfs.dir(self.tmpdir) do
+                    if file:find(base_name, 1, true) and file:sub(-4) == ".eps" then
+                        os.remove(self.tmpdir..'/'..file)
+                    end
+                end
+            else
+                os.remove(filename..'.eps')
+            end
         end
     end
 end
@@ -952,17 +936,14 @@ function Score:header()
         end
     end
 
-    -- fsarud: if clip-regions is set, inyect engraver at start and adapt preamble
     if self['clip-regions'] and self['clip-regions'] ~= '' then
         header = CLIP_BREAK_ENGRAVER .. "\n" .. header
-    -- Look for the original include and paste below the modifier 
         header = header:gsub(
             [[%\include "lilypond%-book%-preamble.ly"]], 
             [[\include "lilypond-book-preamble.ly"
-                #(define default-toplevel-book-handler print-book-with-defaults)]] --This is to allow dclip-systems
+                #(define default-toplevel-book-handler print-book-with-defaults)]] --This is to allow dclip-systems to work
         )
     end
-    --- end fsarud
 
     return header
 end
@@ -994,11 +975,10 @@ function Score:lilypond_cmd()
         .. (self.insert == "fullpage" and "" or "-E ")
         .. "-dno-point-and-click -djob-count=2 -dno-delete-intermediate-files "
 
-    -- fsarud: Si hay clip-regions, activamos dclip-systems obligatoriamente
     if self['clip-regions'] and self['clip-regions'] ~= '' then
         cmd = cmd .. "-dclip-systems "
+        cmd = cmd:gsub("%-E%s*", "") --remove -E option if present. 
     end
-    -- fin fsarud
 
     if self:lilypond_version() >= ly.v{2, 24} then cmd = cmd.."-dtall-page-formats=pdf " end
     if self['optimize-pdf'] and self:lilypond_has_TeXGS() then
@@ -1223,25 +1203,22 @@ function Score:ly_staffprops()
     if self.notimesig then timesig = [[\context { \Staff \remove "Time_signature_engraver" }]] end
     if self.nostaffsymbol then staff = [[\context { \Staff \remove "Staff_symbol_engraver" }]] end
 
-    -- fsarud: clip-regions 
     local clip_code = '%% no clip-regions set'
     if self['clip-regions'] and self['clip-regions'] ~= '' then
-        -- eliminamos espacios por las dudas y buscamos los números separados por guión
-        local limpio = self['clip-regions']:gsub('%s+', '')
-        local start, fin = limpio:match("(%d+)%-(%d+)")
-        if start and fin then
+        local clean = self['clip-regions']:gsub('%s+', '')
+        local start, fine = clean:match("(%d+)%-(%d+)")
+        if start and fine then
             clip_code = string.format([[
     clip-regions = #(list (cons (make-rhythmic-location %s 0 1) (make-rhythmic-location %s 0 1)))
     \context {
         \Score
         \consists \Clip_break_engraver
-    }]], start, tonumber(fin) + 1)
+    }]], start, tonumber(fine) + 1)
         else
             clip_code = '%% Wrong format for clip-regions. Should be start-end, e.g. 52-74 for measures 52 to 74. Ignoring.'
         end
     end
     return string.format('%s\n%s\n%s\n%s\n%s', clef, timing, timesig, staff, clip_code)
-    -- fin fsarud
 end
 
 function Score:ly_twoside() if self.twoside then return 't' else return 'f' end end

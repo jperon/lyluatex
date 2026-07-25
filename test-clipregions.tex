@@ -1,5 +1,5 @@
 \documentclass[a4paper,fontsize=12pt]{scrbook}
-\usepackage[program=lilypond,debug]{lyluatex}
+\usepackage[program=lilypond]{lyluatex}
 
 \title{}
 \author{}
@@ -10,13 +10,14 @@
 
     \begin{enumerate}
         \item Single system, no ragged--right
-        \lilypondfile[staffsize=12, clip-regions=6-10 ]{ly/Beethoven/opus-18-1.ly}
+        \lilypondfile[staffsize=13, clip-regions=5-9 ]{ly/Beethoven/opus-18-1.ly}
     
         \item Single system, ragged--right
-        \lilypondfile[staffsize=12, clip-regions=6-10, ragged-right=true]{ly/Beethoven/opus-18-1.ly}
+        \lilypondfile[staffsize=14, clip-regions=5-9, ragged-right=true]{ly/Beethoven/opus-18-1.ly}
 
         \item Multiple system, ragged--right
-        \lilypondfile[clip-regions=2-15,ragged-right=true]{ly/Ave Maria De Lourdes/Ave Maria.ly}
+        \lilypondfile[clip-regions=2-14,ragged-right=true]{ly/Ave Maria De Lourdes/Ave Maria.ly}
+
     \end{enumerate}
 
 \end{document}
