@@ -261,42 +261,15 @@ end
 
 local function set_lyscore(score)
     ly.score = score
-    
+
     if score['clip-regions'] and score['clip-regions'] ~= '' then
+        -- Clips are cropped to the music by LilyPond, so there is nothing
+        -- to compensate for; `leftgutter` is left alone as it is a user option.
         score.protrusion_left = 0
         score.indent_offset = 0
-        score.leftgutter = 0
 
-        local base_name = score.output:match("[^/]*$")
-        local clips = {}
-
-        pcall(function()
-            for file in lfs.dir(score.tmpdir) do
-                if file:find("^" .. base_name) and file:find("%-clip") and file:sub(-4) == ".pdf" then
-                    local clip_name = file:gsub("%.pdf$", "")
-                    table.insert(clips, clip_name)
-                end
-            end
-        end)
-
-        table.sort(clips, function(a, b)
-            local num_a = a:match("%-clip%-(%d+)$")
-            local num_b = b:match("%-clip%-(%d+)$")
-
-            local n_a = num_a and tonumber(num_a)
-            local n_b = num_b and tonumber(num_b)
-
-            if n_a and n_b then return n_a > n_b end
-            if n_a and not n_b then return true end
-            if not n_a and n_b then return false end
-            return a < b
-        end)
-
-        for _, clip_file in ipairs(clips) do
-            table.insert(score, score.tmpdir .. '/' .. clip_file)
-        end
-
-        score.nsystems = #clips
+        score.clip_files = score:clip_files()
+        score.nsystems = #score.clip_files
         score.range = {}
         for i = 1, score.nsystems do table.insert(score.range, i) end
 
@@ -423,26 +396,21 @@ function latex_includesystems(filename, range, protrusion, gutter, staffsize, in
     local h_offset = protrusion + indent_offset
     local texoutput = '\\ifx\\preLilyPondExample\\undefined\\else\\preLilyPondExample\\fi\n'
     texoutput = texoutput..'\\par\n'
-    
-    local is_clip = ly.score and ly.score['clip-regions'] and ly.score['clip-regions'] ~= ''
-
+    local clip_files = ly.score and ly.score.clip_files
     for index, system in pairs(range) do
-        local path_graphic
-        local h_space = h_offset + gutter
-        
-        if is_clip then
-            path_graphic = ly.score[index]
-            if not path_graphic then break end
-        else -- Default lyluatex behavior
+        local graphic
+        if clip_files then
+            graphic = clip_files[index]
+            if not graphic then break end
+        else
             if not lfs.isfile(filename..'-'..system..'.eps') then break end
-            path_graphic = filename..'-'..system
+            graphic = filename..'-'..system
         end
-
         texoutput = texoutput..
             string.format([[
 \noindent\hspace*{%fpt}\includegraphics{%s}%%
 ]],
-            h_offset + gutter,path_graphic
+                h_offset + gutter, graphic
             )
         if index < #range then
             texoutput = texoutput..
@@ -779,7 +747,11 @@ end
 
 function Score:check_protrusion(bbox_func)
     self.range = self:calc_range()
-    if self.insert ~= 'systems' then return self:is_compiled() end
+    -- Clips are cropped to the music by LilyPond itself, so there is no
+    -- protrusion to compensate for (and no EPS to read a bounding box from).
+    if self.insert ~= 'systems'
+        or (self['clip-regions'] and self['clip-regions'] ~= '')
+    then return self:is_compiled() end
     local bb = bbox_func(self.output, self['line-width'])
     if not bb then return end
     -- line_props lp
@@ -838,20 +810,37 @@ function Score:content()
     end
 end
 
+--- Collect the PDF clips written by `-dclip-systems`, in musical order.
+-- LilyPond names the clips of one region `<base>-clip`, `<base>-clip-1`, …
+-- walking its system list from the last system backwards, so sorting by
+-- descending clip number restores the order of the music.
+function Score:clip_files()
+    local base_name = self.output:match("[^/]*$")
+    local clips = {}
+    for f in lfs.dir(self.tmpdir) do
+        if f:find(base_name, 1, true)
+            and f:find("-clip", 1, true)
+            and f:sub(-4) == ".pdf"
+        then table.insert(clips, self.tmpdir..'/'..f:gsub("%.pdf$", ""))
+        end
+    end
+    table.sort(clips, function(a, b)
+        local n_a = tonumber(a:match("%-clip%-(%d+)$")) or 0
+        local n_b = tonumber(b:match("%-clip%-(%d+)$")) or 0
+        if n_a ~= n_b then return n_a > n_b end
+        return a < b
+    end)
+    return clips
+end
+
 function Score:count_systems(force)
     local count = self.system_count
     if force or not count then
         count = 0
-        local base_name = self.output:match("[^/]*$")
-        
         if self['clip-regions'] and self['clip-regions'] ~= '' then
-            for f in lfs.dir(self.tmpdir) do
-                if f:find(base_name, 1, true) and f:find("-clip", 1, true) and f:sub(-4) == ".pdf" then
-                    count = count + 1
-                end
-            end
-        else -- original logic
-            local systems = base_name.."%-%d+%.eps"
+            count = #self:clip_files()
+        else
+            local systems = self.output:match("[^/]*$").."%-%d+%.eps"
             for f in lfs.dir(self.tmpdir) do
                 if f:match(systems) then
                     count = count + 1
@@ -865,23 +854,11 @@ end
 
 function Score:delete_intermediate_files()
     for _, filename in pairs(self.output_names) do
-        if self.insert == 'fullpage' then 
-            os.remove(filename..'.ps')
+        if self.insert == 'fullpage' then os.remove(filename..'.ps')
         else
             os.remove(filename..'-systems.tex')
             os.remove(filename..'-systems.texi')
-
-            -- If clip-regions
-            if self['clip-regions'] and self['clip-regions'] ~= '' then
-                local base_name = filename:match("[^/]*$")
-                for file in lfs.dir(self.tmpdir) do
-                    if file:find(base_name, 1, true) and file:sub(-4) == ".eps" then
-                        os.remove(self.tmpdir..'/'..file)
-                    end
-                end
-            else
-                os.remove(filename..'.eps')
-            end
+            os.remove(filename..'.eps')
         end
     end
 end
@@ -939,7 +916,7 @@ function Score:header()
     if self['clip-regions'] and self['clip-regions'] ~= '' then
         header = CLIP_BREAK_ENGRAVER .. "\n" .. header
         header = header:gsub(
-            [[%\include "lilypond%-book%-preamble.ly"]], 
+            [[%\include "lilypond%-book%-preamble.ly"]],
             [[\include "lilypond-book-preamble.ly"
                 #(define default-toplevel-book-handler print-book-with-defaults)]] --This is to allow dclip-systems to work
         )
@@ -971,14 +948,13 @@ function Score:lilypond_cmd()
         input = shell_quote(self.output..'.ly') .. ' 2>&1'
         mode = 'r'
     end
+    local clip_regions = self['clip-regions'] and self['clip-regions'] ~= ''
+    -- Clips are taken from the PDF systems, so neither the EPS backend
+    -- nor the EPS intermediate files are needed.
     local cmd = shell_quote(self.program) .. ' '
-        .. (self.insert == "fullpage" and "" or "-E ")
-        .. "-dno-point-and-click -djob-count=2 -dno-delete-intermediate-files "
-
-    if self['clip-regions'] and self['clip-regions'] ~= '' then
-        cmd = cmd .. "-dclip-systems "
-        cmd = cmd:gsub("%-E%s*", "") --remove -E option if present. 
-    end
+        .. ((self.insert == "fullpage" or clip_regions) and "" or "-E ")
+        .. "-dno-point-and-click -djob-count=2 "
+        .. (clip_regions and "-dclip-systems " or "-dno-delete-intermediate-files ")
 
     if self:lilypond_version() >= ly.v{2, 24} then cmd = cmd.."-dtall-page-formats=pdf " end
     if self['optimize-pdf'] and self:lilypond_has_TeXGS() then
