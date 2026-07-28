@@ -5,6 +5,15 @@
 % This file is part of lyluatex.
 
 
+Changes in future release:
+==========================
+
+New features
+------------
+
+- Add `clip-regions` option to insert clipped measure ranges from scores.
+
+
 Changes in release v1.1.6 (2026-05-26):
 =======================================
 

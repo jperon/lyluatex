@@ -547,6 +547,11 @@ end
 function Score:calc_range()
     local nsystems = self:count_systems(true)
     local printonly, donotprint = self['print-only'], self['do-not-print']
+    
+    if self['clip-regions'] and not self['clip-regions']:match("^%d+%-?%d*$") then
+        warn("Invalid clip-regions syntax: '%s'. Expected format like '2-14' or '5'.", self['clip-regions'])
+    end
+    
     if printonly == '' then printonly = '1-' end
     local result = tonumber(printonly) and {tonumber(printonly)} or {}
     if not result[1] then
@@ -1284,6 +1289,11 @@ points to a valid LilyPond executable.
             err(warning)
         end
     end
+
+    if self['clip-regions'] and self['clip-regions'] ~= '' and self.insert == 'fullpage' then
+        warn("clip-regions option is ignored when insert=fullpage.")
+    end
+
     -- with bbox_read check_protrusion will only execute with
     -- a prior compilation, otherwise it will be ignored
     local do_compile = not self:check_protrusion(bbox_read)

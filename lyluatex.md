@@ -521,6 +521,11 @@ present in the score, otherwise \LaTeX\ will raise an error.
 \lyMargin{Examples:}
 Usage examples for this option can be found in [Choosing Systems](#print-only).
 
+### Choosing a range of measures
+
+\lyOption{clip-regions}{}
+The option \option{clip-regions} extracts specific measure ranges as clipped snippets using LilyPond's `-dclip-systems`. Values use inclusive range syntax (e.g., `clip-regions=2-14` includes only measures 2 through 14). The fragment is forced to *begin a new system*. Usage with `ragged-right=true` is recommended.
+
 ## Score Layout
 
 One of the most obvious features of \lyluatex\ is its ability to configure the
