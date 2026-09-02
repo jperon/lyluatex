@@ -9,8 +9,8 @@ on:
       - '.github/workflows/miktex-eps-gs.yml'
       - 'lyluatex.lua'
       - 'lyluatex.sty'
-      - 'test-pipe.tex'
-      - 'test-pipe.lua'
+      - 'test-miktex.tex'
+      - 'test-miktex.lua'
 
 jobs:
   eps-ghostscript:
@@ -147,13 +147,13 @@ jobs:
         run: |
           gswin64c -h
 
-      - name: Test LuaTeX process pipe
+      - name: Run MiKTeX diagnostic test
         shell: pwsh
         run: |
           $env:TEXINPUTS = ".;luaoptions;"
           $env:LUAINPUTS = ".;luaoptions;"
 
-          lualatex -interaction=nonstopmode -shell-escape test-pipe.tex
+          lualatex -interaction=nonstopmode -shell-escape test-miktex.tex
 
       - name: Upload EPS diagnosis artifacts
         if: always()
@@ -162,5 +162,5 @@ jobs:
           name: miktex-eps-ghostscript-artifacts
           path: |
             eps-test/**
-            test-pipe.log
+            test-miktex.log
             tmp-ly/**
