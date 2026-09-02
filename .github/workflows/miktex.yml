@@ -88,6 +88,32 @@ jobs:
           $env:Path = "$chocoBin;$env:Path"
           $chocoBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: Register document fonts
+        shell: pwsh
+        run: |
+          foreach ($cmd in @('miktex', 'initexmf', 'luaotfload-tool')) {
+            $found = Get-Command $cmd -ErrorAction SilentlyContinue
+            if ($found) { Write-Host "$cmd -> $($found.Source)" }
+            else { Write-Host "$cmd -> NOT FOUND" }
+          }
+
+          if (Get-Command miktex -ErrorAction SilentlyContinue) {
+            miktex --admin packages install libertine inconsolata
+            Write-Host "packages install exit: $LASTEXITCODE"
+          }
+
+          initexmf --admin --update-fndb
+          Write-Host "update-fndb exit: $LASTEXITCODE"
+
+          if (Get-Command luaotfload-tool -ErrorAction SilentlyContinue) {
+            luaotfload-tool --update --force
+          } else {
+            $tool = kpsewhich luaotfload-tool.lua
+            if ($tool) { luatex --luaonly $tool --update --force }
+            else { Write-Host "luaotfload-tool.lua not found" }
+          }
+          Write-Host "font database refreshed (exit: $LASTEXITCODE)"
+
       - name: Show versions
         shell: pwsh
         run: |
