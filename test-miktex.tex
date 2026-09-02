@@ -1,0 +1,11 @@
+\documentclass{article}
+\usepackage[debug]{lyluatex}
+\begin{document}
+
+\begin{lilypond}
+\relative c' { \repeat unfold 40 { c4 d e f } }
+\end{lilypond}
+
+\directlua{dofile('test-miktex.lua')}
+
+\end{document}

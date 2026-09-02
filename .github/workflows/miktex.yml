@@ -10,6 +10,8 @@ on:
       - 'lyluatex.sty'
       - 'luaoptions/**'
       - 'test*.tex'
+      - 'test-miktex.lua'
+      - 'examples/**'
       - '.github/workflows/miktex.yml'
 
 jobs:
@@ -20,13 +22,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-
-      - name: Show checkout contents
-        shell: pwsh
-        run: |
-          git submodule status
-          Get-ChildItem
-          Get-ChildItem luaoptions
 
       - name: Install MiKTeX
         shell: pwsh
@@ -45,9 +40,6 @@ jobs:
           # Following steps
           $miktexBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-          where.exe initexmf
-          where.exe lualatex
-          
           initexmf --admin --update-fndb
           initexmf --admin --set-config-value=[MPM]AutoInstall=1
 
@@ -73,9 +65,6 @@ jobs:
           # Make modern Ghostscript available in this step and following steps.
           $env:Path = "$gsBin;$env:Path"
           $gsBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      
-          where.exe gswin64c
-          gswin64c --version
 
       - name: Install LilyPond
         shell: pwsh
@@ -86,35 +75,77 @@ jobs:
           $env:Path = "$chocoBin;$env:Path"
           $chocoBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: Pre-install LaTeX packages
+        shell: pwsh
+        run: |
+          # On-demand installation during a compile has proved flaky, so pull
+          # in everything the tests and examples need up front. Names are
+          # MiKTeX package names, which differ from the .sty they provide
+          # (mdwlist lives in mdwtools, multicol in tools, pgffor in pgf).
+          $packages = @(
+            'blindtext', 'geometry', 'hyperref', 'koma-script', 'libertine',
+            'listings', 'mdwtools', 'microtype', 'minted', 'pgf', 'tools'
+          )
+          foreach ($pkg in $packages) {
+            miktex --admin packages install $pkg
+            Write-Host "$pkg -> exit $LASTEXITCODE"
+          }
+
+          initexmf --admin --update-fndb
+
       - name: Show versions
         shell: pwsh
         run: |
-          where.exe lualatex
-          where.exe lilypond
-          where.exe gswin64c
-          where.exe miktex-epstopdf
-      
           lualatex --version
           lilypond --version
           gswin64c --version
-          initexmf --report
 
       - name: Run existing tests
         shell: pwsh
         run: |
           $env:TEXINPUTS = ".;luaoptions;"
           $env:LUAINPUTS = ".;luaoptions;"
-        
-          Write-Host "TEXINPUTS=$env:TEXINPUTS"
-          Write-Host "LUAINPUTS=$env:LUAINPUTS"
-        
+
           kpsewhich lyluatex.sty
           kpsewhich lyluatex.lua
           kpsewhich luaoptions.sty
           kpsewhich luaoptions-lib.lua
         
-          lualatex -interaction=nonstopmode -shell-escape test.tex
-          lualatex -interaction=nonstopmode -shell-escape test.en.tex
+          $failed = @()
+          foreach ($doc in @('test.tex', 'test.en.tex', 'test-miktex.tex')) {
+            Write-Host "=== $doc ==="
+            lualatex -interaction=nonstopmode -shell-escape $doc
+            if ($LASTEXITCODE -ne 0) { $failed += $doc }
+          }
+          if ($failed.Count -gt 0) {
+            Write-Error "Failed: $($failed -join ', ')"
+            exit 1
+          }
+
+      - name: Run examples
+        shell: pwsh
+        run: |
+          $env:TEXINPUTS = "..;../luaoptions;"
+          $env:LUAINPUTS = "..;../luaoptions;"
+
+          Set-Location examples
+
+          # compilation-error-no-score.tex raises a LaTeX error by design.
+          # fonts.tex needs Inconsolata and Linux Libertine O as system fonts;
+          # the MiKTeX packages carry other family names (Inconsolatazi4).
+          $skip = @('compilation-error-no-score.tex', 'fonts.tex')
+          $failed = @()
+          foreach ($doc in Get-ChildItem -Filter '*.tex' | Sort-Object Name) {
+            if ($skip -contains $doc.Name) { continue }
+            Write-Host "=== $($doc.Name) ==="
+            lualatex -interaction=nonstopmode -shell-escape $doc.Name
+            if ($LASTEXITCODE -ne 0) { $failed += $doc.Name }
+          }
+          if ($failed.Count -gt 0) {
+            Write-Error "Failed: $($failed -join ', ')"
+            exit 1
+          }
+
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -124,3 +155,6 @@ jobs:
             *.log
             *.pdf
             tmp-ly/**
+            examples/*.log
+            examples/*.pdf
+            examples/tmp-ly/**
