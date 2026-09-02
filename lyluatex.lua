@@ -90,7 +90,10 @@ local LY_HEAD = [[
 ]]
 
 
---- Clip-regions engraver to force a snippet to start on a new system. It can manage multiple fragments, but in lyluatex the feature is limited to a single fragment in the form: "clip-regions=aa-bb", where aa and bb are measure numbers.
+-- Clip-regions engraver to force a snippet to start on a new system. It can
+-- manage multiple fragments, but in lyluatex the feature is limited to a single
+-- fragment, given as `clip-regions=aa-bb` or `clip-regions=aa` for one measure,
+-- where aa and bb are measure numbers.
 local CLIP_BREAK_ENGRAVER = [[
 #(define (Clip_break_engraver context)
    (let ((break-measures '()))
@@ -124,6 +127,20 @@ end
 -- debug acts as info if [debug] is specified
 local function debug(...)
     if Score.debug then info(...) end
+end
+
+-- Parse a `clip-regions` specification into inclusive first/last measure
+-- numbers. Accepts `aa-bb` and the single-measure form `aa`; returns nil for
+-- anything LilyPond would silently clip to nothing (reversed ranges included).
+local function parse_clip_regions(spec)
+    local clean = spec:gsub('%s+', '')
+    local start, fine = clean:match('^(%d+)%-(%d+)$')
+    if not start then start = clean:match('^(%d+)$'); fine = start end
+    if not start then return nil end
+    start, fine = tonumber(start), tonumber(fine)
+    -- Measure 0 is a valid start: LilyPond numbers an anacrusis as bar 0.
+    if fine < start then return nil end
+    return start, fine
 end
 
 local function ly_popen(command, mode)
@@ -268,7 +285,7 @@ local function set_lyscore(score)
         score.protrusion_left = 0
         score.indent_offset = 0
 
-        score.clip_files = score:clip_files()
+        score.clip_files = score:get_clip_files()
         score.nsystems = #score.clip_files
         score.range = {}
         for i = 1, score.nsystems do table.insert(score.range, i) end
@@ -548,7 +565,7 @@ function Score:calc_range()
     local nsystems = self:count_systems(true)
     local printonly, donotprint = self['print-only'], self['do-not-print']
     
-    if self['clip-regions'] and not self['clip-regions']:match("^%d+%-?%d*$") then
+    if self['clip-regions'] ~= '' and not parse_clip_regions(self['clip-regions']) then
         warn("Invalid clip-regions syntax: '%s'. Expected format like '2-14' or '5'.", self['clip-regions'])
     end
     
@@ -815,11 +832,11 @@ function Score:content()
     end
 end
 
---- Collect the PDF clips written by `-dclip-systems`, in musical order.
+-- Collect the PDF clips written by `-dclip-systems`, in musical order.
 -- LilyPond names the clips of one region `<base>-clip`, `<base>-clip-1`, …
 -- walking its system list from the last system backwards, so sorting by
 -- descending clip number restores the order of the music.
-function Score:clip_files()
+function Score:get_clip_files()
     local base_name = self.output:match("[^/]*$")
     local clips = {}
     for f in lfs.dir(self.tmpdir) do
@@ -843,7 +860,7 @@ function Score:count_systems(force)
     if force or not count then
         count = 0
         if self['clip-regions'] and self['clip-regions'] ~= '' then
-            count = #self:clip_files()
+            count = #self:get_clip_files()
         else
             local systems = self.output:match("[^/]*$").."%-%d+%.eps"
             for f in lfs.dir(self.tmpdir) do
@@ -1185,18 +1202,17 @@ function Score:ly_staffprops()
     if self.nostaffsymbol then staff = [[\context { \Staff \remove "Staff_symbol_engraver" }]] end
 
     local clip_code = '%% no clip-regions set'
-    if self['clip-regions'] and self['clip-regions'] ~= '' then
-        local clean = self['clip-regions']:gsub('%s+', '')
-        local start, fine = clean:match("(%d+)%-(%d+)")
-        if start and fine then
+    if self['clip-regions'] ~= '' then
+        local start, fine = parse_clip_regions(self['clip-regions'])
+        if start then
             clip_code = string.format([[
     clip-regions = #(list (cons (make-rhythmic-location %s 0 1) (make-rhythmic-location %s 0 1)))
     \context {
         \Score
         \consists \Clip_break_engraver
-    }]], start, tonumber(fine) + 1)
+    }]], start, fine + 1)
         else
-            clip_code = '%% Wrong format for clip-regions. Should be start-end, e.g. 52-74 for measures 52 to 74. Ignoring.'
+            clip_code = '%% Wrong format for clip-regions. Should be start-end, e.g. 52-74 for measures 52 to 74, or a single measure number. Ignoring.'
         end
     end
     return string.format('%s\n%s\n%s\n%s\n%s', clef, timing, timesig, staff, clip_code)
