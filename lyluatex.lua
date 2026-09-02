@@ -466,7 +466,13 @@ function latex_verbatim(verbatim, ly_code, intertext, version)
             '\n'..ly.verbenv[2]:gsub([[\end {]], [[\end{]])..'\n'
         )
         f:close()
-        tex.sprint('\\input{'..fname..'}')
+        -- `\input` searches TEXINPUTS, so anchor the path to the current
+        -- directory: a tmp-ly/verb.tex elsewhere on the path would win.
+        local input_path = fname
+        if not input_path:match('^[%.~/\\]') and not input_path:match('^%a:') then
+            input_path = './'..input_path
+        end
+        tex.sprint('\\input{'..input_path..'}')
         if intertext then tex.sprint('\\lyIntertext{'..intertext..'}') end
     end
 end

@@ -1,0 +1,21 @@
+\documentclass{article}
+\usepackage{lyluatex}
+
+\begin{document}
+
+\begin{lilypond}
+\include "recorder-fingerings.ly"
+
+intro = {\ff d-^ r cis4.->( b8 | a4-.) fis-. d-. fis-. | a-. a8(b a4-.) a8(b->| g1->)}
+
+\score{
+         \relative c'''{\time 4/4 \clef treble \key d \major
+        \finger
+          {\intro} 
+		   }}
+\end{lilypond}
+
+
+toto3
+
+\end{document}

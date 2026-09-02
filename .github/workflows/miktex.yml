@@ -10,6 +10,8 @@ on:
       - 'lyluatex.sty'
       - 'luaoptions/**'
       - 'test*.tex'
+      - 'test-miktex.lua'
+      - 'examples/**'
       - '.github/workflows/miktex.yml'
 
 jobs:
@@ -113,8 +115,39 @@ jobs:
           kpsewhich luaoptions.sty
           kpsewhich luaoptions-lib.lua
         
-          lualatex -interaction=nonstopmode -shell-escape test.tex
-          lualatex -interaction=nonstopmode -shell-escape test.en.tex
+          $failed = @()
+          foreach ($doc in @('test.tex', 'test.en.tex', 'test-miktex.tex')) {
+            Write-Host "=== $doc ==="
+            lualatex -interaction=nonstopmode -shell-escape $doc
+            if ($LASTEXITCODE -ne 0) { $failed += $doc }
+          }
+          if ($failed.Count -gt 0) {
+            Write-Error "Failed: $($failed -join ', ')"
+            exit 1
+          }
+
+      - name: Run examples
+        shell: pwsh
+        run: |
+          $env:TEXINPUTS = "..;../luaoptions;"
+          $env:LUAINPUTS = "..;../luaoptions;"
+
+          Set-Location examples
+
+          # compilation-error-no-score.tex raises a LaTeX error by design.
+          $skip = @('compilation-error-no-score.tex')
+          $failed = @()
+          foreach ($doc in Get-ChildItem -Filter '*.tex' | Sort-Object Name) {
+            if ($skip -contains $doc.Name) { continue }
+            Write-Host "=== $($doc.Name) ==="
+            lualatex -interaction=nonstopmode -shell-escape $doc.Name
+            if ($LASTEXITCODE -ne 0) { $failed += $doc.Name }
+          }
+          if ($failed.Count -gt 0) {
+            Write-Error "Failed: $($failed -join ', ')"
+            exit 1
+          }
+
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -124,3 +157,6 @@ jobs:
             *.log
             *.pdf
             tmp-ly/**
+            examples/*.log
+            examples/*.pdf
+            examples/tmp-ly/**
