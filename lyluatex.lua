@@ -978,7 +978,16 @@ function Score:lilypond_cmd()
         .. "-dno-point-and-click -djob-count=2 "
         .. (clip_regions and "-dclip-systems " or "-dno-delete-intermediate-files ")
 
-    if self:lilypond_version() >= ly.v{2, 24} then cmd = cmd.."-dtall-page-formats=pdf " end
+    if self:lilypond_version() >= ly.v{2, 24} then
+        cmd = cmd.."-dtall-page-formats=pdf "
+        -- Have LilyPond write the per-system PDFs itself. `\includegraphics`
+        -- prefers `.pdf` over `.eps`, so the EPS is still available for the
+        -- bounding box while the epstopdf conversion is never invoked --
+        -- that conversion fails on MiKTeX.
+        if self.insert ~= "fullpage" and not clip_regions then
+            cmd = cmd.."-dseparate-page-formats=pdf "
+        end
+    end
     if self['optimize-pdf'] and self:lilypond_has_TeXGS() then
         cmd = cmd.."-O TeX-GS -dgs-never-embed-fonts "
     end

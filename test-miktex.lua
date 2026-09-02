@@ -129,6 +129,41 @@ else
     end
 end
 
+local function first_system_eps(prefix)
+    if not lfs.isdir('tmp-ly') then return nil end
+    for entry in lfs.dir('tmp-ly') do
+        if entry:sub(-4) == '.eps' and entry:find(prefix, 1, true)
+            and entry:match('%-%d+%.eps$')
+        then return 'tmp-ly/' .. entry end
+    end
+end
+
+say('=== step 4: converting an EPS ourselves (options 1 and 2) ===')
+local probe_ok, probe_size = false, nil
+local eps = base and first_system_eps(base)
+if not eps then
+    say('no per-system EPS found; skipping')
+else
+    local out = 'tmp-ly/probe-gs.pdf'
+    os.remove(out)
+    say('eps=%s', eps)
+    report(os.kpsepopen or io.popen, 'pdfwrite',
+        gs .. ' -q -dBATCH -dNOPAUSE -dEPSCrop -sDEVICE=pdfwrite -sOutputFile="'
+        .. out .. '" "' .. eps .. '" 2>&1')
+    probe_size = lfs.attributes(out, 'size')
+    if not probe_size then
+        say('%s wrote no file', gs)
+    else
+        local lines = report(os.kpsepopen or io.popen, 'bbox',
+            gs .. ' -sDEVICE=bbox -q -dBATCH -dNOPAUSE "' .. out .. '" 2>&1')
+        for _, line in ipairs(lines or {}) do
+            if line:find('HiResBoundingBox', 1, true)
+                and not line:match('HiResBoundingBox:%s*0[%.0%s]*$')
+            then probe_ok = true end
+        end
+    end
+end
+
 say('=== verdict ===')
 say('pipe captures output : %s', tostring(pipe_works))
 say('ghostscript on PATH  : %s', tostring(gs_found))
@@ -144,6 +179,14 @@ end
 if any_blank then
     say('a converted PDF measures 0 0 0 0, matching issue 332: epstopdf')
     say('writes the file but its content is empty')
+end
+
+say('%-16s ok=%-5s size=%s', 'direct gs', tostring(probe_ok),
+    tostring(probe_size or '-'))
+if probe_ok then
+    say('options 1 and 2 are viable: gs converts this EPS itself')
+else
+    say('options 1 and 2 would not help: gs cannot convert this EPS either')
 end
 
 if not any_exists then
