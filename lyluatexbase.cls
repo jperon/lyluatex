@@ -5,7 +5,7 @@
 % This file is part of lyluatex.
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{lyluatexbase}[2026/05/26 v1.1.6]  %%LYLUATEX_DATE LYLUATEX_VERSION
+\ProvidesClass{lyluatexbase}[2026/09/20 v1.1.7]  %%LYLUATEX_DATE LYLUATEX_VERSION
 
 \LoadClass[DIV=11]{scrartcl}
 \RequirePackage{lyluatex}
