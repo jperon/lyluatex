@@ -985,7 +985,10 @@ function Score:lilypond_cmd()
         .. (clip_regions and "-dclip-systems " or "-dno-delete-intermediate-files ")
 
     if self:lilypond_version() >= ly.v{2, 24} then
-        cmd = cmd.."-dtall-page-formats=pdf "
+        -- A tall page would merge the pages of a full-page score into one.
+        if self.insert ~= "fullpage" then
+            cmd = cmd.."-dtall-page-formats=pdf "
+        end
         -- Have LilyPond write the per-system PDFs itself. `\includegraphics`
         -- prefers `.pdf` over `.eps`, so the EPS is still available for the
         -- bounding box while the epstopdf conversion is never invoked --

@@ -8,6 +8,12 @@
 Changes in future release:
 ==========================
 
+Bugfixes
+--------
+
+- Keep the pages of a multi-page score separate with `insert=fullpage`
+  on LilyPond 2.24+ (#345)
+
 Changes in release v1.1.7 (2026-09-20):
 =======================================
 
