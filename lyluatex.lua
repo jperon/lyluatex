@@ -1013,8 +1013,12 @@ end
 
 local lilypond_help_info = {}
 function Score:lilypond_has_TeXGS()
-    lilypond_help_info[self.program] = lilypond_help_info[self.program] or ly_popen(shell_quote(self.program)..' --help', 'r')
-    return lib.readlinematching('TeX%-GS', lilypond_help_info[self.program])
+    if lilypond_help_info[self.program] == nil then
+        lilypond_help_info[self.program] = lib.readlinematching(
+            'TeX%-GS', ly_popen(shell_quote(self.program)..' --help', 'r')
+        ) ~= nil
+    end
+    return lilypond_help_info[self.program]
 end
 
 local lilypond_versions = {}
@@ -1242,7 +1246,8 @@ function Score:ly_version() return self['ly-version'] end
 
 function Score:optimize_pdf()
     if not self['optimize-pdf'] then return end
-    if self:lilypond_has_TeXGS() and not ly.final_optimization_message then
+    if self:lilypond_has_TeXGS() then
+        if ly.final_optimization_message then return end
         ly.final_optimization_message = true
         luatexbase.add_to_callback(
             'stop_run',
