@@ -13,6 +13,9 @@ Bugfixes
 
 - Keep the pages of a multi-page score separate with `insert=fullpage`
   on LilyPond 2.24+ (#345)
+- Fix crash with `optimize-pdf` when LilyPond supports `-O TeX-GS`
+- Don't run every score but the first through Ghostscript with
+  `optimize-pdf` when LilyPond supports `-O TeX-GS`
 
 Changes in release v1.1.7 (2026-09-20):
 =======================================
