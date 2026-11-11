@@ -1,7 +1,7 @@
 name: TeX Live test
 
-# Every branch is tested against TeX Live; the miktex branch is tested on
-# Windows by miktex.yml instead.
+# Every branch is tested against TeX Live and several LilyPond versions; the
+# miktex branch is tested on Windows by miktex.yml instead.
 
 on:
   workflow_dispatch:
@@ -17,14 +17,65 @@ on:
       - 'luaoptions/**'
       - 'test*.tex'
       - 'examples/**'
+      - '.github/docker/**'
       - '.github/workflows/texlive.yml'
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
-  texlive:
+  image:
+    # The test image (.github/docker) is tagged with the month and a hash of
+    # its files, and only built when that tag is not on GHCR yet: so after a
+    # change to the Dockerfile, and once a month to pick up TeX Live updates.
     if: github.head_ref != 'miktex'
     runs-on: ubuntu-latest
-    # TeX Live from xdp-docker; the image has no LilyPond, see below.
-    container: maclotsen/texlive:latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.tag.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compute image tag
+        id: tag
+        run: |
+          hash=$(find .github/docker -type f | sort | xargs cat | sha256sum | cut -c1-12)
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}-ci:$(date +%Y-%m)-$hash" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push the image unless it exists
+        env:
+          IMAGE: ${{ steps.tag.outputs.image }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "$IMAGE exists"
+          else
+            docker build -t "$IMAGE" .github/docker
+            docker push "$IMAGE"
+          fi
+
+  test:
+    needs: image
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lilypond: ['2.22', '2.24', '2.26']
+        include:
+          # Development version: reported, but doesn't fail the run.
+          - lilypond: '2.27'
+            experimental: true
+    continue-on-error: ${{ matrix.experimental == true }}
+    name: test (LilyPond ${{ matrix.lilypond }})
     defaults:
       run:
         shell: bash
@@ -34,10 +85,8 @@ jobs:
         with:
           submodules: true
 
-      - name: Install LilyPond
-        run: |
-          apt-get update -q
-          apt-get install -qy --no-install-recommends lilypond
+      - name: Select LilyPond ${{ matrix.lilypond }}
+        run: echo "/opt/lilypond-${{ matrix.lilypond }}/bin" >> "$GITHUB_PATH"
 
       - name: Show versions
         run: |
@@ -84,7 +133,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: texlive-test-artifacts
+          name: texlive-lilypond-${{ matrix.lilypond }}
           path: |
             *.log
             *.pdf
