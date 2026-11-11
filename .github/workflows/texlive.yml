@@ -1,0 +1,94 @@
+name: TeX Live test
+
+# Every branch is tested against TeX Live; the miktex branch is tested on
+# Windows by miktex.yml instead.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'lyluatex.lua'
+      - 'lyluatex.sty'
+      - 'luaoptions/**'
+      - 'test*.tex'
+      - 'examples/**'
+      - '.github/workflows/texlive.yml'
+
+jobs:
+  texlive:
+    if: github.head_ref != 'miktex'
+    runs-on: ubuntu-latest
+    # TeX Live from xdp-docker; the image has no LilyPond, see below.
+    container: maclotsen/texlive:latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install LilyPond
+        run: |
+          apt-get update -q
+          apt-get install -qy --no-install-recommends lilypond
+
+      - name: Show versions
+        run: |
+          lualatex --version | head -n 1
+          lilypond --version | head -n 1
+          gs --version
+
+      - name: Run existing tests
+        env:
+          TEXINPUTS: '.:luaoptions:'
+          LUAINPUTS: '.:luaoptions:'
+        run: |
+          failed=()
+          for doc in test.tex test.en.tex test-clipregions.tex; do
+            echo "=== $doc ==="
+            lualatex -interaction=nonstopmode -shell-escape "$doc" || failed+=("$doc")
+          done
+          if (( ${#failed[@]} )); then
+            echo "::error::Failed: ${failed[*]}"
+            exit 1
+          fi
+
+      - name: Run examples
+        working-directory: examples
+        env:
+          TEXINPUTS: '..:../luaoptions:'
+          LUAINPUTS: '..:../luaoptions:'
+        run: |
+          # compilation-error-no-score.tex raises a LaTeX error by design.
+          # fonts.tex needs Inconsolata and Linux Libertine O as system fonts.
+          skip=' compilation-error-no-score.tex fonts.tex '
+          failed=()
+          for doc in *.tex; do
+            [[ $skip == *" $doc "* ]] && continue
+            echo "=== $doc ==="
+            lualatex -interaction=nonstopmode -shell-escape "$doc" || failed+=("$doc")
+          done
+          if (( ${#failed[@]} )); then
+            echo "::error::Failed: ${failed[*]}"
+            exit 1
+          fi
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: texlive-test-artifacts
+          path: |
+            *.log
+            *.pdf
+            tmp-ly/**
+            examples/*.log
+            examples/*.pdf
+            examples/tmp-ly/**

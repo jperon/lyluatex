@@ -1,5 +1,9 @@
 name: MiKTeX Windows test
 
+# Only for the miktex branch (or when started by hand): the MiKTeX package
+# server is too unreliable to gate every pull request on. Other branches are
+# tested by texlive.yml.
+
 on:
   workflow_dispatch:
   pull_request:
@@ -16,10 +20,11 @@ on:
 
 jobs:
   miktex-windows:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'miktex'
     runs-on: windows-2022
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -148,7 +153,7 @@ jobs:
 
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: miktex-test-artifacts
           path: |
