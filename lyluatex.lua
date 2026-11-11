@@ -388,6 +388,17 @@ function latex_fullpagestyle(style, ppn)
     end
 end
 
+-- Give `\includegraphics` the file with its extension. LaTeX looks up the
+-- bare name first, and when that isn't found kpathsea's case-insensitive
+-- fallback lists the whole directory: for every score, in a cache that only
+-- grows (#330).
+local function graphic_file(base)
+    for _, ext in ipairs{'.pdf', '.eps'} do
+        if lfs.isfile(base..ext) then return base..ext end
+    end
+    return base
+end
+
 function latex_includeinline(pdfname, height, valign, hpadding, voffset)
     local v_base
     if valign == 'bottom' then v_base = 0
@@ -396,8 +407,8 @@ function latex_includeinline(pdfname, height, valign, hpadding, voffset)
     end
     tex.sprint(
         string.format(
-            [[\hspace{%fpt}\raisebox{%fpt}{\includegraphics{%s-1}}\hspace{%fpt}]],
-            hpadding, v_base + voffset, pdfname, hpadding
+            [[\hspace{%fpt}\raisebox{%fpt}{\includegraphics{%s}}\hspace{%fpt}]],
+            hpadding, v_base + voffset, graphic_file(pdfname..'-1'), hpadding
         )
     )
 end
@@ -419,9 +430,10 @@ function latex_includesystems(filename, range, protrusion, gutter, staffsize, in
         if clip_files then
             graphic = clip_files[index]
             if not graphic then break end
+            graphic = graphic..'.pdf'
         else
             if not lfs.isfile(filename..'-'..system..'.eps') then break end
-            graphic = filename..'-'..system
+            graphic = graphic_file(filename..'-'..system)
         end
         texoutput = texoutput..
             string.format([[
@@ -868,11 +880,10 @@ function Score:count_systems(force)
         if self['clip-regions'] and self['clip-regions'] ~= '' then
             count = #self:get_clip_files()
         else
-            local systems = self.output:match("[^/]*$").."%-%d+%.eps"
-            for f in lfs.dir(self.tmpdir) do
-                if f:match(systems) then
-                    count = count + 1
-                end
+            -- Probe the numbered system files rather than listing tmpdir:
+            -- a listing costs time for every file in the cache (#330).
+            while lfs.isfile(self.output..'-'..(count + 1)..'.eps') do
+                count = count + 1
             end
         end
         self.system_count = count
