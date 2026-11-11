@@ -30,7 +30,9 @@ jobs:
     # its files, and only built when that tag is not on GHCR yet: so after a
     # change to the Dockerfile, and once a month to pick up TeX Live updates.
     if: github.head_ref != 'miktex'
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: on the Ubuntu 26.04 runners, containers can't resolve
+    # host names (actions/runner-images#14230).
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -60,7 +62,7 @@ jobs:
 
   test:
     needs: image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: ${{ needs.image.outputs.image }}
       credentials:
