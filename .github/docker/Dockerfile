@@ -48,18 +48,11 @@ RUN for v in $LILYPOND_TARBALLS; do \
 ARG TL_REPOSITORY=https://mirror.ctan.org/systems/texlive/tlnet
 ARG TL_REFRESH=
 
-COPY texlive.profile /tmp/texlive.profile
-
-RUN echo "TeX Live refresh: ${TL_REFRESH:-none}" \
- && curl -fsSL "$TL_REPOSITORY/install-tl-unx.tar.gz" | tar -xz -C /tmp \
- && /tmp/install-tl-*/install-tl --profile=/tmp/texlive.profile \
-      --location "$TL_REPOSITORY" \
- && rm -rf /tmp/install-tl-* /tmp/texlive.profile
+COPY texlive.profile install-texlive.sh /tmp/
 
 # Packages read by test*.tex and examples/*.tex (from their .fls files), plus
 # the LuaLaTeX format, the default fonts and epstopdf for LilyPond 2.22.
-RUN tlmgr install \
-      latex-bin luahbtex lm epstopdf \
+ARG TL_PACKAGES="latex-bin luahbtex lm epstopdf \
       bigintcalc bitset blindtext bookmark catchfile ctablestack currfile \
       environ epstopdf-pkg eso-pic etexcmds etoolbox fancyvrb filehook float \
       fontspec fvextra gettitlestring graphics graphics-cfg graphics-def \
@@ -69,6 +62,10 @@ RUN tlmgr install \
       luaotfload luatexbase metalogo minibox minted mptopdf pdfescape \
       pdflscape pdfpages pdftexcmds pgf pgfopts refcount rerunfilecheck \
       stringenc tex-ini-files tools trimspaces uniquecounter upquote url \
-      varwidth xcolor xkeyval \
+      varwidth xcolor xkeyval"
+
+RUN echo "TeX Live refresh: ${TL_REFRESH:-none}" \
+ && sh /tmp/install-texlive.sh "$TL_REPOSITORY" $TL_PACKAGES \
+ && rm /tmp/install-texlive.sh /tmp/texlive.profile \
  && luaotfload-tool --update \
  && tlmgr option repository https://mirror.ctan.org/systems/texlive/tlnet
