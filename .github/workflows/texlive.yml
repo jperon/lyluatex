@@ -29,10 +29,10 @@ jobs:
     # The test image (.github/docker) is tagged with the month and a hash of
     # its files, and only built when that tag is not on GHCR yet: so after a
     # change to the Dockerfile, and once a month to pick up TeX Live updates.
+    # Layers are cached in GitHub's cache, so a monthly rebuild only
+    # reinstalls TeX Live (TL_REFRESH) and keeps the apt and LilyPond layers.
     if: github.head_ref != 'miktex'
-    # Not ubuntu-latest: on the Ubuntu 26.04 runners, containers can't resolve
-    # host names (actions/runner-images#14230).
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -45,24 +45,46 @@ jobs:
         id: tag
         run: |
           hash=$(find .github/docker -type f | sort | xargs cat | sha256sum | cut -c1-12)
-          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}-ci:$(date +%Y-%m)-$hash" >> "$GITHUB_OUTPUT"
+          month=$(date +%Y-%m)
+          echo "month=$month" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}-ci:$month-$hash" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push the image unless it exists
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check whether the image exists
+        id: exists
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
             echo "$IMAGE exists"
-          else
-            docker build -t "$IMAGE" .github/docker
-            docker push "$IMAGE"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - if: steps.exists.outputs.exists != 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - if: steps.exists.outputs.exists != 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .github/docker
+          push: true
+          tags: ${{ steps.tag.outputs.image }}
+          # Inside the build, apt uses the image's own sources rather than the
+          # runner's Azure mirror; archive.ubuntu.com can be very slow here.
+          build-args: |
+            UBUNTU_MIRROR=http://azure.archive.ubuntu.com/ubuntu
+            TL_REFRESH=${{ steps.tag.outputs.month }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   test:
     needs: image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     container:
       image: ${{ needs.image.outputs.image }}
       credentials:
@@ -100,10 +122,20 @@ jobs:
         env:
           TEXINPUTS: '.:luaoptions:'
           LUAINPUTS: '.:luaoptions:'
+          LILYPOND: ${{ matrix.lilypond }}
         run: |
           failed=()
           for doc in test.tex test.en.tex test-clipregions.tex; do
             echo "=== $doc ==="
+            if [[ $doc == test-clipregions.tex && $LILYPOND == 2.22 ]]; then
+              # clip-regions needs LilyPond 2.24+: expect lyluatex's error.
+              if lualatex -interaction=nonstopmode -shell-escape "$doc"; then
+                failed+=("$doc (expected an error)")
+              elif ! grep -q 'clip-regions requires LilyPond 2.24' "${doc%.tex}.log"; then
+                failed+=("$doc (wrong error)")
+              fi
+              continue
+            fi
             lualatex -interaction=nonstopmode -shell-escape "$doc" || failed+=("$doc")
           done
           if (( ${#failed[@]} )); then

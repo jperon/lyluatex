@@ -11,14 +11,22 @@ FROM ubuntu:24.04
 
 ARG LILYPOND_2_22=2.22.2
 ARG LILYPOND_TARBALLS="2.24.4 2.26.0 2.27.4"
+# Ubuntu package mirror, e.g. http://azure.archive.ubuntu.com/ubuntu on GitHub
+# runners, where archive.ubuntu.com can be very slow. Empty: Ubuntu's default.
+ARG UBUNTU_MIRROR=
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     PATH=/opt/texlive/bin/x86_64-linux:$PATH
 
-RUN apt-get update -q \
+RUN if [ -n "$UBUNTU_MIRROR" ]; then \
+      sed -i -E "s#http://(archive|security)\.ubuntu\.com/ubuntu/?#$UBUNTU_MIRROR#" \
+        /etc/apt/sources.list.d/ubuntu.sources; \
+    fi \
+ && apt-get update -q \
  && apt-get install -qy --no-install-recommends \
-      bzip2 ca-certificates curl fontconfig ghostscript perl python3 xz-utils \
+      bzip2 ca-certificates curl fontconfig ghostscript git perl python3 \
+      xz-utils \
  && rm -rf /var/lib/apt/lists/*
 
 # LilyPond 2.22 comes as the old self-extracting installer. It covers the
@@ -35,12 +43,17 @@ RUN for v in $LILYPOND_TARBALLS; do \
    && mv "/opt/lilypond-$v" "/opt/lilypond-${v%.*}" || exit 1; \
     done
 
+# TeX Live comes last, so a cached build can keep the layers above. Changing
+# TL_REFRESH (CI passes the month) reinstalls TeX Live with current packages.
+ARG TL_REPOSITORY=https://mirror.ctan.org/systems/texlive/tlnet
+ARG TL_REFRESH=
+
 COPY texlive.profile /tmp/texlive.profile
 
-RUN curl -fsSL https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz \
-      | tar -xz -C /tmp \
+RUN echo "TeX Live refresh: ${TL_REFRESH:-none}" \
+ && curl -fsSL "$TL_REPOSITORY/install-tl-unx.tar.gz" | tar -xz -C /tmp \
  && /tmp/install-tl-*/install-tl --profile=/tmp/texlive.profile \
-      --location https://mirror.ctan.org/systems/texlive/tlnet \
+      --location "$TL_REPOSITORY" \
  && rm -rf /tmp/install-tl-* /tmp/texlive.profile
 
 # Packages read by test*.tex and examples/*.tex (from their .fls files), plus
@@ -57,4 +70,5 @@ RUN tlmgr install \
       pdflscape pdfpages pdftexcmds pgf pgfopts refcount rerunfilecheck \
       stringenc tex-ini-files tools trimspaces uniquecounter upquote url \
       varwidth xcolor xkeyval \
- && luaotfload-tool --update
+ && luaotfload-tool --update \
+ && tlmgr option repository https://mirror.ctan.org/systems/texlive/tlnet
