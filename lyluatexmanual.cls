@@ -5,7 +5,7 @@
 % This file is part of lyluatex.
 
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{lyluatexmanual}[2026/09/20 v1.1.7]  %%LYLUATEX_DATE LYLUATEX_VERSION
+\ProvidesClass{lyluatexmanual}[2026/11/24 v1.1.8]  %%LYLUATEX_DATE LYLUATEX_VERSION
 
 \LoadClass{lyluatexbase}
 
