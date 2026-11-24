@@ -1,0 +1,14 @@
+selected_scheme scheme-infraonly
+TEXDIR /opt/texlive
+TEXMFLOCAL /opt/texlive/texmf-local
+TEXMFSYSCONFIG /opt/texlive/texmf-config
+TEXMFSYSVAR /opt/texlive/texmf-var
+TEXMFHOME ~/texmf
+TEXMFCONFIG ~/.texlive/texmf-config
+TEXMFVAR ~/.texlive/texmf-var
+binary_x86_64-linux 1
+instopt_adjustpath 0
+instopt_adjustrepo 1
+tlpdbopt_autobackup 0
+tlpdbopt_install_docfiles 0
+tlpdbopt_install_srcfiles 0

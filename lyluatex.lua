@@ -1329,8 +1329,14 @@ points to a valid LilyPond executable.
         end
     end
 
-    if self['clip-regions'] and self['clip-regions'] ~= '' and self.insert == 'fullpage' then
-        warn("clip-regions option is ignored when insert=fullpage.")
+    if self['clip-regions'] and self['clip-regions'] ~= '' then
+        if self.insert == 'fullpage' then
+            warn("clip-regions option is ignored when insert=fullpage.")
+        elseif self:lilypond_version() < ly.v{2, 24} then
+            -- The clip engraver needs ly:context-output-def (LilyPond 2.24+).
+            err("clip-regions requires LilyPond 2.24 or newer (found %s).",
+                tostring(self:lilypond_version()))
+        end
     end
 
     -- with bbox_read check_protrusion will only execute with
